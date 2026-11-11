@@ -124,7 +124,8 @@ Data.enemyTypes = {
     damage = 12,
     xp = 11,
     color = { 0.45, 0.80, 0.80 },
-    keepDistance = true,
+    -- Número, no booleano: updateRanged compara distancias contra este valor.
+    keepDistance = 190,
   },
   engranaje = {
     radius = 20,
