@@ -1,0 +1,3 @@
+# Artefactos generados: el .love se empaqueta con src/tools/build.sh
+build/
+*.love
