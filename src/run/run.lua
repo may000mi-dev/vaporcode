@@ -6,6 +6,7 @@ local Data = require("src.run.data")
 local State = require("src.estados")
 local Rhythm = require("src.run.rhythm")
 local Camera = require("src.utils.camera")
+local Screen = require("src.utils.screen")
 local FX = require("src.run.fx")
 local Hud = require("src.run.hud")
 local Joystick = require("src.utils.joystick")
@@ -301,7 +302,7 @@ end
 function Run.draw()
   -- El exterior de la mazmorra se muestra siempre como oscuridad.
   love.graphics.setColor(0.02, 0.025, 0.035)
-  love.graphics.rectangle("fill", 0, 0, 960, 540)
+  love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
   Camera.push()
   Run.dungeon:draw(Camera)
@@ -450,7 +451,7 @@ function Run.keypressed(key, isrepeat)
 end
 
 function Run:pressedAt(pointerId, x, y)
-  if x < 0 or x > 960 or y < 0 or y > 540 then
+  if x < 0 or x > Screen.width or y < 0 or y > Screen.height then
     return
   end
 

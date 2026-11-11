@@ -165,7 +165,10 @@ mazmorras desbloqueadas y personajes desbloqueados.
 
 ## Rendimiento en el A55
 
-- Resolución virtual 960×540 con escalado por transformación (letterboxing).
+- Resolución virtual adaptable: altura fija de 540 y ancho según el aspecto
+  (960 en 16:9, hasta 1200 en 20:9). En teléfonos el área de juego llena la
+  pantalla sin barras laterales; en tabletas 4:3 se conserva 960×540 con
+  letterboxing. HUD, habilidades y paneles se anclan a los bordes visibles.
 - Módulos de LÖVE innecesarios desactivados (joystick, física, video).
 - Textos de HUD, tienda, mochila y game over pasan por `src/utils/textcache.lua`:
   se formatean solo cuando cambian sus valores, no cada frame.

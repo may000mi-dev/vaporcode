@@ -4,14 +4,28 @@ local Save = require("src.run.save")
 local State = require("src.estados")
 local Util = require("src.utils.util")
 local TextCache = require("src.utils.textcache")
+local Screen = require("src.utils.screen")
 
 local Gameover = {
   info = nil,
+  panel = { x = 200, y = 100, w = 560, h = 350 },
   rects = {
     retry = { x = 500, y = 386, w = 180, h = 54 },
     menu = { x = 280, y = 386, w = 180, h = 54 },
   },
 }
+
+-- Centra el panel de derrota en el área visible actual.
+function Gameover.layout()
+  local panel = Gameover.panel
+  panel.x = (Screen.width - panel.w) * 0.5
+  panel.y = (Screen.height - panel.h) * 0.5
+
+  Gameover.rects.menu.x = panel.x + 80
+  Gameover.rects.menu.y = panel.y + 286
+  Gameover.rects.retry.x = panel.x + 300
+  Gameover.rects.retry.y = panel.y + 286
+end
 
 local function retry()
   if Gameover.info.snapshot then
@@ -28,6 +42,7 @@ local function retry()
 end
 
 local function chooseAt(x, y)
+  Gameover.layout()
   if Util.inside(x, y, Gameover.rects.retry) then
     retry()
   elseif Util.inside(x, y, Gameover.rects.menu) then
@@ -97,33 +112,36 @@ function Gameover.touchreleased(id, x, y) end
 function Gameover.focus(focused) end
 
 function Gameover.draw()
+  Gameover.layout()
   local info = Gameover.info
+  local panel = Gameover.panel
+  local px, py = panel.x, panel.y
 
   love.graphics.setColor(0, 0, 0, 0.72)
-  love.graphics.rectangle("fill", 0, 0, 960, 540)
+  love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
   love.graphics.setColor(0.07, 0.08, 0.11, 0.98)
-  love.graphics.rectangle("fill", 200, 100, 560, 350, 12, 12)
+  love.graphics.rectangle("fill", px, py, panel.w, panel.h, 12, 12)
   love.graphics.setColor(0.45, 0.20, 0.20)
-  love.graphics.rectangle("line", 200, 100, 560, 350, 12, 12)
+  love.graphics.rectangle("line", px, py, panel.w, panel.h, 12, 12)
 
   local timeout = info.reason == "timeout"
   love.graphics.setFont(Fonts.title)
   love.graphics.setColor(0.95, 0.40, 0.35)
-  love.graphics.printf(timeout and "TIEMPO AGOTADO" or "DERROTA", 200, 130, 560, "center")
+  love.graphics.printf(timeout and "TIEMPO AGOTADO" or "DERROTA", px, py + 30, panel.w, "center")
 
   love.graphics.setFont(Fonts.body)
   love.graphics.setColor(0.82, 0.86, 0.92)
   if timeout then
     love.graphics.printf(
       "No eliminaste a todos los enemigos a tiempo.",
-      240,
-      178,
+      px + 40,
+      py + 78,
       480,
       "center"
     )
   end
-  love.graphics.printf(TextCache.format("go-dungeon", "Mazmorra: %s", info.dungeon), 240, 204, 480, "center")
+  love.graphics.printf(TextCache.format("go-dungeon", "Mazmorra: %s", info.dungeon), px + 40, py + 104, 480, "center")
   love.graphics.printf(
     TextCache.format(
       "go-character",
@@ -131,36 +149,36 @@ function Gameover.draw()
       info.character or "Amado",
       info.ability or "Resonancia"
     ),
-    240,
-    232,
+    px + 40,
+    py + 132,
     480,
     "center"
   )
   love.graphics.printf(
     TextCache.format("go-floor", "Piso alcanzado: %d · Nv.%d", info.level, info.playerLevel or 1),
-    240,
-    260,
+    px + 40,
+    py + 160,
     480,
     "center"
   )
-  love.graphics.printf(TextCache.format("go-kills", "Enemigos derrotados: %d", info.kills), 240, 288, 480, "center")
-  love.graphics.printf(TextCache.format("go-coins", "Monedas totales: %d", info.coins), 240, 316, 480, "center")
+  love.graphics.printf(TextCache.format("go-kills", "Enemigos derrotados: %d", info.kills), px + 40, py + 188, 480, "center")
+  love.graphics.printf(TextCache.format("go-coins", "Monedas totales: %d", info.coins), px + 40, py + 216, 480, "center")
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.65, 0.70, 0.78)
   if info.snapshot then
     love.graphics.printf(
       "Reintentar restaura el inicio exacto de este piso.",
-      240,
-      348,
+      px + 40,
+      py + 248,
       480,
       "center"
     )
   else
     love.graphics.printf(
       "Las monedas y las mejoras permanentes se conservan.",
-      240,
-      348,
+      px + 40,
+      py + 248,
       480,
       "center"
     )
@@ -171,7 +189,9 @@ function Gameover.draw()
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.55, 0.60, 0.68)
-  love.graphics.printf("Enter reintentar · Esc menú", 0, 470, 960, "center")
+  love.graphics.printf("Enter reintentar · Esc menú", 0, Screen.height - 70, Screen.width, "center")
 end
+
+Gameover.layout()
 
 return Gameover

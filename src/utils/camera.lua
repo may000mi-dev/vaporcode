@@ -98,7 +98,15 @@ end
 
 function Camera.beginDrag(pointerId, x, y)
   if Camera.dragging then return false end
-  if not Util.inside(x, y, Data.camera.dragZone) then return false end
+
+  -- La zona de arrastre se centra en el espacio libre actual (varía con el aspecto).
+  local zoneW = Data.camera.dragZone.w
+  local zoneH = Data.camera.dragZone.h
+  local zoneX = (Screen.width - zoneW) * 0.5
+  local zoneY = (Screen.height - zoneH) * 0.5
+  if x < zoneX or x > zoneX + zoneW or y < zoneY or y > zoneY + zoneH then
+    return false
+  end
 
   Camera.dragging = true
   Camera.dragId = pointerId

@@ -4,6 +4,7 @@ local Data = require("src.run.data")
 local Fonts = require("src.utils.fonts")
 local Util = require("src.utils.util")
 local TextCache = require("src.utils.textcache")
+local Screen = require("src.utils.screen")
 
 local Backpack = {}
 
@@ -17,6 +18,26 @@ local activeY, activeH = 126, 52
 local storageY, storageH, storageGap = 200, 30, 5
 local actionsY, actionH = 354, 40
 local pendingY = 300
+
+-- Centra el panel y recoloca sus elementos según el tamaño visible.
+function Backpack.layout()
+  local panel = Backpack.panel
+  panel.x = (Screen.width - panel.w) * 0.5
+  panel.y = (Screen.height - panel.h) * 0.5
+
+  local close = Backpack.closeButton
+  close.x = panel.x + panel.w - 44
+  close.y = panel.y + 10
+
+  local cancel = Backpack.cancelButton
+  cancel.x = panel.x + panel.w - 100
+  cancel.y = panel.y + 238
+
+  activeY = panel.y + 58
+  storageY = panel.y + 132
+  actionsY = panel.y + 286
+  pendingY = panel.y + 232
+end
 
 -- Claves fijas: una clave concatenada por frame alocaría tanto como el string.
 local activeIndexKeys, activeLabelKeys = {}, {}
@@ -175,7 +196,7 @@ local function drawDetail(run, slot, def)
     love.graphics.printf(
       "Mochila vacía. Los ítems aparecen al derrotar enemigos o abrir cofres.",
       panel.x + 24,
-      310,
+      panel.y + 242,
       panel.w - 48,
       "center"
     )
@@ -188,11 +209,11 @@ local function drawDetail(run, slot, def)
   love.graphics.print(
     TextCache.format("bp-detail", amount > 1 and "%s x%d" or "%s", def.name, amount),
     panel.x + 24,
-    306
+    panel.y + 238
   )
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.72, 0.79, 0.86)
-  love.graphics.printf(def.desc or "", panel.x + 24, 326, panel.w - 48, "left")
+  love.graphics.printf(def.desc or "", panel.x + 24, panel.y + 258, panel.w - 48, "left")
 
   local primaryLabel, primaryEnabled = "Activar", false
   local a1Enabled, a2Enabled = false, false
@@ -247,9 +268,10 @@ local function drawPending(run)
 end
 
 function Backpack.draw(run)
+  Backpack.layout()
   local panel = Backpack.panel
   love.graphics.setColor(0, 0, 0, 0.48)
-  love.graphics.rectangle("fill", 0, 0, 960, 540)
+  love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
   love.graphics.setColor(0.055, 0.075, 0.095, 0.98)
   love.graphics.rectangle("fill", panel.x, panel.y, panel.w, panel.h, 12, 12)
@@ -273,8 +295,8 @@ function Backpack.draw(run)
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.50, 0.60, 0.68)
-  love.graphics.print("ACTIVOS · aplican ahora", panel.x + 24, 108)
-  love.graphics.print("GUARDADOS · consulta y alquimia", panel.x + 24, 184)
+  love.graphics.print("ACTIVOS · aplican ahora", panel.x + 24, panel.y + 40)
+  love.graphics.print("GUARDADOS · consulta y alquimia", panel.x + 24, panel.y + 116)
 
   local pending = run.pendingStorageIndex ~= nil
   for index = 1, Data.inventory.maxActive do

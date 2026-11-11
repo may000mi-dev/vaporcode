@@ -1,6 +1,7 @@
 -- hud.lua: vida, experiencia, monedas, pulso, pausa y capa de depuración.
 local Data = require("src.run.data")
 local Fonts = require("src.utils.fonts")
+local Screen = require("src.utils.screen")
 local Rhythm = require("src.run.rhythm")
 local Save = require("src.run.save")
 local Util = require("src.utils.util")
@@ -9,15 +10,26 @@ local TextCache = require("src.utils.textcache")
 
 local HUD = {}
 
-HUD.pauseButton = { x = 852, y = 10, w = 92, h = 36 }
-HUD.backpackButton = { x = 736, y = 10, w = 104, h = 36 }
-HUD.shopButton = { x = 736, y = 52, w = 104, h = 36 }
+HUD.pauseButton = { x = 0, y = 10, w = 92, h = 36 }
+HUD.backpackButton = { x = 0, y = 10, w = 104, h = 36 }
+HUD.shopButton = { x = 0, y = 52, w = 104, h = 36 }
 
-local inventoryX = 334
+local inventoryX = 0
 local inventoryY = 493
 local inventoryW = 52
 local inventoryH = 38
 local inventoryGap = 6
+
+-- Ancla los botones al borde derecho y centra la franja según el ancho real.
+function HUD.layout()
+  local width = Screen.width
+  HUD.pauseButton.x = width - 108
+  HUD.backpackButton.x = width - 224
+  HUD.shopButton.x = width - 224
+  local strip = Data.inventory.maxActive * inventoryW
+    + (Data.inventory.maxActive - 1) * inventoryGap
+  inventoryX = (width - strip) * 0.5
+end
 
 -- Claves fijas por espacio: una clave concatenada por frame alocaría
 -- tanto como el string que queremos ahorrar.
@@ -25,14 +37,17 @@ local invIndexKeys = { "hud-inv-i1", "hud-inv-i2", "hud-inv-i3", "hud-inv-i4", "
 local invLabelKeys = { "hud-inv-l1", "hud-inv-l2", "hud-inv-l3", "hud-inv-l4", "hud-inv-l5" }
 
 function HUD.hitPause(x, y)
+  HUD.layout()
   return Util.inside(x, y, HUD.pauseButton)
 end
 
 function HUD.hitBackpack(x, y)
+  HUD.layout()
   return Util.inside(x, y, HUD.backpackButton)
 end
 
 function HUD.hitShop(x, y)
+  HUD.layout()
   return Util.inside(x, y, HUD.shopButton)
 end
 
@@ -51,6 +66,7 @@ function HUD.shopUnlocked(run)
 end
 
 function HUD.drawInventory(run)
+  HUD.layout()
   for index = 1, Data.inventory.maxActive do
     local rect = HUD.inventoryRect(index)
     local slot = run.inventory and run.inventory[index]
@@ -101,12 +117,14 @@ function HUD.drawInventory(run)
       #(run.storage or {}),
       Data.inventory.maxInactive
     ),
-    630,
+    inventoryX + Data.inventory.maxActive * inventoryW
+      + (Data.inventory.maxActive - 1) * inventoryGap + 12,
     501
   )
 end
 
 function HUD.draw(run)
+  HUD.layout()
   love.graphics.setColor(0.05, 0.06, 0.08, 0.82)
   love.graphics.rectangle("fill", 10, 8, 500, 122, 8, 8)
 
@@ -263,7 +281,8 @@ function HUD.drawBoss(run)
   local boss = run.boss
   if not boss or boss.dead then return end
 
-  local x, y, w = 340, 132, 280
+  local w = 280
+  local x, y = (Screen.width - w) * 0.5, 132
   love.graphics.setColor(0.05, 0.06, 0.08, 0.88)
   love.graphics.rectangle("fill", x, y, w, 22, 6, 6)
 
@@ -282,21 +301,25 @@ function HUD.drawBoss(run)
 end
 
 function HUD.drawPause(run)
+  local panelW, panelH = 560, 300
+  local px = (Screen.width - panelW) * 0.5
+  local py = (Screen.height - panelH) * 0.5
+
   love.graphics.setColor(0, 0, 0, 0.65)
-  love.graphics.rectangle("fill", 0, 0, 960, 540)
+  love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
   love.graphics.setColor(0.06, 0.08, 0.11, 0.98)
-  love.graphics.rectangle("fill", 200, 120, 560, 300, 12, 12)
+  love.graphics.rectangle("fill", px, py, panelW, panelH, 12, 12)
   love.graphics.setColor(0.30, 0.50, 0.60)
-  love.graphics.rectangle("line", 200, 120, 560, 300, 12, 12)
+  love.graphics.rectangle("line", px, py, panelW, panelH, 12, 12)
 
   love.graphics.setFont(Fonts.title)
   love.graphics.setColor(0.60, 0.90, 1.00)
-  love.graphics.printf("PAUSA", 200, 145, 560, "center")
+  love.graphics.printf("PAUSA", px, py + 25, panelW, "center")
 
   love.graphics.setFont(Fonts.body)
   love.graphics.setColor(0.80, 0.85, 0.90)
-  love.graphics.printf("Toca o pulsa P para continuar", 200, 220, 560, "center")
+  love.graphics.printf("Toca o pulsa P para continuar", px, py + 100, panelW, "center")
 
   love.graphics.setColor(0.60, 0.70, 0.80)
   love.graphics.printf(
@@ -307,9 +330,9 @@ function HUD.drawPause(run)
       run.playerLevel,
       Save.data.coins
     ),
-    200,
-    260,
-    560,
+    px,
+    py + 140,
+    panelW,
     "center"
   )
 
@@ -317,30 +340,30 @@ function HUD.drawPause(run)
   love.graphics.setColor(0.55, 0.62, 0.70)
   love.graphics.printf(
     "Izquierda: moverte · Centro: arrastra para mirar · A1/A2 se asignan en la mochila.",
-    200,
-    310,
-    560,
+    px,
+    py + 190,
+    panelW,
     "center"
   )
   love.graphics.printf(
     "Teclado: WASD/flechas · R/F/E/T habilidades · B mochila · P pausa · F3 depuración",
-    200,
-    335,
-    560,
+    px,
+    py + 215,
+    panelW,
     "center"
   )
   love.graphics.printf(
     "Válvulas: dispara o pisa · Paredes frágiles: Resonancia/Flecha · Cofres: acércate",
-    200,
-    360,
-    560,
+    px,
+    py + 240,
+    panelW,
     "center"
   )
   love.graphics.printf(
     "Ítems: pasivas y mascotas activas son por run · Cofres ocultos: personajes",
-    200,
-    385,
-    560,
+    px,
+    py + 265,
+    panelW,
     "center"
   )
 end
@@ -378,5 +401,7 @@ function HUD.drawDebug(run)
     288
   )
 end
+
+HUD.layout()
 
 return HUD

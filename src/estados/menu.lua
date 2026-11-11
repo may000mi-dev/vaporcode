@@ -5,6 +5,7 @@ local Fonts = require("src.utils.fonts")
 local Util = require("src.utils.util")
 local State = require("src.estados")
 local TextCache = require("src.utils.textcache")
+local Screen = require("src.utils.screen")
 
 local Menu = {
   dungeonRects = {},
@@ -14,7 +15,29 @@ local Menu = {
   selectedDungeonId = "cripta",
   message = nil,
   messageTimer = 0,
+  leftX = 28,
+  rightX = 488,
 }
+
+-- Centra el bloque de dos columnas y realinea los botones al ancho actual.
+function Menu.layout()
+  local leftX = (Screen.width - 904) * 0.5
+  local rightX = leftX + 460
+  Menu.leftX, Menu.rightX = leftX, rightX
+
+  for index, rect in ipairs(Menu.characterRects) do
+    rect.x = leftX + 20
+    rect.y = 132 + (index - 1) * 56
+  end
+  for index, rect in ipairs(Menu.dungeonRects) do
+    rect.x = leftX + 20
+    rect.y = 326 + (index - 1) * 54
+  end
+  for index, rect in ipairs(Menu.upgradeRects) do
+    rect.x = rightX + 20
+    rect.y = 154 + (index - 1) * 58
+  end
+end
 
 local function drawButton(rect, label, sub, enabled, selected, accent)
   if selected then
@@ -107,43 +130,39 @@ function Menu.enter()
     Menu.characterId = "amado"
   end
   Menu.characterRects = {}
-  local y = 132
   for _, id in ipairs(Data.characterOrder) do
     Menu.characterRects[#Menu.characterRects + 1] = {
-      x = 48,
-      y = y,
+      x = 0,
+      y = 0,
       w = 404,
       h = 50,
       id = id,
     }
-    y = y + 56
   end
 
   Menu.dungeonRects = {}
-  y = 326
   for _, dungeon in ipairs(Data.dungeons) do
     Menu.dungeonRects[#Menu.dungeonRects + 1] = {
-      x = 48,
-      y = y,
+      x = 0,
+      y = 0,
       w = 404,
       h = 46,
       def = dungeon,
     }
-    y = y + 54
   end
 
   Menu.upgradeRects = {}
-  y = 154
   for _, id in ipairs(Data.upgradeOrder) do
     Menu.upgradeRects[#Menu.upgradeRects + 1] = {
-      x = 508,
-      y = y,
+      x = 0,
+      y = 0,
       w = 404,
       h = 50,
       id = id,
     }
-    y = y + 58
   end
+
+  Menu.layout()
 end
 
 function Menu.update(dt)
@@ -183,6 +202,7 @@ end
 
 function Menu.mousepressed(x, y, button)
   if button ~= 1 then return end
+  Menu.layout()
 
   for _, rect in ipairs(Menu.characterRects) do
     if Util.inside(x, y, rect) then
@@ -217,40 +237,48 @@ function Menu.touchreleased(id, x, y) end
 function Menu.focus(focused) end
 
 function Menu.draw()
+  Menu.layout()
   love.graphics.setColor(0.04, 0.05, 0.07)
-  love.graphics.rectangle("fill", 0, 0, 960, 540)
+  love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
   love.graphics.setColor(0.06, 0.08, 0.11)
-  love.graphics.circle("fill", 20, 520, 130)
-  love.graphics.circle("fill", 950, 20, 150)
+  love.graphics.circle("fill", 20, Screen.height - 20, 130)
+  love.graphics.circle("fill", Screen.width - 10, 20, 150)
 
   love.graphics.setFont(Fonts.title)
   love.graphics.setColor(0.55, 0.90, 1.00)
-  love.graphics.printf("ROGUELIKE STEAMPUNK MUSICAL", 0, 16, 960, "center")
+  love.graphics.printf("ROGUELIKE STEAMPUNK MUSICAL", 0, 16, Screen.width, "center")
 
   love.graphics.setFont(Fonts.subtitle)
   love.graphics.setColor(0.72, 0.78, 0.85)
-  love.graphics.printf("May000mi · Prototipo LÖVE 11.5 · V5", 0, 54, 960, "center")
+  love.graphics.printf("May000mi · Prototipo LÖVE 11.5 · V5", 0, 54, Screen.width, "center")
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.55, 0.85, 0.95)
   love.graphics.print(TextCache.format("menu-record", "Récord: piso %d", Save.data.bestLevel), 24, 18)
 
   love.graphics.setColor(1.00, 0.85, 0.35)
-  love.graphics.printf(TextCache.format("menu-coins", "Monedas: %d", Save.data.coins), 620, 18, 316, "right")
+  love.graphics.printf(
+    TextCache.format("menu-coins", "Monedas: %d", Save.data.coins),
+    Screen.width - 340,
+    18,
+    316,
+    "right"
+  )
 
+  local leftX, rightX = Menu.leftX, Menu.rightX
   love.graphics.setColor(0.07, 0.09, 0.12, 0.95)
-  love.graphics.rectangle("fill", 28, 96, 444, 420, 10, 10)
-  love.graphics.rectangle("fill", 488, 96, 444, 420, 10, 10)
+  love.graphics.rectangle("fill", leftX, 96, 444, 420, 10, 10)
+  love.graphics.rectangle("fill", rightX, 96, 444, 420, 10, 10)
   love.graphics.setColor(0.18, 0.22, 0.28)
-  love.graphics.rectangle("line", 28, 96, 444, 420, 10, 10)
-  love.graphics.rectangle("line", 488, 96, 444, 420, 10, 10)
+  love.graphics.rectangle("line", leftX, 96, 444, 420, 10, 10)
+  love.graphics.rectangle("line", rightX, 96, 444, 420, 10, 10)
 
   love.graphics.setFont(Fonts.button)
   love.graphics.setColor(0.60, 0.90, 1.00)
-  love.graphics.print("Personaje", 48, 108)
-  love.graphics.print("Mazmorras", 48, 302)
-  love.graphics.print("Mejoras permanentes", 508, 108)
+  love.graphics.print("Personaje", leftX + 20, 108)
+  love.graphics.print("Mazmorras", leftX + 20, 302)
+  love.graphics.print("Mejoras permanentes", rightX + 20, 108)
 
   for _, rect in ipairs(Menu.characterRects) do
     local def = Data.characters[rect.id]
@@ -302,7 +330,7 @@ function Menu.draw()
   love.graphics.setColor(0.60, 0.70, 0.78)
   love.graphics.printf(
     "A1/A2 se encuentran como ítems y se asignan desde la mochila. Escudo y Turbo siempre están activos.",
-    508,
+    rightX + 20,
     356,
     404,
     "center"
@@ -311,7 +339,7 @@ function Menu.draw()
   if Menu.message and Menu.messageTimer > 0 then
     love.graphics.setFont(Fonts.body)
     love.graphics.setColor(1.00, 0.90, 0.50)
-    love.graphics.printf(Menu.message, 0, 496, 960, "center")
+    love.graphics.printf(Menu.message, 0, 496, Screen.width, "center")
   end
 
   love.graphics.setFont(Fonts.small)
@@ -320,7 +348,7 @@ function Menu.draw()
     "Toca personaje y mazmorra. Teclado: 1-3 mazmorra · A/S/D personaje · Q/W/E mejoras · Enter inicia",
     0,
     522,
-    960,
+    Screen.width,
     "center"
   )
 end

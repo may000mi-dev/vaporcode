@@ -1,6 +1,7 @@
 -- buttons.lua: cuatro acciones táctiles; A1/A2 dependen del equipamiento.
 local Data = require("src.run.data")
 local Fonts = require("src.utils.fonts")
+local Screen = require("src.utils.screen")
 
 local Buttons = {}
 Buttons.__index = Buttons
@@ -9,15 +10,27 @@ function Buttons.new()
   local self = setmetatable({}, Buttons)
   self.active = {}
   self.items = {
-    { slot = 1, keyLabel = "R", x = 620, y = 318, r = 42 },
-    { slot = 2, keyLabel = "F", x = 852, y = 318, r = 42 },
-    { slot = 3, keyLabel = "E", x = 736, y = 382, r = 42 },
-    { slot = 4, keyLabel = "T", x = 736, y = 238, r = 42 },
+    { slot = 1, keyLabel = "R", x = 0, y = 0, r = 42 },
+    { slot = 2, keyLabel = "F", x = 0, y = 0, r = 42 },
+    { slot = 3, keyLabel = "E", x = 0, y = 0, r = 42 },
+    { slot = 4, keyLabel = "T", x = 0, y = 0, r = 42 },
   }
+  self:layout()
   return self
 end
 
+-- Mantiene el diamante de habilidades anclado a la esquina inferior derecha.
+function Buttons:layout()
+  local width, height = Screen.width, Screen.height
+  local centerX = width - 224
+  self.items[1].x, self.items[1].y = width - 340, height - 222
+  self.items[2].x, self.items[2].y = width - 108, height - 222
+  self.items[3].x, self.items[3].y = centerX, height - 158
+  self.items[4].x, self.items[4].y = centerX, height - 302
+end
+
 function Buttons:press(pointerId, x, y)
+  self:layout()
   for _, button in ipairs(self.items) do
     local dx = x - button.x
     local dy = y - button.y
@@ -38,6 +51,7 @@ function Buttons:clear()
 end
 
 function Buttons:draw(run)
+  self:layout()
   for _, button in ipairs(self.items) do
     local abilityId = run:abilityIdForSlot(button.slot)
     local def = abilityId and Data.abilities[abilityId]

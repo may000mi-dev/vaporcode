@@ -4,6 +4,7 @@ local Save = require("src.run.save")
 local Fonts = require("src.utils.fonts")
 local Util = require("src.utils.util")
 local TextCache = require("src.utils.textcache")
+local Screen = require("src.utils.screen")
 
 local Shop = {}
 
@@ -14,6 +15,21 @@ Shop.tabAlchemy = { x = 306, y = 92, w = 150, h = 34 }
 
 local rowW, rowH, rowGap = 328, 38, 6
 local listY = 136
+
+-- Centra el panel y sus pestañas en el área visible actual.
+function Shop.layout()
+  local panel = Shop.panel
+  panel.x = (Screen.width - panel.w) * 0.5
+  panel.y = (Screen.height - panel.h) * 0.5
+
+  local close = Shop.closeButton
+  close.x = panel.x + panel.w - 46
+  close.y = panel.y + 10
+
+  Shop.tabBuy.x, Shop.tabBuy.y = panel.x + 26, panel.y + 48
+  Shop.tabAlchemy.x, Shop.tabAlchemy.y = panel.x + 186, panel.y + 48
+  listY = panel.y + 92
+end
 
 -- Precios estáticos: se precalculan una sola vez al cargar el módulo.
 local priceText = {}
@@ -51,7 +67,7 @@ end
 local function drawPanel()
   local panel = Shop.panel
   love.graphics.setColor(0, 0, 0, 0.50)
-  love.graphics.rectangle("fill", 0, 0, 960, 540)
+  love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
   love.graphics.setColor(0.055, 0.070, 0.085, 0.98)
   love.graphics.rectangle("fill", panel.x, panel.y, panel.w, panel.h, 12, 12)
   love.graphics.setColor(0.78, 0.60, 0.24)
@@ -151,6 +167,7 @@ local function drawAlchemy(run)
 end
 
 function Shop.draw(run)
+  Shop.layout()
   drawPanel()
 
   love.graphics.setFont(Fonts.button)
@@ -197,6 +214,7 @@ function Shop.draw(run)
 end
 
 function Shop.pressed(run, x, y)
+  Shop.layout()
   if Util.inside(x, y, Shop.closeButton) then
     run.overlay = nil
     return true
@@ -236,5 +254,7 @@ function Shop.pressed(run, x, y)
 
   return Util.inside(x, y, Shop.panel)
 end
+
+Shop.layout()
 
 return Shop

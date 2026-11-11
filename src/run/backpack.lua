@@ -13,6 +13,7 @@ local Backpack = {
   storageRect = View.storageRect,
   actionRect = View.actionRect,
   draw = View.draw,
+  layout = View.layout,
 }
 
 local function slotAt(first, last, rectFn, x, y)
@@ -25,6 +26,7 @@ local function slotAt(first, last, rectFn, x, y)
 end
 
 function Backpack.pressed(run, x, y)
+  View.layout()
   if Util.inside(x, y, Backpack.closeButton) then
     run.overlay = nil
     run.pendingStorageIndex = nil

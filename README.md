@@ -10,6 +10,14 @@ uno o dos pulgares. Prototipo para Android/Termux primero; escritorio después.
 - **Meta-progresión:** monedas, mejoras permanentes, personajes y mazmorras
   desbloqueables que sobreviven entre partidas.
 
+## Pantalla
+
+La resolución virtual se adapta al dispositivo: la altura lógica es 540 y el
+ancho crece con el aspecto (960 en 16:9, ~1200 en 20:9). En teléfonos el juego
+ocupa toda la pantalla en horizontal, sin barras negras laterales; en tabletas
+4:3 se mantiene el letterboxing. El HUD y los paneles se recolocan al cambiar
+de tamaño o al entrar en pantalla completa.
+
 ## Estado
 
 MVP jugable (V6). Incluye combate automático, tres personajes, cinco habilidades,
