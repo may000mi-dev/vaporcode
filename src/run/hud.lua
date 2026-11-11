@@ -51,10 +51,12 @@ function HUD.shopUnlocked(run)
 end
 
 function HUD.drawInventory(run)
-  for index = 1, Data.inventory.maxSlots do
+  for index = 1, Data.inventory.maxActive do
     local rect = HUD.inventoryRect(index)
     local slot = run.inventory and run.inventory[index]
-    local selected = run.overlay == "backpack" and run.selectedInventory == index
+    local selected = run.overlay == "backpack"
+      and run.selectionSection == "active"
+      and run.selectedInventory == index
 
     love.graphics.setColor(0.05, 0.065, 0.08, 0.86)
     love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 6, 6)
@@ -89,6 +91,19 @@ function HUD.drawInventory(run)
       love.graphics.print("--", rect.x + 22, rect.y + 20)
     end
   end
+
+  love.graphics.setFont(Fonts.small)
+  love.graphics.setColor(0.55, 0.64, 0.72)
+  love.graphics.print(
+    TextCache.format(
+      "hud-storage",
+      "Guardados %d/%d",
+      #(run.storage or {}),
+      Data.inventory.maxInactive
+    ),
+    630,
+    501
+  )
 end
 
 function HUD.draw(run)
@@ -322,7 +337,7 @@ function HUD.drawPause(run)
     "center"
   )
   love.graphics.printf(
-    "Ítems: enemigos y cofres · Pasivas y mascotas son por run · Cofres ocultos: personajes",
+    "Ítems: pasivas y mascotas activas son por run · Cofres ocultos: personajes",
     200,
     385,
     560,
@@ -356,7 +371,8 @@ function HUD.drawDebug(run)
     272
   )
   love.graphics.print(
-    "Mochila " .. #(run.inventory or {}) .. "/" .. Data.inventory.maxSlots
+    "Mochila " .. #(run.inventory or {}) .. "/" .. Data.inventory.maxActive
+      .. " · Guardados " .. #(run.storage or {}) .. "/" .. Data.inventory.maxInactive
       .. " · Capa " .. tostring(run.overlay or "ninguna"),
     20,
     288

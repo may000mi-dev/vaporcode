@@ -106,8 +106,19 @@ ser élite.
 
 ## Ítems
 
-Mochila de 5 espacios; los ítems en el suelo duran 7 s (parpadean el último 1.5 s).
-Las pasivas se acumulan hasta su máximo; mascotas y desbloqueos son únicos.
+Inventario de **5 espacios activos + 15 guardados**. Solo los activos aplican
+efectos y se ven en el HUD; los guardados son reserva y materia prima de alquimia.
+Los ítems en el suelo duran 7 s (parpadean el último 1.5 s). Las pasivas se
+acumulan hasta su máximo global (activos + guardados); mascotas y desbloqueos son
+únicos.
+
+- **Colocación:** pasivas y mascotas entran activas si hay hueco; si no, quedan
+  guardadas. Las habilidades siempre caen en guardados.
+- **Activar un guardado:** con hueco libre sube a activos; con los 5 activos llenos
+  se pide elegir uno para **intercambiarlo** (nada se pierde).
+- **Guardar un activo:** libera su efecto y lo manda a la reserva; es el paso previo
+  para alquimia o para hacer espacio.
+- **Asignar habilidad:** un ítem `*_skill` guardado se asigna a A1/A2 y se consume.
 
 - **Pasivas apilables (máx 5):** Veneno (daño en tiempo), Vampiro (roba vida con el
   básico), Hada (recupera maná con el básico), Pólvora (explosión con aturdimiento).
@@ -121,8 +132,9 @@ Las pasivas se acumulan hasta su máximo; mascotas y desbloqueos son únicos.
 
 ### Alquimia
 
-Dos ítems pasivos iguales del mismo nivel se combinan y suben a x2, x3, x4 o x5.
-Costo: 10, 30, 50 y 150 monedas.
+Dos ítems pasivos iguales del mismo nivel **guardados** se combinan y suben a x2,
+x3, x4 o x5. Costo: 10, 30, 50 y 150 monedas. El resultado queda guardado y no
+aplica efectos hasta activarse.
 
 ### Tienda
 

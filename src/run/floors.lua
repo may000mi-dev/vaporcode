@@ -65,11 +65,15 @@ function Floors.enter(run, dungeonId, characterId, abilityId)
   run.itemDrops = {}
   run.hazards = {}
   run.inventory = {}
+  run.storage = {}
   run.inventoryFullTimer = 0
   run.tornado = nil
   run.unlockNotices = {}
   run.overlay = nil
   run.selectedInventory = 1
+  run.selectedStorage = 1
+  run.selectionSection = "active"
+  run.pendingStorageIndex = nil
   run.shopTab = "buy"
   run.touchUI = Util.isMobile()
   run.joystick = Joystick.new()
@@ -186,6 +190,9 @@ function Floors.retryFloor(run, snapshot)
   run.unlockNotices = {}
   run.overlay = nil
   run.selectedInventory = 1
+  run.selectedStorage = 1
+  run.selectionSection = "active"
+  run.pendingStorageIndex = nil
   run.shopTab = "buy"
   run.touchUI = Util.isMobile()
   run.joystick = Joystick.new()

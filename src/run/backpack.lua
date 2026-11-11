@@ -1,198 +1,89 @@
--- backpack.lua: mochila de 5 espacios; el juego sigue corriendo mientras está abierta.
+-- backpack.lua: interacción de la mochila; 5 activos y 15 guardados.
+-- Activar pasivas/mascotas usa un hueco libre o pide intercambio; las
+-- habilidades se asignan a A1/A2 directamente desde los guardados.
 local Data = require("src.run.data")
-local Fonts = require("src.utils.fonts")
 local Util = require("src.utils.util")
-local TextCache = require("src.utils.textcache")
+local View = require("src.run.backpack_view")
 
-local Backpack = {}
+local Backpack = {
+  panel = View.panel,
+  closeButton = View.closeButton,
+  cancelButton = View.cancelButton,
+  activeRect = View.activeRect,
+  storageRect = View.storageRect,
+  actionRect = View.actionRect,
+  draw = View.draw,
+}
 
-Backpack.panel = { x = 178, y = 68, w = 604, h = 404 }
-Backpack.closeButton = { x = 738, y = 78, w = 32, h = 32 }
-
-local slotW, slotH, slotGap = 104, 82, 10
-local slotY = 132
-
--- Claves fijas por espacio: una clave concatenada por frame alocaría
--- tanto como el string que queremos ahorrar.
-local slotIndexKeys = { "bp-i1", "bp-i2", "bp-i3", "bp-i4", "bp-i5" }
-local slotLabelKeys = { "bp-l1", "bp-l2", "bp-l3", "bp-l4", "bp-l5" }
-
-function Backpack.slotRect(index)
-  local panel = Backpack.panel
-  local x = panel.x + 24 + (index - 1) * (slotW + slotGap)
-  return { x = x, y = slotY, w = slotW, h = slotH }
-end
-
-local function actionRect(index)
-  local panel = Backpack.panel
-  local width = 150
-  local gap = 16
-  local total = width * 3 + gap * 2
-  local startX = panel.x + (panel.w - total) * 0.5
-  return {
-    x = startX + (index - 1) * (width + gap),
-    y = 356,
-    w = width,
-    h = 42,
-  }
-end
-
-local function drawAction(rect, label, enabled, color)
-  if enabled then
-    love.graphics.setColor(0.12, 0.19, 0.23, 0.98)
-  else
-    love.graphics.setColor(0.09, 0.11, 0.13, 0.95)
-  end
-  love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 7, 7)
-  if enabled and color then
-    love.graphics.setColor(color[1], color[2], color[3])
-  else
-    love.graphics.setColor(0.28, 0.36, 0.42)
-  end
-  love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 7, 7)
-  love.graphics.setFont(Fonts.body)
-  love.graphics.setColor(enabled and 1 or 0.48, enabled and 1 or 0.52, enabled and 1 or 0.58)
-  love.graphics.printf(label, rect.x, rect.y + 11, rect.w, "center")
-end
-
-function Backpack.draw(run)
-  local panel = Backpack.panel
-  love.graphics.setColor(0, 0, 0, 0.48)
-  love.graphics.rectangle("fill", 0, 0, 960, 540)
-
-  love.graphics.setColor(0.055, 0.075, 0.095, 0.98)
-  love.graphics.rectangle("fill", panel.x, panel.y, panel.w, panel.h, 12, 12)
-  love.graphics.setColor(0.30, 0.52, 0.60)
-  love.graphics.rectangle("line", panel.x, panel.y, panel.w, panel.h, 12, 12)
-
-  love.graphics.setFont(Fonts.button)
-  love.graphics.setColor(0.62, 0.92, 1.00)
-  love.graphics.print("MOCHILA", panel.x + 24, panel.y + 18)
-  love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.58, 0.68, 0.76)
-  love.graphics.print("El juego sigue activo · máximo 5 ítems", panel.x + 150, panel.y + 22)
-
-  local close = Backpack.closeButton
-  love.graphics.setColor(0.10, 0.13, 0.16, 0.98)
-  love.graphics.rectangle("fill", close.x, close.y, close.w, close.h, 6, 6)
-  love.graphics.setColor(0.55, 0.70, 0.78)
-  love.graphics.rectangle("line", close.x, close.y, close.w, close.h, 6, 6)
-  love.graphics.setFont(Fonts.button)
-  love.graphics.printf("X", close.x, close.y + 6, close.w, "center")
-
-  for index = 1, Data.inventory.maxSlots do
-    local rect = Backpack.slotRect(index)
-    local slot = run.inventory[index]
-    local selected = run.selectedInventory == index
-
-    love.graphics.setColor(0.045, 0.060, 0.075, 0.98)
-    love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 8, 8)
-    if selected then
-      love.graphics.setColor(1.00, 0.82, 0.32)
-      love.graphics.setLineWidth(3)
-    else
-      love.graphics.setColor(0.20, 0.28, 0.34)
-      love.graphics.setLineWidth(1)
-    end
-    love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 8, 8)
-    love.graphics.setLineWidth(1)
-
-    love.graphics.setFont(Fonts.small)
-    love.graphics.setColor(0.44, 0.52, 0.60)
-    love.graphics.print(TextCache.format(slotIndexKeys[index], "i%d", index), rect.x + 7, rect.y + 5)
-
-    if slot then
-      local def = Data.items[slot.itemId]
-      local color = def.color
-      love.graphics.setColor(color[1], color[2], color[3], 0.20)
-      love.graphics.circle("fill", rect.x + rect.w * 0.5, rect.y + 35, 22)
-      love.graphics.setColor(color[1], color[2], color[3])
-      love.graphics.circle("fill", rect.x + rect.w * 0.5, rect.y + 35, 14)
-      love.graphics.setFont(Fonts.button)
-      love.graphics.setColor(1, 1, 1)
-      local amount = slot.amount or 1
-      local fmt = amount > 1 and "%sx%d" or "%s"
-      love.graphics.printf(TextCache.format(slotLabelKeys[index], fmt, def.short, amount), rect.x, rect.y + 27, rect.w, "center")
-      love.graphics.setFont(Fonts.small)
-      love.graphics.setColor(0.72, 0.78, 0.84)
-      love.graphics.printf(def.name, rect.x + 4, rect.y + 58, rect.w - 8, "center")
-    else
-      love.graphics.setFont(Fonts.small)
-      love.graphics.setColor(0.30, 0.36, 0.42)
-      love.graphics.printf("vacío", rect.x, rect.y + 38, rect.w, "center")
+local function slotAt(first, last, rectFn, x, y)
+  for index = first, last do
+    if Util.inside(x, y, rectFn(index)) then
+      return index
     end
   end
-
-  local slot = run.inventory[run.selectedInventory]
-  local def = slot and Data.items[slot.itemId]
-  love.graphics.setFont(Fonts.body)
-  if def then
-    love.graphics.setColor(def.color[1], def.color[2], def.color[3])
-    local amount = slot.amount or 1
-    local fmt = amount > 1 and "%s x%d" or "%s"
-    love.graphics.print(TextCache.format("bp-detail", fmt, def.name, amount), panel.x + 24, 234)
-    love.graphics.setFont(Fonts.small)
-    love.graphics.setColor(0.72, 0.79, 0.86)
-    love.graphics.printf(def.desc or "", panel.x + 24, 258, panel.w - 48, "left")
-
-    local a1 = actionRect(1)
-    local a2 = actionRect(2)
-    local discard = actionRect(3)
-    local canEquip = def.kind == "ability"
-    drawAction(a1, "Asignar a A1 (R)", canEquip, def.color)
-    drawAction(a2, "Asignar a A2 (F)", canEquip, def.color)
-    drawAction(discard, "Tirar ítem", true, { 0.95, 0.45, 0.35 })
-  else
-    love.graphics.setColor(0.60, 0.68, 0.76)
-    love.graphics.printf(
-      "Mochila vacía. Los ítems aparecen al derrotar enemigos o abrir cofres.",
-      panel.x + 24,
-      244,
-      panel.w - 48,
-      "center"
-    )
-  end
-
-  love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.52, 0.60, 0.68)
-  love.graphics.printf(
-    "Toca un espacio para seleccionarlo · B cierra · 1-5 selecciona · Q/W asigna · X tira",
-    panel.x + 24,
-    panel.y + panel.h - 28,
-    panel.w - 48,
-    "center"
-  )
+  return nil
 end
 
 function Backpack.pressed(run, x, y)
   if Util.inside(x, y, Backpack.closeButton) then
     run.overlay = nil
+    run.pendingStorageIndex = nil
     return true
   end
 
-  for index = 1, Data.inventory.maxSlots do
-    if Util.inside(x, y, Backpack.slotRect(index)) then
-      run.selectedInventory = index
+  if run.pendingStorageIndex then
+    if Util.inside(x, y, Backpack.cancelButton) then
+      run.pendingStorageIndex = nil
       return true
     end
+    local activeIndex = slotAt(1, Data.inventory.maxActive, Backpack.activeRect, x, y)
+    if activeIndex then
+      run:swapActiveForStored(activeIndex, run.pendingStorageIndex)
+      run.pendingStorageIndex = nil
+      run.selectionSection = "active"
+      run.selectedInventory = activeIndex
+      return true
+    end
+    return Util.inside(x, y, Backpack.panel)
   end
 
-  local slot = run.inventory[run.selectedInventory]
-  local def = slot and Data.items[slot.itemId]
+  local activeIndex = slotAt(1, Data.inventory.maxActive, Backpack.activeRect, x, y)
+  if activeIndex then
+    run.selectionSection = "active"
+    run.selectedInventory = activeIndex
+    return true
+  end
+
+  local storageIndex = slotAt(1, Data.inventory.maxInactive, Backpack.storageRect, x, y)
+  if storageIndex then
+    run.selectionSection = "inactive"
+    run.selectedStorage = storageIndex
+    return true
+  end
+
+  local section, index, slot, def = run:selectedSlot()
   if def then
-    local a1 = actionRect(1)
-    local a2 = actionRect(2)
-    local discard = actionRect(3)
-    if def.kind == "ability" and Util.inside(x, y, a1) then
-      run:equipInventoryAbility(run.selectedInventory, 1)
+    if Util.inside(x, y, Backpack.actionRect(1)) then
+      if section == "active" then
+        if run:storeActive(index) == "full" then
+          run:notify("Guardados llenos", { 1.00, 0.45, 0.35 })
+        end
+      elseif run:activateStored(index) == "needs_swap" then
+        run.pendingStorageIndex = index
+      end
       return true
-    elseif def.kind == "ability" and Util.inside(x, y, a2) then
-      run:equipInventoryAbility(run.selectedInventory, 2)
+    elseif Util.inside(x, y, Backpack.actionRect(2)) then
+      if section == "inactive" then run:equipStoredAbility(index, 1) end
       return true
-    elseif Util.inside(x, y, discard) then
-      run:removeInventoryAt(run.selectedInventory)
+    elseif Util.inside(x, y, Backpack.actionRect(3)) then
+      if section == "inactive" then run:equipStoredAbility(index, 2) end
+      return true
+    elseif Util.inside(x, y, Backpack.actionRect(4)) then
+      run:removeItemAt(section, index)
       return true
     end
+  elseif slot then
+    return true
   end
 
   return Util.inside(x, y, Backpack.panel)

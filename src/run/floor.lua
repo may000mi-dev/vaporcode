@@ -47,6 +47,7 @@ function Floor.capture(run)
     timeLeft = run.timeLeft,
     passiveStacks = copyMap(run.passiveStacks),
     inventory = copyInventory(run.inventory),
+    storage = copyInventory(run.storage),
     pets = {},
     fluteReady = run.fluteReady,
   }
@@ -85,6 +86,7 @@ function Floor.restore(run, snapshot)
   run.timeLeft = snapshot.timeLeft
   run.passiveStacks = copyMap(snapshot.passiveStacks)
   run.inventory = copyInventory(snapshot.inventory)
+  run.storage = copyInventory(snapshot.storage)
   run.pets = {}
   run.petSnapshot = snapshot.pets or {}
   run.fluteReady = snapshot.fluteReady and true or false

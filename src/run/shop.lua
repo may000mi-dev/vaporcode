@@ -100,7 +100,7 @@ local function drawAlchemy(run)
     love.graphics.setFont(Fonts.body)
     love.graphics.setColor(0.68, 0.76, 0.84)
     love.graphics.printf(
-      "Necesitas dos ítems pasivos iguales y del mismo nivel. Cada combinación sube x1 hasta x5.",
+      "Necesitas dos ítems pasivos iguales y del mismo nivel en tus guardados. Cada combinación sube x1 hasta x5.",
       Shop.panel.x + 40,
       190,
       Shop.panel.w - 80,
@@ -188,7 +188,7 @@ function Shop.draw(run)
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.52, 0.60, 0.68)
   love.graphics.printf(
-    "Toca un artículo para comprar · Alquimia combina dos ítems iguales · V/escape cierra",
+    "Toca un artículo para comprar · Alquimia combina dos guardados iguales · V/escape cierra",
     Shop.panel.x + 26,
     Shop.panel.y + Shop.panel.h - 26,
     Shop.panel.w - 52,

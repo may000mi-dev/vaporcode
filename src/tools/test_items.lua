@@ -63,6 +63,7 @@ assert(not unlockItem.dead, "el ítem de personaje no debe caducar")
 Run.player = fakePlayer
 Run.pets = {}
 Run.inventory = {}
+Run.storage = {}
 Run.passiveStacks = {}
 assert(Run:addItemToInventory("poison", 2) == "ok", "debe aceptar una pasiva x2")
 assert(Run.passiveStacks.poison == 2, "la pasiva debe reflejarse en el inventario")
@@ -72,14 +73,17 @@ assert(#Run.inventory == 2, "las copias iguales no se fusionan solas")
 assert(Run:addItemToInventory("poison", 1) == "duplicate", "no debe pasar del máximo total")
 
 Run.inventory = {}
+Run.storage = {}
 Run.passiveStacks = {}
 assert(Run:addItemToInventory("poison", 1) == "ok", "la primera copia debe entrar")
 assert(Run:addItemToInventory("poison", 1) == "ok", "la segunda copia debe entrar")
+assert(Run:storeActive(1) == "ok", "la primera copia debe guardarse")
+assert(Run:storeActive(1) == "ok", "la segunda copia debe guardarse")
 Save.data.coins = 10
 local pair = Run:alchemyCandidates()[1]
-assert(pair and pair.cost == 10, "dos x1 deben poder combinarse por diez monedas")
+assert(pair and pair.cost == 10, "dos x1 guardados deben combinarse por diez monedas")
 assert(Run:combineAlchemy(pair), "la alquimia debe combinar el par")
-assert(#Run.inventory == 1 and Run.inventory[1].amount == 2, "el resultado debe ser un solo x2")
+assert(#Run.storage == 1 and Run.storage[1].amount == 2, "el resultado debe ser un solo x2 guardado")
 assert(Save.data.coins == 0, "la alquimia debe cobrar monedas")
 
 Run.playerLevel = 14
@@ -92,6 +96,7 @@ Run.depth = 10
 assert(Hud.shopUnlocked(Run), "nivel 15 y piso 10 deben abrir la tienda")
 
 Run.inventory = {}
+Run.storage = {}
 Run.passiveStacks = {}
 Run.shopTab = "buy"
 Save.data.coins = 500
@@ -106,29 +111,32 @@ Save.data.coins = 0
 assert(Run:buyItem("poison") == "coins", "sin monedas no debe comprar")
 
 Run.inventory = {}
+Run.storage = {}
 Run.abilitySlot1 = nil
 Run.abilitySlot2 = nil
-assert(Run:addItemToInventory("light_arrow_skill", 1) == "ok", "la habilidad debe entrar a la mochila")
-assert(Run:equipInventoryAbility(1, 1), "la habilidad debe asignarse a A1")
+assert(Run:addItemToInventory("light_arrow_skill", 1) == "stored", "la habilidad debe entrar a guardados")
+assert(Run:equipStoredAbility(1, 1), "la habilidad debe asignarse a A1")
 assert(Run.abilitySlot1 == "light_arrow", "A1 debe quedar equipada")
-assert(#Run.inventory == 0, "asignar consume el ítem de habilidad")
-assert(Run:addItemToInventory("light_arrow_skill", 1) == "ok", "puede caer otra copia")
-assert(Run:equipInventoryAbility(1, 2), "la copia debe asignarse a A2")
+assert(#Run.storage == 0, "asignar consume el ítem de habilidad")
+assert(Run:addItemToInventory("light_arrow_skill", 1) == "stored", "puede caer otra copia")
+assert(Run:equipStoredAbility(1, 2), "la copia debe asignarse a A2")
 assert(Run.abilitySlot1 == "light_arrow" and Run.abilitySlot2 == "light_arrow", "A1 y A2 pueden repetir")
 
 Run.inventory = {}
+Run.storage = {}
 for _, id in ipairs({ "poison", "vampire", "fairy", "gunpowder", "drum" }) do
   assert(Run:addItemToInventory(id, 1) == "ok", "debe llenarse el inventario")
 end
-assert(Run:addItemToInventory("flute", 1) == "full", "el sexto ítem debe bloquearse")
-Run:removeInventoryAt(1)
+assert(Run:addItemToInventory("flute", 1) == "stored", "el sexto ítem debe quedar guardado")
+Run:removeItemAt("active", 1)
 assert(Run.passiveStacks.poison == nil, "tirar una pasiva debe recalcular efectos")
 
 Run.inventory = {}
+Run.storage = {}
 Run.pets = {}
 assert(Run:addItemToInventory("dog", 1) == "ok", "la mascota debe ocupar un espacio")
 assert(#Run.pets == 1, "la mascota debe activarse")
-Run:removeInventoryAt(1)
+Run:removeItemAt("active", 1)
 assert(#Run.pets == 0 or Run.pets[1].dead, "tirar la mascota debe retirarla")
 
 Run.stats = { damage = 10, maxHp = 100, speed = 150 }

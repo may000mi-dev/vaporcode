@@ -63,8 +63,9 @@ habilidades, botín, estados, piso/reintento, cámara y caché de textos.
 | Silenciar | M | — |
 | Depuración | F3 | — |
 
-Dentro de la mochila: `1`–`5` selecciona espacio, `Q` asigna a A1, `W` asigna a
-A2, `X` tira el ítem y `Escape` cierra.
+Dentro de la mochila: `1`–`5` selecciona un activo, `Tab` recorre los 20 espacios,
+`Enter` activa el guardado o guarda el activo, `Q`/`W` asignan una habilidad
+guardada a A1/A2, `X` tira el ítem y `Escape` cierra (o cancela un intercambio).
 
 ## Estructura
 
@@ -78,7 +79,7 @@ src/
 │   ├── characters.lua     -- personajes, marca de Amado, desbloqueos
 │   ├── dungeons.lua       -- mazmorras, índice por id, cadencia de jefes
 │   ├── enemies.lua        -- tipos, élites, hazards, IA, aparición
-│   ├── items.lua          -- ítems, mascotas, mochila, tienda, alquimia
+│   ├── items.lua          -- ítems, mascotas, espacios y reglas de tienda
 │   └── upgrades.lua       -- mejoras permanentes
 ├── estados/               -- menú, pausa, game over
 ├── run/                   -- partida; run.lua orquesta y monta los sistemas

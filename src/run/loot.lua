@@ -17,8 +17,7 @@ function Loot.itemCandidates(run, poolName)
     local allowed = true
     if def.kind == "passive" and def.stackable and run:passiveMaxed(id) then
       allowed = false
-    elseif def.maxStacks == 1
-      and ((run.passiveStacks and run.passiveStacks[id]) or 0) > 0 then
+    elseif def.maxStacks == 1 and run:totalAmount(id) > 0 then
       allowed = false
     elseif def.kind == "pet" and run:ownsPet(def.pet) then
       allowed = false
@@ -132,15 +131,9 @@ function Loot.openChest(run, chest)
 end
 
 function Loot.onPetKilled(run, pet)
-  local item, index = run:findInventoryItem(pet.kind)
+  local item, index, section = run:findInventoryItem(pet.kind)
   if item and index then
-    table.remove(run.inventory, index)
-    local count = #run.inventory
-    if count == 0 then
-      run.selectedInventory = 1
-    elseif run.selectedInventory > count then
-      run.selectedInventory = count
-    end
+    run:removeItemAt(section or "active", index)
   end
   FX.burst(pet.x, pet.y, 14, Data.items[pet.kind].color)
   FX.add(
@@ -191,6 +184,12 @@ function Loot.pickupItem(run, item, pet)
         FX.add("¡" .. def.name .. " se une!", x, y - 24, def.color)
       elseif def.kind == "ability" then
         FX.add(def.name .. " · abre la mochila", x, y - 24, def.color)
+      end
+    elseif status == "stored" then
+      if def.kind == "ability" then
+        FX.add(def.name .. " · abre la mochila", x, y - 24, def.color)
+      else
+        FX.add(def.name .. " · guardado", x, y - 24, def.color)
       end
     end
   end

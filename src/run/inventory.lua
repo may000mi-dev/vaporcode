@@ -1,12 +1,26 @@
--- inventory.lua: mochila, pasivas, tienda de engranajes y alquimia.
--- Las funciones reciben run como primer argumento y run.lua las monta
--- como métodos para conservar la API run:metodo(...).
+-- inventory.lua: espacios activos, pasivas, mascotas y tienda.
+-- Los guardados y la alquimia viven en storage.lua. Las funciones reciben
+-- run como primer argumento y run.lua las monta como métodos run:metodo(...).
 local Data = require("src.run.data")
 local Save = require("src.run.save")
 local FX = require("src.run.fx")
 local Hud = require("src.run.hud")
 
 local Inventory = {}
+
+local selectionKeys = { active = "selectedInventory", inactive = "selectedStorage" }
+
+function Inventory.totalAmount(run, itemId)
+  local total = 0
+  for _, list in ipairs({ run.inventory or {}, run.storage or {} }) do
+    for _, slot in ipairs(list) do
+      if slot.itemId == itemId then
+        total = total + (slot.amount or 1)
+      end
+    end
+  end
+  return total
+end
 
 function Inventory.ownsPet(run, kind)
   for _, pet in ipairs(run.pets or {}) do
@@ -18,17 +32,20 @@ end
 function Inventory.passiveMaxed(run, id)
   local def = Data.items[id]
   if not def or def.kind ~= "passive" then return false end
-  local stacks = (run.passiveStacks and run.passiveStacks[id]) or 0
-  return stacks >= (def.maxStacks or 1)
+  return run:totalAmount(id) >= (def.maxStacks or 1)
 end
 
 function Inventory.findInventoryItem(run, itemId)
   for index, slot in ipairs(run.inventory or {}) do
-    if slot.itemId == itemId then return slot, index end
+    if slot.itemId == itemId then return slot, index, "active" end
   end
-  return nil, nil
+  for index, slot in ipairs(run.storage or {}) do
+    if slot.itemId == itemId then return slot, index, "inactive" end
+  end
+  return nil, nil, nil
 end
 
+-- Solo los activos aportan efectos; los guardados esperan a ser activados.
 function Inventory.rebuildPassives(run)
   run.passiveStacks = {}
   for _, slot in ipairs(run.inventory or {}) do
@@ -48,65 +65,93 @@ function Inventory.removePetByKind(run, kind)
   end
 end
 
+function Inventory.clampSelection(run, section)
+  local key = selectionKeys[section]
+  local list = section == "active" and run.inventory or run.storage
+  local count = #(list or {})
+  if count == 0 then
+    run[key] = 1
+  elseif (run[key] or 1) > count then
+    run[key] = count
+  end
+end
+
+local function pushToList(run, section, slot)
+  local limit, list
+  if section == "active" then
+    limit, list = Data.inventory.maxActive, run.inventory
+  else
+    limit, list = Data.inventory.maxInactive, run.storage
+  end
+  if #list >= limit then return false end
+  list[#list + 1] = slot
+  return true
+end
+
+-- Colocación: las habilidades siempre van a guardados; pasivas y mascotas
+-- se activan si hay hueco y, si no, quedan guardadas. Devuelve "ok" cuando
+-- el ítem quedó activo y "stored" cuando solo quedó en la reserva.
 function Inventory.addItemToInventory(run, itemId, amount)
   local def = Data.items[itemId]
   if not def then return "invalid" end
   amount = math.max(1, math.floor(amount or 1))
 
-  local existing = run:findInventoryItem(itemId)
   if def.kind == "passive" then
-    -- Cada copia ocupa su espacio para poder combinarlas con alquimia.
-    if not def.stackable and existing then return "duplicate" end
+    -- Cada copia ocupa su espacio para poder combinarlas con alquimia; el
+    -- tope de maxStacks cuenta activos + guardados para no acumular de más.
+    if not def.stackable and run:totalAmount(itemId) > 0 then return "duplicate" end
     if def.stackable and run:passiveMaxed(itemId) then return "duplicate" end
-    amount = math.min(amount, def.maxStacks or 1)
+    local room = (def.maxStacks or 1) - run:totalAmount(itemId)
+    if room <= 0 then return "duplicate" end
+    amount = math.min(amount, room)
   elseif def.kind == "pet" then
-    if existing or run:ownsPet(def.pet) then return "duplicate" end
+    if run:totalAmount(itemId) > 0 or run:ownsPet(def.pet) then return "duplicate" end
   end
 
-  if #(run.inventory or {}) >= Data.inventory.maxSlots then
-    return "full"
-  end
-
-  run.inventory[#run.inventory + 1] = {
+  local slot = {
     itemId = itemId,
     amount = def.kind == "passive" and amount or 1,
   }
-
-  if def.kind == "passive" then
-    run:rebuildPassives()
-  elseif def.kind == "pet" then
-    run:addPet(def.pet, run.player.x, run.player.y)
+  local placed
+  if def.kind == "ability" then
+    placed = pushToList(run, "inactive", slot)
+  else
+    placed = pushToList(run, "active", slot) or pushToList(run, "inactive", slot)
   end
-  return "ok", amount
+  if not placed then return "full" end
+
+  local active = run.inventory[#run.inventory] == slot
+  if active then
+    if def.kind == "passive" then
+      run:rebuildPassives()
+    elseif def.kind == "pet" then
+      run:addPet(def.pet, run.player.x, run.player.y)
+    end
+  end
+  return active and "ok" or "stored", amount
 end
 
-function Inventory.removeInventoryAt(run, index)
-  local slot = run.inventory and run.inventory[index]
+function Inventory.removeItemAt(run, section, index)
+  local list = section == "active" and run.inventory or run.storage
+  local slot = list and list[index]
   if not slot then return nil end
-  table.remove(run.inventory, index)
+  table.remove(list, index)
 
-  local def = Data.items[slot.itemId]
-  if def and def.kind == "passive" then
-    run:rebuildPassives()
-  elseif def and def.kind == "pet" then
-    run:removePetByKind(def.pet)
+  if section == "active" then
+    local def = Data.items[slot.itemId]
+    if def and def.kind == "passive" then
+      run:rebuildPassives()
+    elseif def and def.kind == "pet" then
+      run:removePetByKind(def.pet)
+    end
   end
 
-  local count = #run.inventory
-  if count == 0 then
-    run.selectedInventory = 1
-  elseif run.selectedInventory > count then
-    run.selectedInventory = count
-  end
+  Inventory.clampSelection(run, section)
   return slot
 end
 
 function Inventory.shopPrice(run, itemId)
   return Data.shop.prices[itemId]
-end
-
-function Inventory.alchemyCost(run, amount)
-  return Data.alchemy.costs[amount + 1]
 end
 
 function Inventory.buyItem(run, itemId)
@@ -115,115 +160,28 @@ function Inventory.buyItem(run, itemId)
   if Save.data.coins < price then return "coins" end
 
   local status = run:addItemToInventory(itemId, 1)
-  if status ~= "ok" then return status end
+  if status ~= "ok" and status ~= "stored" then return status end
 
   Save.data.coins = Save.data.coins - price
   Save.save()
+  local suffix = status == "stored" and " · guardado" or ""
   run:notify(
-    "Comprado: " .. Data.items[itemId].name .. " (-" .. price .. ")",
+    "Comprado: " .. Data.items[itemId].name .. " (-" .. price .. ")" .. suffix,
     Data.items[itemId].color
   )
-  return "ok"
-end
-
-function Inventory.alchemyCandidates(run)
-  local out = {}
-  local inventory = run.inventory or {}
-  for i = 1, #inventory do
-    local a = inventory[i]
-    local def = Data.items[a.itemId]
-    if def and def.kind == "passive" and def.stackable
-      and (a.amount or 1) < (def.maxStacks or Data.alchemy.maxAmount) then
-      for j = i + 1, #inventory do
-        local b = inventory[j]
-        if b.itemId == a.itemId and (b.amount or 1) == (a.amount or 1) then
-          local result = (a.amount or 1) + 1
-          out[#out + 1] = {
-            itemId = a.itemId,
-            index1 = i,
-            index2 = j,
-            amount = a.amount or 1,
-            result = result,
-            cost = run:alchemyCost(a.amount or 1),
-          }
-        end
-      end
-    end
-  end
-  return out
-end
-
-function Inventory.combineAlchemy(run, candidate)
-  if not candidate then return false end
-  local inventory = run.inventory or {}
-  local a = inventory[candidate.index1]
-  local b = inventory[candidate.index2]
-  if not a or not b then return false end
-  if a.itemId ~= b.itemId then return false end
-  if (a.amount or 1) ~= (b.amount or 1) then return false end
-
-  local def = Data.items[a.itemId]
-  if not def or def.kind ~= "passive" or not def.stackable then return false end
-  if (a.amount or 1) >= (def.maxStacks or Data.alchemy.maxAmount) then
-    return false
-  end
-
-  local cost = run:alchemyCost(a.amount or 1)
-  if Save.data.coins < cost then return false end
-
-  table.remove(inventory, math.max(candidate.index1, candidate.index2))
-  table.remove(inventory, math.min(candidate.index1, candidate.index2))
-  table.insert(inventory, math.min(candidate.index1, candidate.index2), {
-    itemId = a.itemId,
-    amount = (a.amount or 1) + 1,
-  })
-
-  Save.data.coins = Save.data.coins - cost
-  Save.save()
-  run:rebuildPassives()
-  run:notify(
-    def.name .. " x" .. (a.amount + 1) .. " combinado",
-    def.color
-  )
-  return true
-end
-
-function Inventory.equipInventoryAbility(run, index, slot)
-  if slot ~= 1 and slot ~= 2 then return false end
-  local item = run.inventory and run.inventory[index]
-  if not item then return false end
-  local def = Data.items[item.itemId]
-  if not def or def.kind ~= "ability" then return false end
-
-  table.remove(run.inventory, index)
-  run:equipAbility(slot, def.abilityId)
-  local count = #run.inventory
-  if count == 0 then
-    run.selectedInventory = 1
-  elseif run.selectedInventory > count then
-    run.selectedInventory = count
-  end
-
-  FX.add(
-    def.name .. " → A" .. slot,
-    run.player.x,
-    run.player.y - 30,
-    def.color
-  )
-  return true
+  return status
 end
 
 function Inventory.toggleBackpack(run)
   if run.overlay == "backpack" then
     run.overlay = nil
+    run.pendingStorageIndex = nil
   else
     run.overlay = "backpack"
-    local count = #(run.inventory or {})
-    if count == 0 then
-      run.selectedInventory = 1
-    elseif run.selectedInventory > count then
-      run.selectedInventory = count
-    end
+    run.pendingStorageIndex = nil
+    run.selectionSection = run.selectionSection or "active"
+    run:clampSelection("active")
+    run:clampSelection("inactive")
   end
   run:clearInput()
 end
@@ -239,6 +197,7 @@ function Inventory.openShop(run)
     return
   end
   run.overlay = "shop"
+  run.pendingStorageIndex = nil
   run.shopTab = "buy"
   run:clearInput()
 end

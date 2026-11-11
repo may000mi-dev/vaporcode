@@ -29,6 +29,9 @@ local run = {
   inventory = {
     { itemId = "poison", amount = 2 },
     { itemId = "drum", amount = 1 },
+  },
+  storage = {
+    { itemId = "poison", amount = 1 },
     { itemId = "light_arrow_skill", amount = 1 },
   },
   fluteReady = true,
@@ -47,6 +50,7 @@ assert(snapshot.stats ~= run.stats, "las estadísticas deben copiarse")
 assert(snapshot.cooldowns ~= run.cooldowns, "los cooldowns deben copiarse")
 assert(snapshot.passiveStacks ~= run.passiveStacks, "las pasivas deben copiarse")
 assert(snapshot.inventory ~= run.inventory, "el inventario debe copiarse")
+assert(snapshot.storage ~= run.storage, "los guardados deben copiarse")
 assert(#snapshot.pets == 1, "las mascotas deben capturarse")
 
 run.seed = 0
@@ -60,6 +64,7 @@ run.cooldowns.a1 = 0
 run.timeLeft = 2
 run.passiveStacks.poison = 5
 run.inventory = {}
+run.storage = {}
 run.fluteReady = false
 
 assert(Floor.restore(run, snapshot), "la instantánea debe restaurarse")
@@ -70,7 +75,8 @@ assert(run.stats.damage == 17, "las estadísticas deben restaurarse")
 assert(run.cooldowns.a1 == 2.5, "los cooldowns deben restaurarse")
 assert(run.timeLeft == 300, "el tiempo del piso debe reiniciarse")
 assert(run.passiveStacks.poison == 2, "las pasivas deben restaurarse")
-assert(#run.inventory == 3 and run.inventory[1].itemId == "poison", "el inventario debe restaurarse")
+assert(#run.inventory == 2 and run.inventory[1].itemId == "poison", "el inventario debe restaurarse")
+assert(#run.storage == 2 and run.storage[2].itemId == "light_arrow_skill", "los guardados deben restaurarse")
 assert(run.fluteReady, "la flauta lista debe restaurarse")
 assert(#run.petSnapshot == 1 and run.petSnapshot[1].kind == "dog", "las mascotas deben restaurarse")
 

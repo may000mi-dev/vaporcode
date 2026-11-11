@@ -226,8 +226,11 @@ Items.itemPool = {
   },
 }
 
+-- Los activos aplican efectos y se ven en el HUD; los guardados solo
+-- sirven para alquimia y como reserva de intercambio.
 Items.inventory = {
-  maxSlots = 5,
+  maxActive = 5,
+  maxInactive = 15,
 }
 
 Items.alchemy = {

@@ -52,9 +52,13 @@ local Run = {
   abilitySlot4 = "turbo",
   cooldowns = {},
   inventory = {},
+  storage = {},
   inventoryFullTimer = 0,
   overlay = nil,
   selectedInventory = 1,
+  selectedStorage = 1,
+  selectionSection = "active",
+  pendingStorageIndex = nil,
   shopTab = "buy",
   turboTimer = 0,
   mana = Data.mana.max,
@@ -364,7 +368,11 @@ end
 
 function Run.keypressed(key, isrepeat)
   if key == "escape" and Run.overlay then
-    Run.overlay = nil
+    if Run.pendingStorageIndex then
+      Run.pendingStorageIndex = nil
+    else
+      Run.overlay = nil
+    end
     return
   end
 
@@ -402,20 +410,28 @@ function Run.keypressed(key, isrepeat)
   end
 
   if Run.overlay == "backpack" then
+    if Run.pendingStorageIndex then return end
     local number = tonumber(key)
-    if number and number >= 1 and number <= Data.inventory.maxSlots then
+    if number and number >= 1 and number <= Data.inventory.maxActive then
+      Run.selectionSection = "active"
       Run.selectedInventory = number
       return
     end
-    if key == "q" then
-      Run:equipInventoryAbility(Run.selectedInventory, 1)
-      return
+    if key == "tab" then
+      Run:cycleSelection(1)
+    elseif key == "q" then
+      Run:assignSelected(1)
     elseif key == "w" then
-      Run:equipInventoryAbility(Run.selectedInventory, 2)
-      return
+      Run:assignSelected(2)
     elseif key == "x" then
-      Run:removeInventoryAt(Run.selectedInventory)
-      return
+      Run:discardSelected()
+    elseif key == "return" or key == "space" then
+      local status = Run:primarySelected()
+      if status == "needs_swap" then
+        Run.pendingStorageIndex = Run.selectedStorage
+      elseif status == "full" then
+        Run:notify("Guardados llenos", { 1.00, 0.45, 0.35 })
+      end
     end
     return
   elseif Run.overlay then
@@ -563,6 +579,7 @@ local systems = {
   sys("src.run.walls"),
   sys("src.run.progression"),
   sys("src.run.inventory"),
+  sys("src.run.storage"),
   sys("src.run.loot"),
   sys("src.run.slots"),
 }
