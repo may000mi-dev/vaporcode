@@ -21,6 +21,11 @@ function ItemDrop.new(itemId, x, y, amount)
   self.life = self.permanent and math.huge or Data.itemLifetime
   self.phase = love.math.random() * math.pi * 2
   self.dead = false
+  -- Etiqueta precalculada: la cantidad no cambia tras aparecer en el suelo.
+  self.label = def.short
+  if self.amount > 1 then
+    self.label = def.short .. " x" .. self.amount
+  end
   return self
 end
 
@@ -116,11 +121,7 @@ function ItemDrop:draw()
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(1, 1, 1, alpha)
-  local label = def.short
-  if self.amount > 1 then
-    label = label .. " x" .. self.amount
-  end
-  love.graphics.printf(label, x - 34, y - r - 15, 68, "center")
+  love.graphics.printf(self.label, x - 34, y - r - 15, 68, "center")
 end
 
 return ItemDrop

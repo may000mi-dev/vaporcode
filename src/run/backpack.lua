@@ -2,6 +2,7 @@
 local Data = require("src.run.data")
 local Fonts = require("src.utils.fonts")
 local Util = require("src.utils.util")
+local TextCache = require("src.utils.textcache")
 
 local Backpack = {}
 
@@ -10,6 +11,11 @@ Backpack.closeButton = { x = 738, y = 78, w = 32, h = 32 }
 
 local slotW, slotH, slotGap = 104, 82, 10
 local slotY = 132
+
+-- Claves fijas por espacio: una clave concatenada por frame alocaría
+-- tanto como el string que queremos ahorrar.
+local slotIndexKeys = { "bp-i1", "bp-i2", "bp-i3", "bp-i4", "bp-i5" }
+local slotLabelKeys = { "bp-l1", "bp-l2", "bp-l3", "bp-l4", "bp-l5" }
 
 function Backpack.slotRect(index)
   local panel = Backpack.panel
@@ -93,7 +99,7 @@ function Backpack.draw(run)
 
     love.graphics.setFont(Fonts.small)
     love.graphics.setColor(0.44, 0.52, 0.60)
-    love.graphics.print("i" .. index, rect.x + 7, rect.y + 5)
+    love.graphics.print(TextCache.format(slotIndexKeys[index], "i%d", index), rect.x + 7, rect.y + 5)
 
     if slot then
       local def = Data.items[slot.itemId]
@@ -104,11 +110,9 @@ function Backpack.draw(run)
       love.graphics.circle("fill", rect.x + rect.w * 0.5, rect.y + 35, 14)
       love.graphics.setFont(Fonts.button)
       love.graphics.setColor(1, 1, 1)
-      local label = def.short
-      if slot.amount and slot.amount > 1 then
-        label = label .. "x" .. slot.amount
-      end
-      love.graphics.printf(label, rect.x, rect.y + 27, rect.w, "center")
+      local amount = slot.amount or 1
+      local fmt = amount > 1 and "%sx%d" or "%s"
+      love.graphics.printf(TextCache.format(slotLabelKeys[index], fmt, def.short, amount), rect.x, rect.y + 27, rect.w, "center")
       love.graphics.setFont(Fonts.small)
       love.graphics.setColor(0.72, 0.78, 0.84)
       love.graphics.printf(def.name, rect.x + 4, rect.y + 58, rect.w - 8, "center")
@@ -124,11 +128,9 @@ function Backpack.draw(run)
   love.graphics.setFont(Fonts.body)
   if def then
     love.graphics.setColor(def.color[1], def.color[2], def.color[3])
-    love.graphics.print(
-      def.name .. (slot.amount and slot.amount > 1 and (" x" .. slot.amount) or ""),
-      panel.x + 24,
-      234
-    )
+    local amount = slot.amount or 1
+    local fmt = amount > 1 and "%s x%d" or "%s"
+    love.graphics.print(TextCache.format("bp-detail", fmt, def.name, amount), panel.x + 24, 234)
     love.graphics.setFont(Fonts.small)
     love.graphics.setColor(0.72, 0.79, 0.86)
     love.graphics.printf(def.desc or "", panel.x + 24, 258, panel.w - 48, "left")

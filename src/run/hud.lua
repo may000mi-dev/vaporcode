@@ -5,6 +5,7 @@ local Rhythm = require("src.run.rhythm")
 local Save = require("src.run.save")
 local Util = require("src.utils.util")
 local Debug = require("src.utils.debug")
+local TextCache = require("src.utils.textcache")
 
 local HUD = {}
 
@@ -17,6 +18,11 @@ local inventoryY = 493
 local inventoryW = 52
 local inventoryH = 38
 local inventoryGap = 6
+
+-- Claves fijas por espacio: una clave concatenada por frame alocaría
+-- tanto como el string que queremos ahorrar.
+local invIndexKeys = { "hud-inv-i1", "hud-inv-i2", "hud-inv-i3", "hud-inv-i4", "hud-inv-i5" }
+local invLabelKeys = { "hud-inv-l1", "hud-inv-l2", "hud-inv-l3", "hud-inv-l4", "hud-inv-l5" }
 
 function HUD.hitPause(x, y)
   return Util.inside(x, y, HUD.pauseButton)
@@ -74,10 +80,11 @@ function HUD.drawInventory(run)
       love.graphics.print(def.short, rect.x + 23, rect.y + 4)
       love.graphics.setColor(0.66, 0.74, 0.82)
       local amount = slot.amount or 1
-      love.graphics.print("i" .. index .. (amount > 1 and ("x" .. amount) or ""), rect.x + 23, rect.y + 20)
+      local fmt = amount > 1 and "i%dx%d" or "i%d"
+      love.graphics.print(TextCache.format(invLabelKeys[index], fmt, index, amount), rect.x + 23, rect.y + 20)
     else
       love.graphics.setColor(0.34, 0.42, 0.49)
-      love.graphics.print("i" .. index, rect.x + 6, rect.y + 5)
+      love.graphics.print(TextCache.format(invIndexKeys[index], "i%d", index), rect.x + 6, rect.y + 5)
       love.graphics.setColor(0.24, 0.30, 0.36)
       love.graphics.print("--", rect.x + 22, rect.y + 20)
     end
@@ -90,17 +97,17 @@ function HUD.draw(run)
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.55, 0.85, 0.95)
-  love.graphics.print(run.def.name .. " · Piso " .. run.depth, 20, 12)
+  love.graphics.print(TextCache.format("hud-floor", "%s · Piso %d", run.def.name, run.depth), 20, 12)
 
   love.graphics.setColor(0.80, 0.85, 0.90)
-  love.graphics.print("Monedas " .. Save.data.coins, 398, 12)
+  love.graphics.print(TextCache.format("coins", "Monedas %d", Save.data.coins), 398, 12)
 
   local timeLeft = math.max(0, math.ceil(run.timeLeft or 0))
   local warning = timeLeft <= Data.floor.warningTime
   local pulse = warning and (0.65 + 0.35 * math.sin(love.timer.getTime() * 6)) or 1
   love.graphics.setColor(0.95 * pulse, 0.35 * pulse, 0.30 * pulse)
   love.graphics.print(
-    string.format("Tiempo %02d:%02d", math.floor(timeLeft / 60), timeLeft % 60),
+    TextCache.format("hud-time", "Tiempo %02d:%02d", math.floor(timeLeft / 60), timeLeft % 60),
     620,
     12
   )
@@ -123,7 +130,7 @@ function HUD.draw(run)
   end
 
   love.graphics.setColor(0.90, 0.95, 1.00)
-  love.graphics.print(string.format("%d / %d", Util.round(run.hp), run.stats.maxHp), 258, 34)
+  love.graphics.print(TextCache.format("hud-hp", "%d / %d", Util.round(run.hp), run.stats.maxHp), 258, 34)
 
   local xpRatio = 0
   if run.xpToNext > 0 then
@@ -135,7 +142,7 @@ function HUD.draw(run)
   love.graphics.rectangle("fill", 20, 58, 230 * xpRatio, 8, 3, 3)
 
   love.graphics.setColor(0.75, 0.82, 0.90)
-  love.graphics.print(string.format("XP %d / %d", run.xp, run.xpToNext), 258, 54)
+  love.graphics.print(TextCache.format("hud-xp", "XP %d / %d", run.xp, run.xpToNext), 258, 54)
 
   local manaRatio = 0
   if run.manaMax > 0 then
@@ -152,13 +159,13 @@ function HUD.draw(run)
 
   love.graphics.setColor(0.75, 0.82, 0.90)
   love.graphics.print(
-    string.format("Maná %d / %d", Util.round(run.mana or 0), run.manaMax),
+    TextCache.format("hud-mana", "Maná %d / %d", Util.round(run.mana or 0), run.manaMax),
     258,
     68
   )
 
   love.graphics.setColor(0.80, 0.85, 0.90)
-  love.graphics.print("Nv. " .. run.playerLevel, 398, 34)
+  love.graphics.print(TextCache.format("hud-level", "Nv. %d", run.playerLevel), 398, 34)
 
   local character = Data.characters[run.characterId]
   local a1 = run.abilitySlot1 and Data.abilities[run.abilitySlot1]
@@ -168,8 +175,12 @@ function HUD.draw(run)
     love.graphics.print(character.name, 20, 88)
     love.graphics.setColor(0.72, 0.80, 0.88)
     love.graphics.print(
-      "A1 " .. (a1 and a1.name or "libre")
-        .. " · A2 " .. (a2 and a2.name or "libre"),
+      TextCache.format(
+        "hud-abilities",
+        "A1 %s · A2 %s",
+        a1 and a1.name or "libre",
+        a2 and a2.name or "libre"
+      ),
       120,
       88
     )
@@ -178,8 +189,9 @@ function HUD.draw(run)
   local lock = run.abilityLockTimer or 0
   if lock > 0 then
     love.graphics.setColor(0.55, 0.72, 1.00)
+    -- Se cuantiza a décimas: el texto cambia 10 veces por segundo, no 60.
     love.graphics.print(
-      string.format("Habilidades selladas: %.1fs", lock),
+      TextCache.format("hud-lock", "Habilidades selladas: %.1fs", math.floor(lock * 10) / 10),
       20,
       104
     )
@@ -273,7 +285,13 @@ function HUD.drawPause(run)
 
   love.graphics.setColor(0.60, 0.70, 0.80)
   love.graphics.printf(
-    "Piso " .. run.depth .. " · Nv. " .. run.playerLevel .. " · Monedas " .. Save.data.coins,
+    TextCache.format(
+      "pause-summary",
+      "Piso %d · Nv. %d · Monedas %d",
+      run.depth,
+      run.playerLevel,
+      Save.data.coins
+    ),
     200,
     260,
     560,

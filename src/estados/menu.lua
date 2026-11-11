@@ -4,6 +4,7 @@ local Save = require("src.run.save")
 local Fonts = require("src.utils.fonts")
 local Util = require("src.utils.util")
 local State = require("src.estados")
+local TextCache = require("src.utils.textcache")
 
 local Menu = {
   dungeonRects = {},
@@ -233,10 +234,10 @@ function Menu.draw()
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.55, 0.85, 0.95)
-  love.graphics.print("Récord: piso " .. Save.data.bestLevel, 24, 18)
+  love.graphics.print(TextCache.format("menu-record", "Récord: piso %d", Save.data.bestLevel), 24, 18)
 
   love.graphics.setColor(1.00, 0.85, 0.35)
-  love.graphics.printf("Monedas: " .. Save.data.coins, 620, 18, 316, "right")
+  love.graphics.printf(TextCache.format("menu-coins", "Monedas: %d", Save.data.coins), 620, 18, 316, "right")
 
   love.graphics.setColor(0.07, 0.09, 0.12, 0.95)
   love.graphics.rectangle("fill", 28, 96, 444, 420, 10, 10)

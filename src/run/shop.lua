@@ -3,6 +3,7 @@ local Data = require("src.run.data")
 local Save = require("src.run.save")
 local Fonts = require("src.utils.fonts")
 local Util = require("src.utils.util")
+local TextCache = require("src.utils.textcache")
 
 local Shop = {}
 
@@ -13,6 +14,19 @@ Shop.tabAlchemy = { x = 306, y = 92, w = 150, h = 34 }
 
 local rowW, rowH, rowGap = 328, 38, 6
 local listY = 136
+
+-- Precios estáticos: se precalculan una sola vez al cargar el módulo.
+local priceText = {}
+for _, itemId in ipairs(Data.shop.items) do
+  priceText[itemId] = (Data.shop.prices[itemId] or 0) .. " monedas"
+end
+
+-- Claves fijas por fila de alquimia (máximo 7 visibles).
+local alchemyRowKeys, alchemyCostKeys = {}, {}
+for i = 1, 7 do
+  alchemyRowKeys[i] = "shop-alchemy-" .. i
+  alchemyCostKeys[i] = "shop-alchemy-cost-" .. i
+end
 
 local function buyRowRect(index)
   local column = (index - 1) % 2
@@ -76,7 +90,7 @@ local function drawBuyList(run)
 
     love.graphics.setFont(Fonts.body)
     love.graphics.setColor(affordable and 1.00 or 0.65, affordable and 0.86 or 0.40, affordable and 0.35 or 0.32)
-    love.graphics.printf(price .. " monedas", rect.x + rect.w - 130, rect.y + 9, 120, "right")
+    love.graphics.printf(priceText[itemId], rect.x + rect.w - 130, rect.y + 9, 120, "right")
   end
 end
 
@@ -111,14 +125,28 @@ local function drawAlchemy(run)
     love.graphics.setFont(Fonts.body)
     love.graphics.setColor(0.92, 0.95, 1.00)
     love.graphics.print(
-      def.name .. " x" .. candidate.amount .. " + " .. def.name .. " x" .. candidate.amount
-        .. "  ->  " .. def.name .. " x" .. candidate.result,
+      TextCache.format(
+        alchemyRowKeys[index],
+        "%s x%d + %s x%d  ->  %s x%d",
+        def.name,
+        candidate.amount,
+        def.name,
+        candidate.amount,
+        def.name,
+        candidate.result
+      ),
       rect.x + 40,
       rect.y + 9
     )
 
     love.graphics.setColor(affordable and 1.00 or 0.65, affordable and 0.86 or 0.40, affordable and 0.35 or 0.32)
-    love.graphics.printf(candidate.cost .. " monedas", rect.x + rect.w - 126, rect.y + 9, 112, "right")
+    love.graphics.printf(
+      TextCache.format(alchemyCostKeys[index], "%d monedas", candidate.cost),
+      rect.x + rect.w - 126,
+      rect.y + 9,
+      112,
+      "right"
+    )
   end
 end
 
@@ -132,7 +160,13 @@ function Shop.draw(run)
   love.graphics.setColor(0.68, 0.74, 0.80)
   love.graphics.print("Activo · Nv.15 / piso 10", Shop.panel.x + 260, Shop.panel.y + 23)
   love.graphics.setColor(1.00, 0.86, 0.35)
-  love.graphics.printf("Monedas " .. Save.data.coins, Shop.panel.x + 490, Shop.panel.y + 23, 160, "right")
+  love.graphics.printf(
+    TextCache.format("coins", "Monedas %d", Save.data.coins),
+    Shop.panel.x + 490,
+    Shop.panel.y + 23,
+    160,
+    "right"
+  )
 
   local close = Shop.closeButton
   love.graphics.setColor(0.10, 0.13, 0.16, 0.98)

@@ -3,6 +3,7 @@ local Fonts = require("src.utils.fonts")
 local Save = require("src.run.save")
 local State = require("src.estados")
 local Util = require("src.utils.util")
+local TextCache = require("src.utils.textcache")
 
 local Gameover = {
   info = nil,
@@ -122,24 +123,28 @@ function Gameover.draw()
       "center"
     )
   end
-  love.graphics.printf("Mazmorra: " .. info.dungeon, 240, 204, 480, "center")
+  love.graphics.printf(TextCache.format("go-dungeon", "Mazmorra: %s", info.dungeon), 240, 204, 480, "center")
   love.graphics.printf(
-    "Personaje: " .. (info.character or "Amado")
-      .. " · " .. (info.ability or "Resonancia"),
+    TextCache.format(
+      "go-character",
+      "Personaje: %s · %s",
+      info.character or "Amado",
+      info.ability or "Resonancia"
+    ),
     240,
     232,
     480,
     "center"
   )
   love.graphics.printf(
-    "Piso alcanzado: " .. info.level .. " · Nv." .. (info.playerLevel or 1),
+    TextCache.format("go-floor", "Piso alcanzado: %d · Nv.%d", info.level, info.playerLevel or 1),
     240,
     260,
     480,
     "center"
   )
-  love.graphics.printf("Enemigos derrotados: " .. info.kills, 240, 288, 480, "center")
-  love.graphics.printf("Monedas totales: " .. info.coins, 240, 316, 480, "center")
+  love.graphics.printf(TextCache.format("go-kills", "Enemigos derrotados: %d", info.kills), 240, 288, 480, "center")
+  love.graphics.printf(TextCache.format("go-coins", "Monedas totales: %d", info.coins), 240, 316, 480, "center")
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.65, 0.70, 0.78)
