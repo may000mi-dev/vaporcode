@@ -19,7 +19,7 @@ alquimia y guardado versionado.
 
 ## Ejecutar
 
-Termux con Termux:X11:
+Termux con Termux:X11 (la primera vez: `pkg install x11-repo && pkg install love termux-x11-nightly`):
 
 ```bash
 termux-x11 :0 >/dev/null 2>&1 &
