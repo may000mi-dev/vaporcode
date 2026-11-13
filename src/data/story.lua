@@ -309,6 +309,460 @@ Story.scenes = {
   },
 }
 
+-- Variantes de la campaña. Cada personaje vive el secuestro desde otro lugar
+-- y conserva el mismo objetivo: llegar a la Torre y liberar a su familia.
+Story.characterScenes = {
+  mar = {
+    prologo = {
+      title = "Acto I · La última nota",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "Aethelgard, hace quinientos años. Un alquimista y músico descubrió que el vapor podía recordar una melodía.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Llamó a ese lenguaje VaporCode. Cada máquina aprendió a obedecer por resonancia, no por cadenas.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Pero bajo los talleres creció una sustancia negra. Corrompió los autómatas y creó a los Espectros de Vapor.",
+        },
+        {
+          speaker = "Narrador",
+          text = "La puerta de la casa de Amado cede. Los espectros entran mientras él aún intenta explicar la sustancia al gremio.",
+        },
+        {
+          speaker = "Amado",
+          text = "Mar, toma a Amileth y corre. Yo puedo detenerlos con el prototipo.",
+        },
+        {
+          speaker = "Mar",
+          text = "No puedes ni sostenerlo sin temblar. Y no voy a dejar que te sacrifiques por nosotros.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Amado ataca sin escuchar. Un espectro lo derriba y otro alcanza a Amileth. Mar corre a la cocina por dos cuchillos.",
+        },
+        {
+          speaker = "Mar",
+          text = "El prototipo se adapta a mí. Las cuchillas también. Entonces no necesito permiso para seguirte.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Mar graba la primera resonancia y cruza el portal rojo. Su misión no es salvar el mundo: es recuperar a los suyos.",
+        },
+      },
+    },
+    cripta_outro = {
+      title = "El primer eco",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "El Patriarca cae. Entre sus costillas de cobre aparece un portal rojo que huele a aceite caliente.",
+        },
+        {
+          speaker = "Mar",
+          text = "La resonancia tiene la voz de Amado. Está vivo, pero habla como si el tiempo ya lo hubiera alcanzado.",
+        },
+        {
+          speaker = "Voz de Amado",
+          text = "Mar... no sigas el compás. El Órgano usa la música para contar cuánto nos queda.",
+        },
+        {
+          speaker = "Mar",
+          text = "Entonces aprenderé a contar más rápido. La Forja guarda la siguiente parte de la melodía.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Mar afila los cuchillos en una válvula rota y entra en el portal sin mirar atrás.",
+        },
+      },
+    },
+    forja_intro = {
+      title = "Acto II · El eco de los talleres",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "La Forja de Vapor respira como un animal herido. Cada martillo golpea al mismo tiempo, como si alguien dirigiera.",
+        },
+        {
+          speaker = "Mar",
+          text = "La sustancia negra no corrompe el metal. Corrompe la intención que el metal aprendió a repetir.",
+        },
+        {
+          speaker = "Narrador",
+          text = "En las paredes hay marcas de una niña pequeña. Amileth estuvo aquí, y dejó un dibujo de tres engranajes.",
+        },
+        {
+          speaker = "Mar",
+          text = "Tres engranajes. Tres partes. Amado, Amileth, yo. La Catedral debe ser la última antes de la Torre.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Mar no espera a que el miedo se vaya. Lo usa como filo y se adentra en los talleres.",
+        },
+      },
+    },
+    forja_outro = {
+      title = "La pieza que falta",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "La Forja Viviente se apaga. Su núcleo proyecta una imagen de la Catedral de Engranajes.",
+        },
+        {
+          speaker = "Voz de Amileth",
+          text = "Mamá, aquí el tiempo hace ruido. Papá dice que no llore, pero se le rompe la voz.",
+        },
+        {
+          speaker = "Mar",
+          text = "Amileth, escúchame. Yo también tengo miedo. Pero mamá no se detiene cuando algo duele.",
+        },
+        {
+          speaker = "Narrador",
+          text = "El portal rojo se abre. Al otro lado, mil engranajes giran en silencio.",
+        },
+      },
+    },
+    catedral_intro = {
+      title = "La catedral que canta",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "La Catedral de Engranajes no tiene campanas. Tiene un coro de válvulas que repite cada error de Aethelgard.",
+        },
+        {
+          speaker = "Mar",
+          text = "Amado siempre quiso entender la sustancia. Yo solo necesito saber dónde la escondieron con mi familia.",
+        },
+        {
+          speaker = "Narrador",
+          text = "En el altar hay dos siluetas de luz: Amado sostiene el prototipo; Amileth sostiene una partitura.",
+        },
+        {
+          speaker = "Mar",
+          text = "La llave no abre puertas. Afina el corazón de la Torre. Y yo he venido a usarla.",
+        },
+      },
+    },
+    catedral_outro = {
+      title = "El portal negro",
+      lines = {
+        {
+          speaker = "Inquisidor del Tiempo",
+          text = "No puedes rescatar a quien ya forma parte del compás. La Torre no tiene salida.",
+        },
+        {
+          speaker = "Mar",
+          text = "No necesito una salida. Necesito una puerta, y pienso abrirla con mis dos manos.",
+        },
+        {
+          speaker = "Narrador",
+          text = "El Inquisidor cae. Un portal negro se abre en el altar: la Torre del Tiempo Detenido.",
+        },
+        {
+          speaker = "Voz de Amado",
+          text = "Mar, escucha. La sustancia no quiere destruirte. Quiere que te detengas.",
+        },
+        {
+          speaker = "Mar",
+          text = "Entonces voy a ser la primera cosa que no se detiene.",
+        },
+      },
+    },
+    torre_intro = {
+      title = "Acto III · La torre detenida",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "La Torre no tiene pisos: tiene recuerdos apilados. El piso 10 es la noche en que Mar conoció a Amado.",
+        },
+        {
+          speaker = "Narrador",
+          text = "El piso 11 es el primer llanto de Amileth. El piso 12 es el instante en que la sustancia negra despertó.",
+        },
+        {
+          speaker = "Mar",
+          text = "No vine a borrar el pasado. Vine a sacar a mi familia de él.",
+        },
+        {
+          speaker = "Órgano del Tiempo",
+          text = "Amado creó el lenguaje que me dio forma. Tú solo afilaste los cuchillos.",
+        },
+        {
+          speaker = "Mar",
+          text = "Los cuchillos cortan lo que sobra. Empecemos por esa nota.",
+        },
+      },
+    },
+    final = {
+      title = "Final · El parche de la empatía",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "El Órgano del Tiempo se abre como una caja de música rota. En su centro, Amado y Amileth duermen entre engranajes.",
+        },
+        {
+          speaker = "Órgano del Tiempo",
+          text = "Si me apagas, el tiempo se detendrá para siempre. No hay otra salida.",
+        },
+        {
+          speaker = "Mar",
+          text = "No vine a apagarte. Vine a cortar la nota que te impide escuchar.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Mar cruza los cuchillos con el prototipo. La sustancia negra grita, y por primera vez deja un silencio donde cabe una voz.",
+        },
+        {
+          speaker = "Amado",
+          text = "Mar... escribiste el parche sin mí.",
+        },
+        {
+          speaker = "Mar",
+          text = "Lo escribimos todos. Ahora ayúdame a afinarlo.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Mamá, la canción ya no está triste. Ahora tiene tres voces.",
+        },
+        {
+          speaker = "Narrador",
+          text = "La Torre vuelve a moverse. Mar guarda los cuchillos: ya no hacen falta.",
+        },
+      },
+    },
+  },
+
+  amileth = {
+    prologo = {
+      title = "Acto I · La última nota",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "Aethelgard, hace quinientos años. Un alquimista y músico descubrió que el vapor podía recordar una melodía.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Llamó a ese lenguaje VaporCode. Cada máquina aprendió a obedecer por resonancia, no por cadenas.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Pero bajo los talleres creció una sustancia negra. Corrompió los autómatas y creó a los Espectros de Vapor.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Amado llega a casa antes que los espectros. Sabe que no podrá detenerlos a todos.",
+        },
+        {
+          speaker = "Amado",
+          text = "Amileth, escóndete debajo de la mesa. No salgas hasta que la canción cambie.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Papá, tu prototipo está brillando. ¿Puedo dibujarle una puerta?",
+        },
+        {
+          speaker = "Amado",
+          text = "Hazlo. Si no vuelvo, el dibujo será tu manera de encontrarme.",
+        },
+        {
+          speaker = "Narrador",
+          text = "El prototipo se combina con el libro de dibujos. Amado y Mar caen. Los espectros se los llevan.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Mamá, papá... voy a dibujar una puerta que también funcione de noche.",
+        },
+      },
+    },
+    cripta_outro = {
+      title = "El primer eco",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "El Patriarca cae. Entre sus costillas de cobre aparece un portal rojo que huele a aceite caliente.",
+        },
+        {
+          speaker = "Amileth",
+          text = "El libro copió la resonancia. Es la voz de papá, pero está guardada al revés.",
+        },
+        {
+          speaker = "Voz de Amado",
+          text = "Amileth... si puedes oírme, no sigas el compás. El Órgano usa el ritmo para contar el tiempo.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Entonces dibujaré un compás que no sepa contar. La Forja guarda la siguiente página.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Amileth pasa la hoja por el portal. El dibujo se seca antes de terminar de cruzar.",
+        },
+      },
+    },
+    forja_intro = {
+      title = "Acto II · El eco de los talleres",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "La Forja de Vapor respira como un animal herido. Cada martillo golpea al mismo tiempo, como si alguien dirigiera.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Aquí está mi dibujo. Lo dejé en la pared para que papá supiera que estuve aquí.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Los engranajes intentan rodearla. El prototipo dibuja una línea de luz y la cadena salta al siguiente engranaje.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Tres engranajes. Tres dibujos. La Catedral debe ser la última página antes de la Torre.",
+        },
+      },
+    },
+    forja_outro = {
+      title = "La pieza que falta",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "La Forja Viviente se apaga. Su núcleo proyecta una imagen de la Catedral de Engranajes.",
+        },
+        {
+          speaker = "Voz de Mar",
+          text = "Amileth, no mires la sustancia. Mírame a mí cuando llegues.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Mamá, no puedo verte. Pero puedo dibujar tu voz para no perderla.",
+        },
+        {
+          speaker = "Narrador",
+          text = "El portal rojo se abre. Al otro lado, mil engranajes giran en silencio.",
+        },
+      },
+    },
+    catedral_intro = {
+      title = "La catedral que canta",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "La Catedral de Engranajes no tiene campanas. Tiene un coro de válvulas que repite cada error de Aethelgard.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Papá decía que el Órgano no es un virus. Es una canción que olvidó a quién estaba dedicada.",
+        },
+        {
+          speaker = "Narrador",
+          text = "En el altar hay dos siluetas de luz: Amado y Mar, tomados de la mano dentro de un engranaje.",
+        },
+        {
+          speaker = "Amileth",
+          text = "La llave no abre puertas. Afina el corazón de la Torre. Yo traje la página donde está dibujada.",
+        },
+      },
+    },
+    catedral_outro = {
+      title = "El portal negro",
+      lines = {
+        {
+          speaker = "Inquisidor del Tiempo",
+          text = "No puedes rescatar a quien ya forma parte del compás. La Torre no tiene salida.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Las puertas no siempre están donde uno las dibuja. A veces están dentro de la persona que asusta.",
+        },
+        {
+          speaker = "Narrador",
+          text = "El Inquisidor cae. Un portal negro se abre en el altar: la Torre del Tiempo Detenido.",
+        },
+        {
+          speaker = "Voz de Mar",
+          text = "Amileth, escucha. La sustancia no quiere destruirte. Quiere que te detengas.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Entonces voy a caminar despacio, pero no me voy a detener.",
+        },
+      },
+    },
+    torre_intro = {
+      title = "Acto III · La torre detenida",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "La Torre no tiene pisos: tiene recuerdos apilados. El piso 10 es el día en que Amileth aprendió a dibujar un engranaje.",
+        },
+        {
+          speaker = "Narrador",
+          text = "El piso 11 es la noche en que sus padres le prometieron volver. El piso 12 es el instante en que la sustancia negra despertó.",
+        },
+        {
+          speaker = "Amileth",
+          text = "No vine a borrar el pasado. Vine a terminar el dibujo que dejamos a medias.",
+        },
+        {
+          speaker = "Órgano del Tiempo",
+          text = "Amado creó el lenguaje que me dio forma. Tú solo dibujaste encima.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Dibujar encima también es una forma de escuchar. Mira lo que encontré.",
+        },
+      },
+    },
+    final = {
+      title = "Final · El parche de la empatía",
+      lines = {
+        {
+          speaker = "Narrador",
+          text = "El Órgano del Tiempo se abre como una caja de música rota. En su centro, Amado y Mar duermen entre engranajes.",
+        },
+        {
+          speaker = "Órgano del Tiempo",
+          text = "Si me apagas, el tiempo se detendrá para siempre. No hay otra salida.",
+        },
+        {
+          speaker = "Amileth",
+          text = "No voy a apagarte. Voy a dibujarte la nota que te faltó: la de volver.",
+        },
+        {
+          speaker = "Narrador",
+          text = "Amileth abre el libro. El prototipo convierte cada trazo en VaporCode, y la sustancia negra aprende a leer el dibujo.",
+        },
+        {
+          speaker = "Mar",
+          text = "Amileth... llegaste tarde, pero llegaste con la página correcta.",
+        },
+        {
+          speaker = "Amado",
+          text = "No era una puerta. Era una canción con tres voces.",
+        },
+        {
+          speaker = "Amileth",
+          text = "Papá, mamá, la caja de música ya no está triste.",
+        },
+        {
+          speaker = "Narrador",
+          text = "La Torre vuelve a moverse, un compás a la vez. Amileth guarda el libro: aún quedan páginas en blanco.",
+        },
+      },
+    },
+  },
+}
+
+function Story.sceneFor(characterId, sceneId)
+  local variants = Story.characterScenes[characterId]
+  if variants and variants[sceneId] then
+    return variants[sceneId]
+  end
+  return Story.scenes[sceneId]
+end
+
 Story.lore = {
   cripta = {
     "Página 3 del diario: Mar decía que el vapor recuerda mejor las canciones que los nombres.",

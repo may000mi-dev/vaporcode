@@ -40,8 +40,8 @@ function Story.floorIndex(run)
     chapter.endDepth - chapter.startDepth + 1
 end
 
-function Story.scene(id)
-  return StoryData.scenes[id]
+function Story.scene(id, characterId)
+  return StoryData.sceneFor(characterId or "amado", id)
 end
 
 return Story

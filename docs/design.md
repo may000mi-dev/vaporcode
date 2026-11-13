@@ -13,8 +13,12 @@ Roguelite de acción con ataques automáticos y ventanas de ritmo. El loop de un
 4. La salida se abre al morir el último enemigo; tocarla sube al siguiente piso.
 5. Cada 3 pisos hay jefe de mazmorra. Al morir se puede reintentar el piso exacto
    (instantánea) o volver al menú; monedas y mejoras permanentes se conservan.
-6. El Modo Historia encadena Cripta, Forja, Catedral y Torre con escenas,
-   checkpoints por piso y portales al cerrar cada capítulo.
+6. **Modo Historia** encadena Cripta, Forja, Catedral y Torre con escenas,
+   checkpoints por piso y portales al cerrar cada capítulo. **Modo Infinito**
+   permite elegir personaje y cualquier mazmorra ya desbloqueada.
+7. El **Bestiario** revela retrato, nombre y habilidades de cada enemigo visto.
+8. La pantalla de **Personajes** concentra estadísticas, pasivas, historia y
+   mejoras permanentes por personaje.
 
 La cámara sigue al jugador con margen de arrastre; el área de juego es mayor que
 la pantalla y se explora moviéndose.
@@ -29,6 +33,17 @@ la pantalla y se explora moviéndose.
 
 Mar y Amileth se desbloquean con ítems de personaje, que solo aparecen en cofres
 ocultos en paredes frágiles (35% por cofre mientras falten personajes).
+
+Cada personaje tiene su propia perspectiva de la Historia, sus mejoras
+permanentes, su contador de resonancias y su estado de campaña completada:
+
+- **Amado:** alerta sobre la sustancia negra en una junta cuando secuestran a su
+  familia; reprograma espectros de vapor con el parche de empatía.
+- **Mar:** llega durante el secuestro, ataca sin prudencia y cae junto con
+  Amileth; toma dos cuchillos y el prototipo, que se adapta a ella.
+- **Amileth:** Amado la esconde y le deja una versión del prototipo que se
+  combina con su libro de dibujos; ella sigue a los enemigos para rescatar a su
+  familia.
 
 ## Habilidades y maná
 
@@ -59,11 +74,12 @@ habilidades a ritmo y reduce enfriamientos.
 | Cripta de latón | inicial | 104 | autómata, caldera, artillero, maquinista, peste | Patriarca de Huesos y Cobre |
 | Forja de vapor | piso 2 | 124 | sabueso, centinela, saboteador | Forja Viviente |
 | Catedral de engranajes | piso 4 | 138 | espectro, engranaje, clérigo, inquisidor | Inquisidor del Tiempo |
-| Torre del Tiempo Detenido | solo historia | 150 | reutiliza espectros | Órgano del Tiempo |
+| Torre del Tiempo Detenido | 3 historias completadas | 150 | todos los regulares | Órgano del Tiempo |
 
 Los desbloqueos se guardan al alcanzar el piso indicado. `bossEvery = 3`; la Torre
 es la excepción narrativa: ocupa los pisos 10–12 y solo tiene jefe en el 12.
-La Torre no se desbloquea para el modo libre.
+En Modo Infinito la Torre se habilita al completar la Historia con Amado, Mar y
+Amileth, y puede invocar a todos los tipos de enemigo del juego.
 
 ## Enemigos por rol
 
@@ -137,6 +153,9 @@ acumulan hasta su máximo global (activos + guardados); mascotas y desbloqueos s
   dentro tras 4 beats, con 10 s de recarga). Si una mascota queda atrapada y se aleja
   más de 360 px del jugador, reaparece a su lado.
 - **Personajes:** Mar y Amileth.
+- **Resonancias de personaje:** cada jefe deja la resonancia del personaje con el
+  que se juega. No ocupa inventario: al recogerla suma un punto permanente para
+  esa ficha. En la Sala de pruebas no se generan.
 
 ### Alquimia
 
@@ -160,13 +179,15 @@ entre 25 y 120 monedas; vende pasivas, mascotas y habilidades de ítem.
 | Órgano del Tiempo | jefe final; invoca espectros y lanza compases de rayos en fases |
 
 Todos los jefes son inmunes al aturdimiento para que la Pólvora o el Perro no
-anulen sus patrones de ataque.
+anulen sus patrones de ataque. Al morir sueltan una Resonancia del personaje de la
+run, que se gasta en la pantalla de Personajes.
 
 ## Modo Historia
 
-Campaña de tres actos centrada en Amado, Mar y Amileth. Se entra desde el menú
-(`H` o el botón `MODO HISTORIA`) y usa las mismas reglas de combate, economía,
-mejoras y personajes que el modo libre.
+Campaña de tres actos con una perspectiva por personaje. Se entra desde el menú
+(`H` o `Historia`) y usa las mismas reglas de combate, economía, mejoras y
+personajes que el modo Infinito. La melodía, los diálogos y el motivo del
+protagonista cambian según el personaje elegido.
 
 | Capítulo | Pisos | Jefes | Salida |
 |---|---|---|---|
@@ -184,29 +205,51 @@ mejoras y personajes que el modo libre.
 - **Derrota:** `REINTENTAR PISO` restaura el checkpoint; el menú conserva la
   campaña para continuar después. La derrota por tiempo se narra como
   desestabilización del núcleo.
-- **Final:** el piso 12 abre el desenlace. Al terminarlo se marca la historia
-  como completada y se borra el checkpoint, pero se conserva el resto del
-  progreso. `NUEVA HISTORIA` pide confirmación antes de reiniciar.
-- **Personajes:** se puede jugar con Mar o Amileth solo si ya están desbloqueados;
-  la narrativa sigue centrada en Amado.
+- **Final:** el piso 12 abre el desenlace. Al terminarlo se marca la historia de
+  ese personaje como completada y se borra el checkpoint, pero se conservan las
+  demás historias, mejoras y monedas. `NUEVA HISTORIA` pide confirmación antes de
+  reiniciar la campaña activa.
+- **Personajes:** se puede jugar con Mar o Amileth solo si ya están desbloqueados.
+  Cada uno tiene escenas propias y su final se contabiliza por separado (`x/3`).
+- **Torre:** se desbloquea al completar las tres historias y entonces también
+  aparece como mazmorra elegible en Modo Infinito.
 
 ## Meta-progresión
 
-Persistente en `save.json` (versión 4, normalizado al cargar). Se escribe al
+Persistente en `save.json` (versión 5, normalizado al cargar). Se escribe al
 cambiar de piso, al terminar la run, al pausar y al perder el foco; usa
 `save.json.tmp` como respaldo para escrituras interrumpidas en Android. También
-guarda `settings.musicVolume`, `settings.effectsVolume` (0..1) y el estado del
-Modo Historia con su checkpoint validado por capítulo.
+guarda `settings.musicVolume`, `settings.effectsVolume` (0..1), el estado del
+Modo Historia con su checkpoint validado por capítulo y el Bestiario.
 
-| Mejora | Efecto | Base | +Nivel | Costo base | Máx |
-|---|---|---|---|---|---|
-| Filo de vapor | daño | 10 | +4 | 30 | 8 |
-| Caldera reforzada | vida máxima | 100 | +20 | 40 | 8 |
-| Botas de presión | velocidad | 150 | +12 | 35 | 8 |
+| Mejora | Efecto | Base | +Nivel | Máx |
+|---|---|---|---|---|
+| Filo de vapor | daño | 10 | +4 | 8 |
+| Caldera reforzada | vida máxima | 100 | +20 | 8 |
+| Botas de presión | velocidad | 150 | +12 | 8 |
 
-El costo crece ×1.65 por nivel. También persisten monedas, récord de piso,
-mazmorras desbloqueadas, personajes desbloqueados, volúmenes de audio y el
-checkpoint de la campaña.
+Las mejoras son **por personaje** y ya no se compran con monedas. Cada jefe
+derrotado suelta una **Resonancia del personaje** de la run; recogerla suma un
+punto que se gasta en la pantalla de Personajes para subir una mejora. Al migrar
+un guardado v4, los niveles globales se reparten entre Amado, Mar y Amileth.
+
+También persisten monedas, récord de piso, mazmorras desbloqueadas, historias
+completadas por personaje, resonancias, personajes desbloqueados, enemigos vistos
+y volúmenes de audio.
+
+## Menú, Personajes y Bestiario
+
+El menú principal tiene cinco accesos: **Historia**, **Infinito**, **Personajes**,
+**Bestiario** y **Configuración**. Cada uno muestra un resumen del progreso.
+
+- **Infinito:** elegir personaje y mazmorra desbloqueada; si falta una condición,
+  se explica en la ficha. La Torre exige las tres historias.
+- **Personajes:** retrato procedural a la izquierda; estadísticas base, pasiva,
+  estado de Historia, resonancias y mejoras a la derecha. Solo los personajes
+  desbloqueados pueden mejorar.
+- **Bestiario:** cuadrícula de enemigos y jefes ya vistos. Los no vistos aparecen
+  como `???`; al seleccionarlos se muestra retrato procedural y descripción de
+  sus habilidades. Los descubrimientos persisten entre partidas.
 
 ## Audio y configuración
 

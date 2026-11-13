@@ -112,9 +112,9 @@ function Floors.enter(run, dungeonId, characterId, abilityId, options)
 
   local character = Data.characters[run.characterId]
   run.stats = {
-    damage = Save.stat("damage"),
-    maxHp = Save.stat("maxHp"),
-    speed = Save.stat("speed"),
+    damage = Save.stat("damage", run.characterId),
+    maxHp = Save.stat("maxHp", run.characterId),
+    speed = Save.stat("speed", run.characterId),
     attackRate = character.attackRate,
   }
 

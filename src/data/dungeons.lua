@@ -42,11 +42,13 @@ Dungeons.dungeons = {
   {
     id = "torre",
     name = "Torre del Tiempo Detenido",
-    unlockLevel = 999,
-    storyOnly = true,
-    desc = "Los recuerdos de Amado se defienden del último compás.",
+    storyUnlock = true,
+    desc = "Todos los recuerdos y enemigos se mezclan en el último compás.",
     song = { name = "Eco del último compás", bpm = 150 },
-    enemies = { "espectro", "engranaje", "clerigo", "inquisidor" },
+    enemies = {
+      "automaton", "caldera", "sabueso", "centinela", "espectro", "engranaje",
+      "artillero", "maquinista", "saboteador", "peste", "clerigo", "inquisidor",
+    },
     boss = "time_organ",
     spawnBase = 7,
     hpScale = 0.26,

@@ -4,13 +4,14 @@ Roguelite de acción steampunk con toques de ritmo, en LÖVE 11.5. Vista cenital
 ataques automáticos y controles táctiles pensados para jugar en el teléfono con
 uno o dos pulgares. Prototipo para Android/Termux primero; escritorio después.
 
-- **Protagonista:** Amado, con Mar y Amileth desbloqueables.
-- **Run:** pisos generados con semilla, jefe cada 3 pisos, tres mazmorras base
-  con canción y BPM propios.
-- **Historia:** campaña de tres actos con escenas, checkpoints por piso y final
-  en la Torre del Tiempo Detenido.
-- **Meta-progresión:** monedas, mejoras permanentes, personajes y mazmorras
-  desbloqueables que sobreviven entre partidas.
+- **Protagonistas:** Amado, Mar y Amileth, cada uno con su perspectiva, pasiva y
+  mejoras permanentes.
+- **Modos:** **Historia** (tres perspectivas con escenas y checkpoints) e
+  **Infinito** (personaje + mazmorra desbloqueada).
+- **Run:** pisos generados con semilla, jefe cada 3 pisos y mazmorras con canción
+  y BPM propios. La Torre se abre al completar las tres historias.
+- **Meta-progresión:** resonancias de jefe, mejoras por personaje, monedas,
+  personajes, mazmorras y Bestiario persistente.
 
 ## Pantalla
 
@@ -22,10 +23,11 @@ de tamaño o al entrar en pantalla completa.
 
 ## Estado
 
-MVP jugable (V8). Incluye combate automático, tres personajes, cinco habilidades,
-enemigos por rol (torreta, mortero, invocador, trampero, sanador, cazador de maná),
-élites, hazards, cinco jefes con fases, ítems pasivos, mascotas, mochila, tienda,
-alquimia, guardado versionado, Modo Historia con checkpoints, configuración de
+MVP jugable (V9). Incluye combate automático, tres personajes con historia
+propia, cinco habilidades, enemigos por rol (torreta, mortero, invocador, trampero,
+sanador, cazador de maná), élites, hazards, cinco jefes con fases, ítems pasivos,
+mascotas, mochila, tienda, alquimia, guardado versionado, Modo Historia e Infinito,
+Bestiario, pantalla de Personajes con mejoras por resonancia, configuración de
 audio, salida segura al menú y una sala de pruebas para enemigos e ítems.
 
 ## Ejecutar
@@ -60,7 +62,7 @@ sh src/tools/test_all.sh
 Suites en Lua puro (sin LÖVE): datos, mazmorras y línea de visión, personajes,
 habilidades, botín, estados, piso/reintento, historia, cámara, caché de textos,
 aislamiento entre runs, guardado con respaldo, volúmenes de audio y aislamiento
-de la sala de pruebas.
+de la sala de pruebas, resonancias, bestiario y mejoras por personaje.
 
 ## Controles
 
@@ -74,13 +76,17 @@ de la sala de pruebas.
 | Tienda | V | botón TIENDA |
 | Pausa | P | botón PAUSA |
 | Salir al menú | Esc en pausa (doble) | botón SALIR AL MENÚ |
-| Modo Historia | H (menú) | botón MODO HISTORIA |
+| Modo Historia | H (menú) | botón HISTORIA |
+| Modo Infinito | I (menú) | botón INFINITO |
+| Personajes | P (menú) | botón PERSONAJES |
+| Bestiario | B (menú) | botón BESTIARIO |
 | Sala de pruebas | F2 (solo en pruebas) | botón PRUEBAS |
 | Silenciar pulso | M | — |
 | Depuración | F3 | — |
 
-En el menú, `H` abre Modo Historia y `C` abre Configuración (música, efectos,
-borrar datos y sala de pruebas). Dentro de la mochila: `1`–`5` selecciona un activo, `Tab` recorre los 20 espacios,
+En el menú, `1`/`H` abre Historia, `2`/`I` Infinito, `3`/`P` Personajes, `4`/`B`
+Bestiario y `5`/`C` Configuración (música, efectos, borrar datos y sala de pruebas).
+Dentro de la mochila: `1`–`5` selecciona un activo, `Tab` recorre los 20 espacios,
 `Enter` activa el guardado o guarda el activo, `Q`/`W` asignan una habilidad
 guardada a A1/A2, `X` tira el ítem y `Escape` cierra (o cancela un intercambio).
 
@@ -99,7 +105,7 @@ src/
 │   ├── items.lua          -- ítems, mascotas, espacios y reglas de tienda
 │   ├── story.lua          -- actos, capítulos, escenas y lore
 │   └── upgrades.lua       -- mejoras permanentes
-├── estados/               -- menú, historia, configuración, pausa, game over
+├── estados/               -- menú, historia, infinito, personajes, bestiario, configuración
 ├── run/                   -- partida; run.lua orquesta y monta los sistemas
 ├── tools/                 -- suites de test y empaquetado
 └── utils/                 -- input, cámara, joystick, JSON, audio, textcache
@@ -111,10 +117,15 @@ juego, así que los datos se pueden mover entre archivos sin tocar el resto.
 
 ## Guardado
 
-JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 4.
+JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 5.
 Al cargar se normaliza y se repara: valores inválidos caen a los predeterminados,
 la cripta y Amado siempre quedan desbloqueados, los volúmenes de música/efectos
 se acotan a 0..1 y el checkpoint de historia se valida contra su capítulo.
+
+Cada personaje guarda sus mejoras, resonancias y si completó la Historia. La
+migración desde v4 reparte las mejoras globales entre los tres y asigna el final
+antiguo a su personaje. Los enemigos vistos se guardan en `bestiary`, y la Torre
+solo se desbloquea cuando las tres historias están completas.
 
 El progreso se guarda al cambiar de piso, al terminar la run, al pausar y cuando
 la app pierde el foco o se oculta; Android puede matar el proceso en segundo plano
@@ -133,11 +144,29 @@ actos y cuatro capítulos jugables:
 3. **Catedral de engranajes** (pisos 1–9), portal negro hacia la Torre.
 4. **Torre del Tiempo Detenido** (pisos 10–12), jefe final y desenlace.
 
-Amado, Mar y Amileth se pueden elegir si ya están desbloqueados. La historia no
-regala personajes ni mejoras: usa la misma economía de la run libre. Al comenzar
-cada piso se guarda un checkpoint; `CONTINUAR HISTORIA` retoma ese piso sin repetir
-las escenas ya vistas. Morir permite `REINTENTAR PISO` o volver al menú; reiniciar
-la campaña pide confirmación y conserva monedas, mejoras y desbloqueos.
+Amado, Mar y Amileth se pueden elegir si ya están desbloqueados. Cada uno tiene
+escenas, motivación y final propios; el contador `x/3` muestra las historias
+completadas. La historia no regala personajes ni mejoras: usa la misma economía
+del modo Infinito. Al comenzar cada piso se guarda un checkpoint; `CONTINUAR
+HISTORIA` retoma ese piso sin repetir las escenas ya vistas. Morir permite
+`REINTENTAR PISO` o volver al menú; reiniciar la campaña pide confirmación y
+conserva historias completadas, monedas, mejoras y desbloqueos.
+
+## Modo Infinito, Personajes y Bestiario
+
+El menú principal ofrece cinco accesos. **Infinito** permite elegir personaje y
+cualquier mazmorra desbloqueada; si falta una condición, la ficha explica cuál.
+La **Torre del Tiempo Detenido** solo aparece cuando Historia está completada con
+los tres personajes.
+
+**Personajes** muestra el retrato procedural, estadísticas base, pasiva, estado de
+Historia y resonancias. Cada jefe derrotado suelta una resonancia del personaje de
+la run; al recogerla se obtiene un punto para subir una mejora permanente desde
+esta pantalla. Las mejoras son independientes por personaje.
+
+**Bestiario** registra enemigos y jefes vistos en partidas (no en la sala de
+pruebas). Cada ficha muestra retrato procedural, nombre y descripción; los no
+vistos aparecen como `???`. El descubrimiento persiste entre partidas.
 
 ## Configuración y sala de pruebas
 

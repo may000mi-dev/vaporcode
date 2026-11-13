@@ -66,6 +66,9 @@ local Save = require("src.run.save")
 local Menu = require("src.estados.menu")
 local Config = require("src.estados.config")
 local Historia = require("src.estados.historia")
+local Infinito = require("src.estados.infinito")
+local Personajes = require("src.estados.personajes")
+local Bestiario = require("src.estados.bestiario")
 local Run = require("src.run.run")
 local Sandbox = require("src.run.sandbox")
 local Hud = require("src.run.hud")
@@ -86,6 +89,26 @@ Historia.draw()
 Historia.confirmNew = true
 Historia.draw()
 Historia.confirmNew = false
+
+Infinito.enter()
+Infinito.draw()
+
+Personajes.enter("mar")
+Personajes.draw()
+Save.data.characters.mar = true
+Save.data.progress.mar.resonance = 1
+Save.data.progress.mar.upgrades.damage = 2
+Personajes.draw()
+local upgradeRect = Personajes.upgradeRects[1]
+Personajes.pressed(upgradeRect.x + 4, upgradeRect.y + 4)
+assert(Save.upgradeLevel("damage", "mar") == 3, "la ficha debe gastar resonancia")
+
+Bestiario.enter()
+Bestiario.draw()
+Save.data.bestiary.automaton = true
+Save.data.bestiary.bone_patriarch = true
+Bestiario.selectedId = "bone_patriarch"
+Bestiario.draw()
 
 Run.enter("sandbox", "amado")
 Run:setPaused(true)

@@ -195,6 +195,67 @@ Enemies.hazards = {
   beamTick = 0.45,
 }
 
+Enemies.bestiaryOrder = {
+  "automaton", "caldera", "sabueso", "centinela", "espectro", "engranaje",
+  "artillero", "maquinista", "saboteador", "peste", "clerigo", "inquisidor",
+  "broken_automaton",
+}
+
+Enemies.bestiary = {
+  automaton = {
+    name = "Autómata de Latón",
+    desc = "Avanza en línea recta y golpea al contacto. Frágil, pero suele aparecer en grupos.",
+  },
+  caldera = {
+    name = "Caldera Errante",
+    desc = "Cuerpo acorazado que resiste más golpes. Su contacto quema.",
+  },
+  sabueso = {
+    name = "Sabueso de Vapor",
+    desc = "Rápido y persistente. Acosa al jugador y cierra la distancia.",
+  },
+  centinela = {
+    name = "Centinela de Presión",
+    desc = "Torreta fija que dispara proyectiles a distancia y obliga a moverse.",
+  },
+  espectro = {
+    name = "Espectro de Vapor",
+    desc = "Mantiene la distancia y ataca a rango. Esquiva el cuerpo a cuerpo.",
+  },
+  engranaje = {
+    name = "Engranaje Voraz",
+    desc = "Lento y muy resistente. Absorbe daño y bloquea pasillos.",
+  },
+  artillero = {
+    name = "Artillero de Cobre",
+    desc = "Dispara morteros con retardo. Hay que abandonar la zona marcada.",
+  },
+  maquinista = {
+    name = "Maquinista Corrupto",
+    desc = "Invoca autómatas rotos y huye cuando el jugador se le acerca.",
+  },
+  saboteador = {
+    name = "Saboteador",
+    desc = "Flanquea y coloca minas. Castiga quedarse quieto demasiado tiempo.",
+  },
+  peste = {
+    name = "Peste-Negra",
+    desc = "Aplica ralentización con el contacto y con sus proyectiles.",
+  },
+  clerigo = {
+    name = "Clérigo de Engranaje",
+    desc = "Cura a los enemigos cercanos. Conviene eliminarlo primero.",
+  },
+  inquisidor = {
+    name = "Inquisidor de Reloj",
+    desc = "Drena maná y bloquea habilidades desde la distancia.",
+  },
+  broken_automaton = {
+    name = "Autómata Roto",
+    desc = "Invocación débil y veloz. Muere de un golpe, pero distrae.",
+  },
+}
+
 Enemies.spawn = {
   perDepth = 0.65,
   maxEnemies = 12,

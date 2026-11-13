@@ -91,7 +91,10 @@ function Progression.nextLevel(run)
   local reached = run.depth + 1
   Save.recordLevel(reached)
   for _, dungeon in ipairs(Data.dungeons) do
-    if reached >= dungeon.unlockLevel then
+    if not dungeon.storyUnlock
+      and dungeon.unlockLevel
+      and reached >= dungeon.unlockLevel
+    then
       Save.unlock(dungeon.id)
     end
   end
@@ -129,7 +132,10 @@ function Progression.nextStoryLevel(run)
     local reached = run.depth + 1
     Save.recordLevel(reached)
     for _, dungeon in ipairs(Data.dungeons) do
-      if not dungeon.storyOnly and reached >= dungeon.unlockLevel then
+      if not dungeon.storyUnlock
+        and dungeon.unlockLevel
+        and reached >= dungeon.unlockLevel
+      then
         Save.unlock(dungeon.id)
       end
     end

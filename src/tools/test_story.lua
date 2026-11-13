@@ -52,7 +52,8 @@ end
 
 assert(StoryData.chapterById.torre.startDepth == 10, "la Torre debe iniciar en el piso 10")
 assert(StoryData.chapterById.torre.endDepth == 12, "la Torre debe terminar en el piso 12")
-assert(Data.dungeonById.torre.storyOnly, "la Torre debe ser exclusiva de la historia")
+assert(Data.dungeonById.torre.storyUnlock, "la Torre debe desbloquearse con la historia")
+assert(not Data.dungeonById.torre.storyOnly, "la Torre también debe existir en modo Infinito")
 assert(Data.dungeonById.torre.boss == "time_organ", "la Torre debe usar al Órgano del Tiempo")
 assert(Data.enemyTypes.time_organ.bossKind == "organ", "el jefe final debe usar la IA de órgano")
 
@@ -60,6 +61,12 @@ for id, scene in pairs(StoryData.scenes) do
   assert(type(id) == "string" and #scene.lines > 0, "cada escena debe tener líneas")
   for _, line in ipairs(scene.lines) do
     assert(line.speaker and line.text, "cada línea debe tener voz y texto")
+  end
+  for _, characterId in ipairs({ "mar", "amileth" }) do
+    local variant = StoryData.characterScenes[characterId]
+      and StoryData.characterScenes[characterId][id]
+    assert(variant, characterId .. " debe tener variante para " .. id)
+    assert(#variant.lines > 0, "la variante debe tener líneas")
   end
 end
 
@@ -89,7 +96,7 @@ local index, total = Story.floorIndex({
 assert(index == 2 and total == 3, "la Torre debe mostrar 2 de 3 pisos")
 
 Save.load()
-assert(Save.data.version == 4, "el guardado debe usar la versión 4")
+assert(Save.data.version == 5, "el guardado debe usar la versión 5")
 assert(Save.data.story and not Save.data.story.active, "la historia inicia inactiva")
 assert(not Save.hasStoryCheckpoint(), "sin checkpoint no debe haber continuación")
 
@@ -159,15 +166,26 @@ assert(Save.data.story.chapterId == "cripta", "el capítulo válido debe conserv
 assert(Save.data.story.depth == 2, "la profundidad válida debe conservarse")
 
 assert(Save.setStoryCheckpoint("cripta", snapshot), "debe poder reiniciar el checkpoint")
-assert(Save.completeStory(), "debe poder completar la historia")
+assert(Save.completeStory("amado"), "debe poder completar la historia de Amado")
 assert(not Save.hasStoryCheckpoint(), "completar debe borrar el checkpoint")
-assert(Save.data.story.completed, "completar debe marcar el final")
+assert(Save.data.story.completed, "completar debe marcar el final de la sesión")
+assert(Save.isStoryCompleted("amado"), "Amado debe tener su historia completada")
+assert(Save.storyCompletionCount() == 1, "debe contar una historia completada")
+assert(not Save.isDungeonUnlocked("torre"), "la Torre exige las tres historias")
 Save.load()
 assert(Save.data.story.completed, "el final debe persistir")
+assert(Save.isStoryCompleted("amado"), "la historia de Amado debe persistir")
 
-assert(Save.resetStory(), "debe poder reiniciar la campaña")
+assert(Save.completeStory("mar"), "debe poder completar la historia de Mar")
+assert(Save.completeStory("amileth"), "debe poder completar la historia de Amileth")
+assert(Save.storyCompletionCount() == 3, "deben quedar tres historias completadas")
+assert(Save.isDungeonUnlocked("torre"), "la Torre debe abrirse con las tres historias")
+
+assert(Save.resetStory(), "debe poder reiniciar la campaña activa")
 assert(not Save.data.story.active, "reiniciar debe desactivar la historia")
-assert(not Save.data.story.completed, "reiniciar debe borrar el final")
+assert(not Save.data.story.completed, "reiniciar debe borrar el final de la sesión")
 assert(not Save.hasStoryCheckpoint(), "reiniciar debe borrar el checkpoint")
+assert(Save.storyCompletionCount() == 3, "reiniciar no debe borrar historias completadas")
+assert(Save.isDungeonUnlocked("torre"), "la Torre debe seguir abierta tras reiniciar la sesión")
 
-print("OK historia, portales, escenas y guardado v4")
+print("OK historia, portales, escenas y guardado v5")

@@ -5,7 +5,7 @@ local Json = require("src.utils.json")
 local Save = {}
 local FILE = "save.json"
 local TEMP_FILE = "save.json.tmp"
-local VERSION = 4
+local VERSION = 5
 
 local function clamp01(value)
   value = tonumber(value)
@@ -41,17 +41,41 @@ local function defaultStory()
   }
 end
 
+local function defaultProgress()
+  return {
+    upgrades = { damage = 0, maxHp = 0, speed = 0 },
+    resonance = 0,
+    storyCompleted = false,
+  }
+end
+
 local function defaults()
+  local progress = {}
+  for _, id in ipairs(Data.characterOrder) do
+    progress[id] = defaultProgress()
+  end
+
   return {
     version = VERSION,
     coins = 0,
     bestLevel = 0,
-    upgrades = { damage = 0, maxHp = 0, speed = 0 },
-    unlocked = { cripta = true, forja = false, catedral = false },
+    unlocked = { cripta = true, forja = false, catedral = false, torre = false },
     characters = { amado = true, mar = false, amileth = false },
+    progress = progress,
+    bestiary = {},
     settings = { musicVolume = 0.6, effectsVolume = 0.8 },
     story = defaultStory(),
   }
+end
+
+local function allStoriesCompleted(progress)
+  for _, id in ipairs(Data.characterOrder) do
+    local entry = progress and progress[id]
+    if not entry or not entry.storyCompleted then
+      return false
+    end
+  end
+  return true
 end
 
 local function validCheckpoint(checkpoint)
@@ -79,6 +103,10 @@ local function normalizeStory(data)
   if type(data) ~= "table" then return out end
 
   out.completed = data.completed and true or false
+  if Data.characters[data.characterId] then
+    out.characterId = data.characterId
+  end
+
   local chapter = type(data.chapterId) == "string"
     and Data.story.chapterById[data.chapterId]
     or nil
@@ -87,9 +115,6 @@ local function normalizeStory(data)
   out.chapterId = chapter.id
   local depth = math.floor(tonumber(data.depth) or chapter.startDepth)
   out.depth = math.max(chapter.startDepth, math.min(depth, chapter.endDepth))
-  if Data.characters[data.characterId] then
-    out.characterId = data.characterId
-  end
 
   if data.active and validCheckpoint(data.checkpoint) then
     local checkpoint = data.checkpoint
@@ -119,10 +144,36 @@ local function normalize(data)
   out.coins = math.max(0, math.floor(tonumber(data.coins) or 0))
   out.bestLevel = math.max(0, math.floor(tonumber(data.bestLevel) or 0))
 
-  if type(data.upgrades) == "table" then
-    for id, definition in pairs(Data.upgrades) do
-      local level = math.floor(tonumber(data.upgrades[id]) or 0)
-      out.upgrades[id] = math.max(0, math.min(level, definition.maxLevel))
+  -- La versión 4 guardaba un solo nivel de mejora para toda la cuenta. Al
+  -- migrar, ese progreso se reparte entre los tres personajes para no quitar
+  -- fuerza a quien ya había invertido monedas.
+  local legacyUpgrades = type(data.upgrades) == "table" and data.upgrades or nil
+  local savedProgress = type(data.progress) == "table" and data.progress or {}
+
+  for _, characterId in ipairs(Data.characterOrder) do
+    local source = type(savedProgress[characterId]) == "table"
+      and savedProgress[characterId]
+      or nil
+    local levels = source and type(source.upgrades) == "table"
+      and source.upgrades
+      or legacyUpgrades
+
+    if type(levels) == "table" then
+      for id, definition in pairs(Data.upgrades) do
+        local level = math.floor(tonumber(levels[id]) or 0)
+        out.progress[characterId].upgrades[id] = math.max(
+          0,
+          math.min(level, definition.maxLevel)
+        )
+      end
+    end
+
+    if source then
+      out.progress[characterId].resonance = math.max(
+        0,
+        math.floor(tonumber(source.resonance) or 0)
+      )
+      out.progress[characterId].storyCompleted = source.storyCompleted and true or false
     end
   end
 
@@ -142,6 +193,14 @@ local function normalize(data)
   end
   out.characters.amado = true
 
+  if type(data.bestiary) == "table" then
+    for id, seen in pairs(data.bestiary) do
+      if type(id) == "string" and seen and Data.bestiary[id] then
+        out.bestiary[id] = true
+      end
+    end
+  end
+
   if type(data.settings) == "table" then
     out.settings.musicVolume = clamp01(data.settings.musicVolume)
       or out.settings.musicVolume
@@ -150,6 +209,15 @@ local function normalize(data)
   end
 
   out.story = normalizeStory(data.story)
+
+  -- El guardado anterior solo tenía un final. Se adjudica al personaje que
+  -- completó la campaña y se conserva la compatibilidad con story.completed.
+  local completedCharacter = out.story.characterId or "amado"
+  if out.story.completed and out.progress[completedCharacter] then
+    out.progress[completedCharacter].storyCompleted = true
+  end
+
+  out.unlocked.torre = allStoriesCompleted(out.progress)
   return out
 end
 
@@ -235,14 +303,25 @@ function Save.setStoryCheckpoint(chapterId, snapshot)
   return true
 end
 
-function Save.completeStory()
+function Save.completeStory(characterId)
   local story = Save.data and Save.data.story
   if not story then return false end
+
+  characterId = characterId or story.characterId or "amado"
+  if not Save.data.progress[characterId] then
+    characterId = "amado"
+  end
+
+  Save.data.progress[characterId].storyCompleted = true
   story.active = false
   story.completed = true
+  story.characterId = characterId
   story.checkpoint = nil
+
+  local allCompleted = allStoriesCompleted(Save.data.progress)
+  Save.data.unlocked.torre = allCompleted
   Save.save()
-  return true
+  return true, allCompleted
 end
 
 function Save.resetStory()
@@ -250,6 +329,90 @@ function Save.resetStory()
   Save.data.story = defaultStory()
   Save.save()
   return true
+end
+
+function Save.progressFor(characterId)
+  if type(Save.data) ~= "table" then return nil end
+  local progress = Save.data.progress[characterId]
+  if progress then return progress end
+  progress = defaultProgress()
+  Save.data.progress[characterId] = progress
+  return progress
+end
+
+function Save.isStoryCompleted(characterId)
+  local progress = Save.progressFor(characterId)
+  return progress ~= nil and progress.storyCompleted == true
+end
+
+function Save.storyCompletionCount()
+  local count = 0
+  for _, id in ipairs(Data.characterOrder) do
+    if Save.isStoryCompleted(id) then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+function Save.allStoriesCompleted()
+  return allStoriesCompleted(Save.data and Save.data.progress)
+end
+
+function Save.addResonance(characterId, amount)
+  local progress = Save.progressFor(characterId)
+  if not progress then return false end
+  amount = math.max(0, math.floor(tonumber(amount) or 0))
+  if amount == 0 then return false end
+  progress.resonance = progress.resonance + amount
+  Save.save()
+  return true
+end
+
+function Save.upgradeLevel(upgradeId, characterId)
+  local progress = Save.progressFor(characterId)
+  if not progress or not Data.upgrades[upgradeId] then return 0 end
+  return progress.upgrades[upgradeId] or 0
+end
+
+function Save.useResonance(characterId, upgradeId)
+  local progress = Save.progressFor(characterId)
+  local def = Data.upgrades[upgradeId]
+  if not progress or not def then return false end
+  if progress.resonance <= 0 then return false end
+  if (progress.upgrades[upgradeId] or 0) >= def.maxLevel then return false end
+
+  progress.resonance = progress.resonance - 1
+  progress.upgrades[upgradeId] = (progress.upgrades[upgradeId] or 0) + 1
+  Save.save()
+  return true
+end
+
+function Save.isDungeonUnlocked(id)
+  if id == "torre" then
+    return Save.allStoriesCompleted()
+  end
+  return Save.data.unlocked[id] == true
+end
+
+function Save.discoverEnemy(id)
+  if type(id) ~= "string" or not Data.enemyTypes[id] then return false end
+  if Save.data.bestiary[id] then return false end
+  Save.data.bestiary[id] = true
+  Save.save()
+  return true
+end
+
+function Save.isEnemyDiscovered(id)
+  return Save.data.bestiary[id] == true
+end
+
+function Save.bestiaryCount()
+  local count = 0
+  for id in pairs(Save.data.bestiary) do
+    if Data.bestiary[id] then count = count + 1 end
+  end
+  return count
 end
 
 function Save.setVolumes(musicVolume, effectsVolume)
@@ -285,30 +448,9 @@ function Save.recordLevel(level)
   end
 end
 
-function Save.upgradeCost(id)
+function Save.stat(id, characterId)
   local def = Data.upgrades[id]
-  local level = Save.data.upgrades[id] or 0
-  return math.floor(def.baseCost * (Data.economy.costGrowth ^ level))
-end
-
-function Save.canBuy(id)
-  local def = Data.upgrades[id]
-  local level = Save.data.upgrades[id] or 0
-  if level >= def.maxLevel then return false end
-  return Save.data.coins >= Save.upgradeCost(id)
-end
-
-function Save.buy(id)
-  if not Save.canBuy(id) then return false end
-  Save.data.coins = Save.data.coins - Save.upgradeCost(id)
-  Save.data.upgrades[id] = Save.data.upgrades[id] + 1
-  Save.save()
-  return true
-end
-
-function Save.stat(id)
-  local def = Data.upgrades[id]
-  local level = Save.data.upgrades[id] or 0
+  local level = Save.upgradeLevel(id, characterId)
   return def.base + def.step * level
 end
 

@@ -43,6 +43,9 @@ local Buttons = require("src.utils.buttons")
 local Backpack = require("src.run.backpack")
 local Shop = require("src.run.shop")
 local Menu = require("src.estados.menu")
+local Infinito = require("src.estados.infinito")
+local Personajes = require("src.estados.personajes")
+local Bestiario = require("src.estados.bestiario")
 local Gameover = require("src.estados.gameover")
 local Config = require("src.estados.config")
 local Sandbox = require("src.run.sandbox")
@@ -131,21 +134,41 @@ local function checkWide(width, height, expectedWidth, expectedScale)
   assert(insideScreen(Shop.tabAlchemy, Screen.width, Screen.height), "pestaña alquimia fuera")
 
   Menu.enter()
-  assert(Menu.leftX >= 0, "columna izquierda fuera de pantalla")
-  assert(Menu.rightX + 444 <= Screen.width + 0.001, "columna derecha fuera de pantalla")
-  for _, rect in ipairs(Menu.characterRects) do
-    assert(insideScreen(rect, Screen.width, Screen.height), "personaje fuera de pantalla")
+  assert(insideScreen(Menu.panel, Screen.width, Screen.height), "menú fuera de pantalla")
+  for _, id in ipairs({ "story", "infinite", "characters", "bestiary", "config" }) do
+    assert(
+      insideScreen(Menu.rects[id], Screen.width, Screen.height),
+      "acceso de menú fuera de pantalla: " .. id
+    )
   end
-  for _, rect in ipairs(Menu.dungeonRects) do
-    assert(insideScreen(rect, Screen.width, Screen.height), "mazmorra fuera de pantalla")
+
+  Infinito.enter()
+  assert(insideScreen(Infinito.panel, Screen.width, Screen.height), "modo infinito fuera")
+  assert(insideScreen(Infinito.rects.back, Screen.width, Screen.height), "volver fuera")
+  assert(insideScreen(Infinito.rects.start, Screen.width, Screen.height), "iniciar fuera")
+  for _, rect in ipairs(Infinito.characterRects) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "personaje infinito fuera")
   end
-  for _, rect in ipairs(Menu.upgradeRects) do
-    assert(insideScreen(rect, Screen.width, Screen.height), "mejora fuera de pantalla")
+  for _, rect in ipairs(Infinito.dungeonRects) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "mazmorra infinita fuera")
   end
-  assert(
-    insideScreen(Menu.configRect, Screen.width, Screen.height),
-    "configuración fuera de pantalla"
-  )
+
+  Personajes.enter("amado")
+  assert(insideScreen(Personajes.panel, Screen.width, Screen.height), "personajes fuera")
+  assert(insideScreen(Personajes.rects.back, Screen.width, Screen.height), "volver fuera")
+  for _, rect in ipairs(Personajes.characterRects) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "ficha de personaje fuera")
+  end
+  for _, rect in ipairs(Personajes.upgradeRects) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "mejora de personaje fuera")
+  end
+
+  Bestiario.enter()
+  assert(insideScreen(Bestiario.panel, Screen.width, Screen.height), "bestiario fuera")
+  assert(insideScreen(Bestiario.rects.back, Screen.width, Screen.height), "volver fuera")
+  for _, rect in ipairs(Bestiario.cards) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "ficha de bestiario fuera")
+  end
 
   Config.layout()
   assert(insideScreen(Config.panel, Screen.width, Screen.height), "configuración fuera")

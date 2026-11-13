@@ -16,8 +16,8 @@ function ItemDrop.new(itemId, x, y, amount)
   self.x = x
   self.y = y
   self.amount = amount or 1
-  self.radius = def.kind == "character" and 13 or 9
-  self.permanent = def.kind == "character"
+  self.radius = (def.kind == "character" or def.kind == "resonance") and 13 or 9
+  self.permanent = def.kind == "character" or def.kind == "resonance"
   self.life = self.permanent and math.huge or Data.itemLifetime
   self.phase = love.math.random() * math.pi * 2
   self.dead = false
@@ -106,6 +106,15 @@ function ItemDrop:draw()
     love.graphics.setLineWidth(3)
     love.graphics.circle("line", x, y, r)
     love.graphics.circle("line", x, y, r * 0.55)
+    love.graphics.setLineWidth(1)
+    love.graphics.setColor(1, 1, 1, alpha)
+    love.graphics.circle("fill", x, y, 3)
+  elseif def.kind == "resonance" then
+    love.graphics.setLineWidth(2)
+    love.graphics.circle("line", x, y, r)
+    love.graphics.circle("line", x, y, r * 0.62)
+    love.graphics.line(x - r, y, x + r, y)
+    love.graphics.line(x, y - r, x, y + r)
     love.graphics.setLineWidth(1)
     love.graphics.setColor(1, 1, 1, alpha)
     love.graphics.circle("fill", x, y, 3)

@@ -2,6 +2,7 @@
 -- Las funciones reciben run como primer argumento y run.lua las monta
 -- como métodos, así el resto del juego sigue llamando run:metodo(...).
 local Data = require("src.run.data")
+local Save = require("src.run.save")
 local Enemy = require("src.run.enemy")
 local Hazard = require("src.run.hazard")
 local Projectile = require("src.run.projectile")
@@ -32,6 +33,9 @@ function Spawner.createEnemy(run, kind, x, y, options)
 
   local enemy = Enemy.new(kind, x, y, hp, damage, def.xp, { elite = elite })
   run.enemies[#run.enemies + 1] = enemy
+  if not run.sandbox then
+    Save.discoverEnemy(kind)
+  end
   return enemy
 end
 

@@ -107,4 +107,31 @@ Bosses.types = {
   },
 }
 
+Bosses.bestiaryOrder = {
+  "guardian", "bone_patriarch", "living_forge", "time_inquisitor", "time_organ",
+}
+
+Bosses.bestiary = {
+  guardian = {
+    name = "Guardián de la Caldera",
+    desc = "Dispara un patrón circular de proyectiles y mantiene una presión constante.",
+  },
+  bone_patriarch = {
+    name = "Patriarca de Huesos y Cobre",
+    desc = "Invoca autómatas y gira una jaula de rayos al bajar de vida.",
+  },
+  living_forge = {
+    name = "Forja Viviente",
+    desc = "Permanece inmóvil, crea zonas de fuego e invoca sabuesos.",
+  },
+  time_inquisitor = {
+    name = "Inquisidor del Tiempo",
+    desc = "Aura dañina, teletransporte y un cono que congela al jugador.",
+  },
+  time_organ = {
+    name = "Órgano del Tiempo",
+    desc = "Invoca espectros, barre con rayos y acelera su compás en cada fase.",
+  },
+}
+
 return Bosses

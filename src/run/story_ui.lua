@@ -18,7 +18,7 @@ local function finish(run)
 end
 
 function StoryUI.start(run, sceneId, onDone)
-  local scene = Data.story.scenes[sceneId]
+  local scene = Data.story.sceneFor(run.characterId, sceneId)
   if not scene then
     if onDone then onDone(run) end
     return false

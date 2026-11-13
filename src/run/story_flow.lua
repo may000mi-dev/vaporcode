@@ -48,7 +48,7 @@ function StoryFlow.advanceStoryChapter(run)
 end
 
 function StoryFlow.finishStory(run)
-  Save.completeStory()
+  Save.completeStory(run.characterId)
   Audio.stopMusic()
   run.over = true
   run.paused = false

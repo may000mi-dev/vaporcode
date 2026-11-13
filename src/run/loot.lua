@@ -168,6 +168,18 @@ function Loot.pickupItem(run, item, pet)
         def.color
       )
     end
+  elseif def.kind == "resonance" then
+    if run.sandbox then
+      FX.add("Resonancia omitida en pruebas", player.x, player.y - 34, def.color)
+    else
+      Save.addResonance(def.characterId, item.amount or 1)
+      FX.add(
+        "¡" .. def.name .. "!",
+        player.x,
+        player.y - 34,
+        def.color
+      )
+    end
   else
     local status, added = run:addItemToInventory(item.itemId, item.amount)
     if status == "full" then

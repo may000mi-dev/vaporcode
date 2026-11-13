@@ -15,6 +15,15 @@ end
 package.preload["src.estados.historia"] = function()
   return { enter = function() entered.historia = true end }
 end
+package.preload["src.estados.infinito"] = function()
+  return { enter = function() entered.infinito = true end }
+end
+package.preload["src.estados.personajes"] = function()
+  return { enter = function() entered.personajes = true end }
+end
+package.preload["src.estados.bestiario"] = function()
+  return { enter = function() entered.bestiario = true end }
+end
 package.preload["src.run.run"] = function()
   return { enter = function() entered.run = true end }
 end
@@ -35,5 +44,14 @@ assert(State.name == "config" and entered.config, "debe cargar configuración")
 
 State.switch("historia")
 assert(State.name == "historia" and entered.historia, "debe cargar historia")
+
+State.switch("infinito")
+assert(State.name == "infinito" and entered.infinito, "debe cargar infinito")
+
+State.switch("personajes")
+assert(State.name == "personajes" and entered.personajes, "debe cargar personajes")
+
+State.switch("bestiario")
+assert(State.name == "bestiario" and entered.bestiario, "debe cargar bestiario")
 
 print("OK ruteo de estados")

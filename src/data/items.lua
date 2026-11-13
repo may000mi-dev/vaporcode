@@ -206,11 +206,50 @@ Items.items = {
     stackable = false,
     maxStacks = 1,
   },
+  resonance_amado = {
+    id = "resonance_amado",
+    kind = "resonance",
+    name = "Resonancia de Amado",
+    short = "RES",
+    characterId = "amado",
+    color = { 0.50, 0.90, 1.00 },
+    desc = "Permite subir una mejora permanente de Amado.",
+    stackable = false,
+    weight = 0,
+  },
+  resonance_mar = {
+    id = "resonance_mar",
+    kind = "resonance",
+    name = "Resonancia de Mar",
+    short = "RES",
+    characterId = "mar",
+    color = { 0.95, 0.38, 0.34 },
+    desc = "Permite subir una mejora permanente de Mar.",
+    stackable = false,
+    weight = 0,
+  },
+  resonance_amileth = {
+    id = "resonance_amileth",
+    kind = "resonance",
+    name = "Resonancia de Amileth",
+    short = "RES",
+    characterId = "amileth",
+    color = { 0.98, 0.86, 0.30 },
+    desc = "Permite subir una mejora permanente de Amileth.",
+    stackable = false,
+    weight = 0,
+  },
 }
 
 Items.characterItem = {
   mar = "mar_unlock",
   amileth = "amileth_unlock",
+}
+
+Items.resonanceItem = {
+  amado = "resonance_amado",
+  mar = "resonance_mar",
+  amileth = "resonance_amileth",
 }
 
 Items.itemPool = {

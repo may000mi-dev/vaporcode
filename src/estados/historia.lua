@@ -13,6 +13,12 @@ local shortDescription = {
   amileth = "Cadena y escudo",
 }
 
+local completedSubKeys = {
+  amado = "historia-completed-amado",
+  mar = "historia-completed-mar",
+  amileth = "historia-completed-amileth",
+}
+
 local Historia = {
   rects = {},
   characterRects = {},
@@ -78,8 +84,7 @@ local function continueStory()
 end
 
 local function requestNew()
-  local story = Save.data.story
-  if Save.hasStoryCheckpoint() or (story and story.completed) then
+  if Save.hasStoryCheckpoint() or Save.isStoryCompleted(Historia.characterId) then
     Historia.confirmNew = true
   else
     startNew()
@@ -299,23 +304,17 @@ function Historia.draw()
 
   local chapter = currentChapter()
   local story = Save.data.story
+  local selected = Data.characters[Historia.characterId]
   love.graphics.setFont(Fonts.body)
   love.graphics.setColor(0.86, 0.90, 0.95)
-  if story and story.completed then
-    love.graphics.printf(
-      "Campaña completada · la melodía de Aethelgard vuelve a sonar.",
-      panel.x + 40,
-      panel.y + 98,
-      panel.w - 80,
-      "center"
-    )
-  elseif chapter then
+  if chapter then
     love.graphics.printf(
       TextCache.format(
         "historia-progress",
-        "%s · piso %d",
+        "%s · piso %d · %s",
         chapter.name,
-        story.depth
+        story.depth,
+        Data.characters[story.characterId].name
       ),
       panel.x + 40,
       panel.y + 92,
@@ -325,17 +324,53 @@ function Historia.draw()
     love.graphics.setFont(Fonts.small)
     love.graphics.setColor(0.72, 0.78, 0.86)
     love.graphics.printf(
-      "Amado debe cruzar tres reinos y afinar el Órgano del Tiempo.",
+      "La misma torre cambia según quién sostenga el prototipo.",
       panel.x + 40,
       panel.y + 118,
       panel.w - 80,
       "center"
     )
-  else
+  elseif Save.isStoryCompleted(Historia.characterId) then
     love.graphics.printf(
-      "Rescata a Mar y Amileth antes de que el tiempo se detenga.",
+      "Historia completada con " .. selected.name .. ".",
       panel.x + 40,
       panel.y + 98,
+      panel.w - 80,
+      "center"
+    )
+    love.graphics.setFont(Fonts.small)
+    love.graphics.setColor(0.72, 0.78, 0.86)
+    love.graphics.printf(
+      TextCache.format(
+        "historia-completed-count",
+        "%d/%d historias completadas · la Torre se abre con las tres.",
+        Save.storyCompletionCount(),
+        #Data.characterOrder
+      ),
+      panel.x + 40,
+      panel.y + 124,
+      panel.w - 80,
+      "center"
+    )
+  else
+    love.graphics.printf(
+      "Rescata a la familia antes de que el tiempo se detenga.",
+      panel.x + 40,
+      panel.y + 98,
+      panel.w - 80,
+      "center"
+    )
+    love.graphics.setFont(Fonts.small)
+    love.graphics.setColor(0.72, 0.78, 0.86)
+    love.graphics.printf(
+      TextCache.format(
+        "historia-count",
+        "%d/%d historias completadas · elige una perspectiva",
+        Save.storyCompletionCount(),
+        #Data.characterOrder
+      ),
+      panel.x + 40,
+      panel.y + 124,
       panel.w - 80,
       "center"
     )
@@ -347,10 +382,14 @@ function Historia.draw()
 
   for _, rect in ipairs(Historia.characterRects) do
     local def = Data.characters[rect.id]
+    local sub = shortDescription[rect.id] or def.desc
+    if Save.isStoryCompleted(rect.id) then
+      sub = TextCache.format(completedSubKeys[rect.id], "%s · completada", sub)
+    end
     drawButton(
       rect,
       def.name,
-      shortDescription[rect.id] or def.desc,
+      sub,
       def.color,
       Historia.characterId == rect.id
     )
@@ -366,13 +405,17 @@ function Historia.draw()
     )
   end
 
-  local newLabel = (story and story.completed)
-    and "NUEVA HISTORIA"
-    or "COMENZAR HISTORIA"
+  local newLabel = (
+    Save.isStoryCompleted(Historia.characterId) or Save.hasStoryCheckpoint()
+  ) and "NUEVA HISTORIA" or "COMENZAR HISTORIA"
   drawButton(
     Historia.rects.new,
     newLabel,
-    "Las mejoras y monedas se conservan",
+    TextCache.format(
+      "historia-new-sub",
+      "Campaña de %s · mejoras y monedas se conservan",
+      Data.characters[Historia.characterId].name
+    ),
     { 0.78, 0.64, 1.00 },
     false
   )
@@ -416,7 +459,7 @@ function Historia.draw()
     love.graphics.setFont(Fonts.small)
     love.graphics.setColor(0.78, 0.82, 0.88)
     love.graphics.printf(
-      "Se borrará el checkpoint actual. Las mejoras y monedas se conservan.",
+      "Se borrará el checkpoint en curso. Las historias completadas, mejoras y monedas se conservan.",
       modal.x + 30,
       modal.y + 58,
       modal.w - 60,

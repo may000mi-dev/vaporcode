@@ -50,6 +50,31 @@ end
 for id, def in pairs(Bosses.types) do
   Data.enemyTypes[id] = def
 end
+Data.bestiary = {}
+Data.bestiaryOrder = {}
+for _, id in ipairs(Enemies.bestiaryOrder) do
+  local info = Enemies.bestiary[id]
+  if info then
+    Data.bestiary[id] = {
+      name = info.name,
+      desc = info.desc,
+      boss = false,
+    }
+    Data.bestiaryOrder[#Data.bestiaryOrder + 1] = id
+  end
+end
+for _, id in ipairs(Bosses.bestiaryOrder) do
+  local info = Bosses.bestiary[id]
+  if info then
+    Data.bestiary[id] = {
+      name = info.name,
+      desc = info.desc,
+      boss = true,
+    }
+    Data.bestiaryOrder[#Data.bestiaryOrder + 1] = id
+  end
+end
+
 Data.elite = Enemies.elite
 Data.hazards = Enemies.hazards
 Data.enemyAI = Enemies.enemyAI
@@ -57,6 +82,7 @@ Data.spawn = Enemies.spawn
 
 Data.items = Items.items
 Data.itemPool = Items.itemPool
+Data.resonanceItem = Items.resonanceItem
 Data.itemLifetime = Items.itemLifetime
 Data.itemBlinkTime = Items.itemBlinkTime
 Data.itemPickupRadius = Items.itemPickupRadius

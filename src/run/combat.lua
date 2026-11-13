@@ -138,6 +138,12 @@ function Combat.onEnemyKilled(run, enemy)
   end
   if enemy.def.boss then
     run:shake(8, 0.40)
+    if not run.sandbox then
+      local resonanceId = Data.resonanceItem[run.characterId]
+      if resonanceId then
+        run:dropItem(resonanceId, enemy.x, enemy.y + 18, 1)
+      end
+    end
     FX.add(
       "¡Jefe derrotado!",
       enemy.x,

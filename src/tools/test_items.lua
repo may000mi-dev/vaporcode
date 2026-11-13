@@ -33,6 +33,7 @@ local Rhythm = require("src.run.rhythm")
 local Hud = require("src.run.hud")
 local Shop = require("src.run.shop")
 local Run = require("src.run.run")
+local Combat = require("src.run.combat")
 
 Save.load()
 assert(Save.isCharacterUnlocked("amado"), "Amado debe estar disponible")
@@ -367,4 +368,37 @@ Run:pickupItem(characterItem)
 assert(Save.isCharacterUnlocked("amileth"), "recoger el ítem debe desbloquear")
 assert(Run.unlockNotices.amileth == nil, "recoger debe quitar el aviso pendiente")
 
-print("OK botín, pasivas, desbloqueos y mascotas")
+-- Las resonancias de jefe son permanentes y mejoran al personaje de la run.
+Run.player = fakePlayer
+Run.sandbox = false
+Run.unlockNotices = {}
+Run.data = Run.data or {}
+Save.data.progress.amado.resonance = 0
+Run:pickupItem(ItemDrop.new("resonance_amado", 0, 0, 2))
+assert(Save.progressFor("amado").resonance == 2, "recoger resonancia debe sumar al personaje")
+
+local bossDrops = {}
+local bossRun = {
+  sandbox = false,
+  characterId = "mar",
+  kills = 0,
+  dropItem = function(_, id)
+    bossDrops[#bossDrops + 1] = id
+  end,
+  shake = function() end,
+}
+local fakeBoss = {
+  x = 0,
+  y = 0,
+  xp = 50,
+  def = { boss = true, color = { 1, 1, 1 }, noDrop = true },
+}
+Combat.onEnemyKilled(bossRun, fakeBoss)
+assert(bossDrops[1] == "resonance_mar", "el jefe debe soltar la resonancia del personaje")
+
+bossDrops = {}
+bossRun.sandbox = true
+Combat.onEnemyKilled(bossRun, fakeBoss)
+assert(#bossDrops == 0, "la sala de pruebas no debe dar resonancias")
+
+print("OK botín, pasivas, desbloqueos, resonancias y mascotas")
