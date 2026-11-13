@@ -126,13 +126,16 @@ acumulan hasta su máximo global (activos + guardados); mascotas y desbloqueos s
 - **Asignar habilidad:** un ítem `*_skill` guardado se asigna a A1/A2 y se consume.
 
 - **Pasivas apilables (máx 5):** Veneno (daño en tiempo), Vampiro (roba vida con el
-  básico), Hada (recupera maná con el básico), Pólvora (explosión con aturdimiento).
+  básico), Hada (recupera maná con el básico), Pólvora (explosión con aturdimiento;
+  los jefes son inmunes).
 - **Pasivas únicas:** Tambor (ritmo: menos costo y enfriamiento), Flauta (el
   siguiente básico invoca un tornado).
 - **Habilidades de ítem:** Resonancia, Flecha de luz, Intercambio de sombra.
 - **Mascotas:** Perro (muerde al ritmo, inmune al cuerpo a cuerpo), Gato (los
   enemigos lo ignoran), Dragón (aliento potente, débil al cuerpo a cuerpo), Hámster
-  (recoge ítems y busca paredes frágiles).
+  (recoge ítems; al pulso fuerte puede meterse en una pared frágil y romperla desde
+  dentro tras 4 beats, con 10 s de recarga). Si una mascota queda atrapada y se aleja
+  más de 360 px del jugador, reaparece a su lado.
 - **Personajes:** Mar y Amileth.
 
 ### Alquimia
@@ -153,8 +156,11 @@ entre 25 y 120 monedas; vende pasivas, mascotas y habilidades de ítem.
 | Guardián de la Caldera | cuerpo a cuerpo rápido; 320 HP |
 | Patriarca de Huesos y Cobre | invoca autómatas y dispara abanicos; fases en 66%/33% |
 | Forja Viviente | zonas de fuego (radio 58) e invoca sabuesos; 500 HP |
-| Inquisidor del Tiempo | dash telegrafiado y cono a 2x daño |
+| Inquisidor del Tiempo | tamaño del jugador; aura de daño, cono congelante y reubicación si queda bloqueado; 560 HP |
 | Órgano del Tiempo | jefe final; invoca espectros y lanza compases de rayos en fases |
+
+Todos los jefes son inmunes al aturdimiento para que la Pólvora o el Perro no
+anulen sus patrones de ataque.
 
 ## Modo Historia
 

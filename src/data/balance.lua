@@ -113,6 +113,7 @@ Balance.projectile = {
 Balance.rhythm = {
   bpm = 104,
   firstBeatDelay = 1.6,
+  beatsPerBar = 4,
   visualWindow = 0.12,
   hitWindow = 0.12,
   perfectMultiplier = 2,
@@ -127,6 +128,7 @@ Balance.colors = {
   wallTop = { 0.22, 0.25, 0.30 },
   player = { 0.50, 0.90, 1.00 },
   xp = { 0.35, 0.85, 1.00 },
+  beatStrong = { 0.40, 0.72, 1.00 },
 }
 
 return Balance

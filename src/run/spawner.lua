@@ -127,7 +127,7 @@ function Spawner.addPet(run, kind, x, y)
   if run:ownsPet(kind) then return false end
   local pet = Pet.new(kind, x, y)
   if not pet then return false end
-  pet:placeNear(run.player, #run.pets + 1)
+  pet:placeNear(run.player, #run.pets + 1, run.dungeon)
   run.pets[#run.pets + 1] = pet
   return true
 end

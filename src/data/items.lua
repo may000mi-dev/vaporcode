@@ -6,6 +6,8 @@ local Items = {}
 Items.itemLifetime = 7
 Items.itemBlinkTime = 1.5
 Items.itemPickupRadius = 20
+-- Si una mascota queda atrapada, reaparece junto al jugador al superar esta distancia.
+Items.petLeash = 360
 
 Items.items = {
   poison = {
@@ -177,7 +179,7 @@ Items.items = {
     name = "Hámster",
     short = "HAM",
     color = { 0.94, 0.78, 0.52 },
-    desc = "Recoge ítems y busca paredes frágiles.",
+    desc = "Recoge ítems y rompe paredes frágiles al ritmo fuerte.",
     stackable = false,
     maxStacks = 1,
     weight = 0,
@@ -329,6 +331,9 @@ Items.pets = {
     regenDelay = 3,
     regenRate = 0.10,
     targetable = true,
+    burrowChance = 0.40,
+    burrowBeats = 4,
+    burrowCooldown = 10,
   },
 }
 

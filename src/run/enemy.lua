@@ -73,7 +73,10 @@ function Enemy:movementSpeed()
 end
 
 function Enemy:applyStun(duration)
+  -- Los jefes no se aturden: la pólvora y el perro no deben anular su IA.
+  if self.def.boss then return false end
   self.stunTimer = math.max(self.stunTimer, duration or 0)
+  return true
 end
 
 function Enemy:applySlow(duration, factor)

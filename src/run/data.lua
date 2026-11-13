@@ -60,6 +60,7 @@ Data.itemPool = Items.itemPool
 Data.itemLifetime = Items.itemLifetime
 Data.itemBlinkTime = Items.itemBlinkTime
 Data.itemPickupRadius = Items.itemPickupRadius
+Data.petLeash = Items.petLeash
 Data.inventory = Items.inventory
 Data.alchemy = Items.alchemy
 Data.shop = Items.shop

@@ -271,6 +271,85 @@ end
 hamster:update(0.016, petRun)
 assert(collected and collected.itemId == "poison", "el hámster debe recoger ítems")
 
+petRun.player = { x = Data.petLeash + 200, y = 0, radius = 16 }
+petRun.enemies = {}
+petRun.itemDrops = {}
+local strandedDog = Pet.new("dog", 0, 0)
+strandedDog:update(0.016, petRun)
+local leashDx = strandedDog.x - petRun.player.x
+local leashDy = strandedDog.y - petRun.player.y
+assert(
+  leashDx * leashDx + leashDy * leashDy < 100 * 100,
+  "una mascota lejana debe reaparecer junto al jugador"
+)
+
+-- El hámster entra en una pared frágil al pulso fuerte y la rompe en 4 beats.
+Rhythm.enter({ bpm = 60 })
+Rhythm.beat = 3
+Rhythm.nextBeat = Rhythm.t + 0.01
+Rhythm.update(0.02)
+assert(Rhythm.beat == 4 and Rhythm.justStrongBeat, "el beat 4 debe ser el pulso fuerte")
+
+local burrowWall = { hp = Data.destructible.hp, maxHp = Data.destructible.hp }
+local burrowDungeon = {
+  tile = 36,
+  destructible = { [5] = { [5] = burrowWall } },
+  tileCenter = function(_, tx, ty)
+    return tx * 36, ty * 36
+  end,
+  moveCircle = function(_, x, y, dx, dy)
+    return x + dx, y + dy
+  end,
+  lineOfSight = function()
+    return true
+  end,
+  circleCollides = function()
+    return false
+  end,
+}
+local wallsBroken = 0
+local burrowRun = {
+  player = { x = 0, y = 0, radius = 16 },
+  stats = { damage = 10 },
+  enemies = {},
+  itemDrops = {},
+  dungeon = burrowDungeon,
+  pickupItem = function()
+    return false
+  end,
+  damageWallAt = function(self, tx, ty)
+    local wall = self.dungeon.destructible[ty] and self.dungeon.destructible[ty][tx]
+    if not wall then return false end
+    self.dungeon.destructible[ty][tx] = nil
+    wallsBroken = wallsBroken + 1
+    return true
+  end,
+}
+local burrower = Pet.new("hamster", 5 * 36 + 20, 5 * 36)
+randomValue = 0
+Rhythm.beat = 4
+Rhythm.justStrongBeat = true
+burrower:update(0.016, burrowRun)
+assert(burrower.burrow and burrower.burrow.startBeat == 4, "el hámster debe entrar a la pared")
+assert(burrower.x == 5 * 36 and burrower.y == 5 * 36, "debe quedar dentro de la pared")
+
+Rhythm.justStrongBeat = false
+Rhythm.beat = 7
+burrower:update(0.016, burrowRun)
+assert(burrower.burrow and wallsBroken == 0, "no debe romper antes de 4 beats")
+
+Rhythm.beat = 8
+burrower:update(0.016, burrowRun)
+assert(not burrower.burrow and wallsBroken == 1, "debe romper la pared desde dentro")
+assert(burrower.burrowCooldown == 10, "la habilidad debe entrar en recarga de 10 s")
+
+burrowDungeon.destructible[5][6] = { hp = Data.destructible.hp, maxHp = Data.destructible.hp }
+burrower.x, burrower.y = 6 * 36, 5 * 36
+Rhythm.beat = 12
+Rhythm.justStrongBeat = true
+burrower:update(0.016, burrowRun)
+assert(not burrower.burrow, "la recarga debe impedir otra entrada")
+
 Save.data.characters.amileth = false
 Run.itemDrops = {}
 Run.unlockNotices = {}

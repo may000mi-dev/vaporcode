@@ -37,6 +37,22 @@ local function nearestItem(run, x, y, range)
   return best
 end
 
+local function nearestWall(run, x, y, range)
+  local best = nil
+  local bestD2 = range * range
+  for ty, row in pairs(run.dungeon.destructible or {}) do
+    for tx, wall in pairs(row) do
+      local wx, wy = run.dungeon:tileCenter(tx, ty)
+      local d2 = Util.dist2(x, y, wx, wy)
+      if d2 <= bestD2 then
+        bestD2 = d2
+        best = { x = wx, y = wy, tx = tx, ty = ty, wall = wall }
+      end
+    end
+  end
+  return best
+end
+
 function Pet.new(kind, x, y, snapshot)
   local def = Data.pets[kind]
   if not def then return nil end
@@ -53,6 +69,8 @@ function Pet.new(kind, x, y, snapshot)
   self.facingX = 1
   self.facingY = 0
   self.attackCooldown = snapshot and snapshot.attackCooldown or 0
+  self.burrowCooldown = 0
+  self.burrow = nil
   self.retaliateTimer = 0
   self.regenDelay = 0
   self.hitFlash = 0
@@ -63,11 +81,25 @@ function Pet.new(kind, x, y, snapshot)
   return self
 end
 
-function Pet:placeNear(player, slot)
+function Pet:placeNear(player, slot, dungeon)
   self.slot = slot
   local angle = -1.4 + (slot - 1) * 0.95
-  self.x = player.x + math.cos(angle) * (player.radius + self.radius + 12)
-  self.y = player.y + math.sin(angle) * (player.radius + self.radius + 12)
+  local distance = player.radius + self.radius + 12
+  local offsetX = math.cos(angle) * distance
+  local offsetY = math.sin(angle) * distance
+  if dungeon then
+    -- Se desliza contra paredes para no reaparecer dentro de un muro.
+    self.x, self.y = dungeon:moveCircle(
+      player.x,
+      player.y,
+      offsetX,
+      offsetY,
+      self.radius
+    )
+  else
+    self.x = player.x + offsetX
+    self.y = player.y + offsetY
+  end
 end
 
 function Pet:snapshot()
@@ -166,18 +198,7 @@ function Pet:updateHamster(dt, run)
     end
   else
     local player = run.player
-    local best = nil
-    local bestD2 = self.def.range * self.def.range
-    for ty2, row in pairs(run.dungeon.destructible or {}) do
-      for tx2 in pairs(row) do
-        local wx, wy = run.dungeon:tileCenter(tx2, ty2)
-        local d2 = Util.dist2(self.x, self.y, wx, wy)
-        if d2 <= bestD2 then
-          bestD2 = d2
-          best = { x = wx, y = wy }
-        end
-      end
-    end
+    local best = nearestWall(run, self.x, self.y, self.def.range)
     if best then
       tx, ty = best.x, best.y
     else
@@ -189,12 +210,63 @@ function Pet:updateHamster(dt, run)
   return tx, ty
 end
 
+function Pet:tryStartBurrow(run)
+  if self.burrowCooldown > 0 or not Rhythm.justStrongBeat then return false end
+
+  local wall = nearestWall(run, self.x, self.y, self.def.range)
+  if not wall then return false end
+
+  local tile = run.dungeon.tile or 36
+  local reach = tile * 0.5 + self.radius + 8
+  if Util.dist2(self.x, self.y, wall.x, wall.y) > reach * reach then
+    return false
+  end
+  if love.math.random() >= (self.def.burrowChance or 0.40) then
+    return false
+  end
+
+  self.burrow = {
+    tx = wall.tx,
+    ty = wall.ty,
+    x = wall.x,
+    y = wall.y,
+    startBeat = Rhythm.beat,
+  }
+  self.x, self.y = wall.x, wall.y
+  self.facingX, self.facingY = 0, 0
+  FX.ring(wall.x, wall.y, self.radius + 6, Data.items.hamster.color)
+  return true
+end
+
+function Pet:updateBurrow(dt, run)
+  local burrow = self.burrow
+  local wall = run.dungeon.destructible[burrow.ty]
+    and run.dungeon.destructible[burrow.ty][burrow.tx]
+
+  if not wall then
+    -- Otra fuente ya abrió la pared: el hámster sale sin gastar la recarga.
+    self.burrow = nil
+    self.x, self.y = burrow.x, burrow.y
+    return
+  end
+
+  local beats = self.def.burrowBeats or 4
+  if Rhythm.beat - burrow.startBeat < beats then return end
+
+  run:damageWallAt(burrow.tx, burrow.ty, wall.maxHp or wall.hp or 1)
+  self.burrow = nil
+  self.x, self.y = burrow.x, burrow.y
+  self.burrowCooldown = self.def.burrowCooldown or 10
+  FX.ring(burrow.x, burrow.y, self.radius + 8, Data.items.hamster.color)
+end
+
 function Pet:update(dt, run)
   if self.dead then return end
 
   self.hitFlash = math.max(0, self.hitFlash - dt * 10)
   self.invuln = math.max(0, self.invuln - dt)
   self.attackCooldown = math.max(0, self.attackCooldown - dt)
+  self.burrowCooldown = math.max(0, (self.burrowCooldown or 0) - dt)
   self.regenDelay = math.max(0, self.regenDelay - dt)
   self.retaliateTimer = math.max(0, self.retaliateTimer - dt)
 
@@ -202,11 +274,26 @@ function Pet:update(dt, run)
     self.hp = math.min(self.maxHp, self.hp + self.maxHp * self.def.regenRate * dt)
   end
 
+  if self.burrow then
+    self:updateBurrow(dt, run)
+    return
+  end
+
+  local player = run.player
+  local leash = Data.petLeash or 360
+  if Util.dist2(self.x, self.y, player.x, player.y) > leash * leash then
+    -- Una mascota atrapada por paredes vuelve junto al jugador.
+    self:placeNear(player, self.slot, run.dungeon)
+  end
+
+  if self.kind == "hamster" and self:tryStartBurrow(run) then
+    return
+  end
+
   local tx, ty
   if self.kind == "hamster" then
     tx, ty = self:updateHamster(dt, run)
   else
-    local player = run.player
     local angle = -1.4 + (self.slot - 1) * 0.95
     local distance = player.radius + self.radius + 14
     tx = player.x + math.cos(angle) * distance
@@ -252,6 +339,24 @@ function Pet:draw()
   local color = Data.items[self.kind].color
   local radius = self.radius
   local flash = self.hitFlash or 0
+
+  if self.burrow then
+    local t = love.timer.getTime()
+    local pulse = 0.65 + 0.20 * math.sin(t * 10)
+    love.graphics.setColor(color[1], color[2], color[3], pulse)
+    love.graphics.circle("fill", self.x, self.y, radius * 0.8)
+    love.graphics.setColor(1.00, 0.86, 0.35, 0.85)
+    love.graphics.setLineWidth(2)
+    love.graphics.circle("line", self.x, self.y, radius + 4)
+    love.graphics.setLineWidth(1)
+    local beats = self.def.burrowBeats or 4
+    local remaining = math.max(0, beats - (Rhythm.beat - self.burrow.startBeat))
+    for i = 1, beats do
+      love.graphics.setColor(1.00, 0.86, 0.35, i <= remaining and 0.95 or 0.25)
+      love.graphics.circle("fill", self.x - 12 + i * 6, self.y - radius - 9, 2)
+    end
+    return
+  end
 
   love.graphics.setColor(0, 0, 0, 0.30)
   love.graphics.circle("fill", self.x, self.y + 2, radius + 2)

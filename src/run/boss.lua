@@ -11,10 +11,10 @@ function Boss.init(enemy)
   enemy.invulnTimer = 0
   enemy.summonTimer = def.firstSummonDelay or 2
   enemy.zoneTimer = def.zoneInterval or 2.4
-  enemy.dashTimer = def.dashInterval or 3.2
   enemy.coneTimer = def.coneInterval or 5.0
-  enemy.dashTime = 0
-  enemy.dashAngle = 0
+  enemy.auraTimer = 0
+  enemy.lostTimer = 0
+  enemy.stuckTimer = 0
 end
 
 local function moveToward(enemy, dt, run, dx, dy, distance, scale)
@@ -133,42 +133,87 @@ local function angleDifference(a, b)
   return math.abs(d)
 end
 
-local function updateChrono(enemy, dt, run, ctx)
-  enemy.dashTimer = math.max(0, enemy.dashTimer - dt)
-  enemy.coneTimer = math.max(0, enemy.coneTimer - dt)
+local function findBlinkPoint(enemy, run, target)
+  local def = enemy.def
+  local minDistance = def.blinkMinDistance or 72
+  local maxDistance = def.blinkMaxDistance or 132
+  local start = love.math.random() * math.pi * 2
 
-  if enemy.dashTime > 0 then
-    enemy.dashTime = math.max(0, enemy.dashTime - dt)
-    local speed = enemy.def.dashSpeed
-    enemy.x, enemy.y = run.dungeon:moveCircle(
-      enemy.x,
-      enemy.y,
-      math.cos(enemy.dashAngle) * speed * dt,
-      math.sin(enemy.dashAngle) * speed * dt,
-      enemy.radius
-    )
-    if enemy.dashTime <= 0 then
-      FX.ring(enemy.x, enemy.y, enemy.radius + 8, enemy.def.color)
+  for i = 0, 15 do
+    local angle = start + i * (math.pi * 2 / 16)
+    local distance = minDistance + (maxDistance - minDistance) * (i % 2)
+    local x = target.x + math.cos(angle) * distance
+    local y = target.y + math.sin(angle) * distance
+    local blocked = run.dungeon.circleCollides
+      and run.dungeon:circleCollides(x, y, enemy.radius)
+    if not blocked and run.dungeon:lineOfSight(x, y, target.x, target.y) then
+      return x, y
     end
-  elseif ctx.canSee then
-    moveToward(enemy, dt, run, ctx.dx, ctx.dy, ctx.distance, 0.85)
-    if enemy.dashTimer <= 0 and ctx.distance > 70 and ctx.distance < 430 then
-      enemy.dashTimer = enemy.def.dashInterval
-      enemy.dashTime = enemy.def.dashDuration
-      enemy.dashAngle = Util.atan2(ctx.dy, ctx.dx)
+  end
+end
+
+local function updateChrono(enemy, dt, run, ctx)
+  local def = enemy.def
+  enemy.coneTimer = math.max(0, enemy.coneTimer - dt)
+  enemy.auraTimer = math.max(0, (enemy.auraTimer or 0) - dt)
+
+  if enemy.auraTimer <= 0 then
+    enemy.auraTimer = def.auraInterval or 0.7
+    local reach = (def.auraRadius or 120) + run.player.radius
+    if Util.dist2(enemy.x, enemy.y, run.player.x, run.player.y) <= reach * reach
+      and run.dungeon:lineOfSight(enemy.x, enemy.y, run.player.x, run.player.y)
+    then
+      run.player:takeDamage(enemy.damage * (def.auraDamageScale or 0.12), run)
     end
+  end
+
+  local beforeX, beforeY = enemy.x, enemy.y
+  if ctx.canSee then
+    enemy.lostTimer = 0
+    moveToward(enemy, dt, run, ctx.dx, ctx.dy, ctx.distance, 1)
   else
+    enemy.lostTimer = (enemy.lostTimer or 0) + dt
     enemy:updateSearch(dt, run)
   end
 
+  local target = ctx.target or run.player
+  local step = enemy:movementSpeed() * dt
+  local moved = Util.dist(beforeX, beforeY, enemy.x, enemy.y)
+  local closeEnough = ctx.distance <= enemy.radius + target.radius + 12
+  if not closeEnough and step > 0.001 and moved < step * 0.2 then
+    enemy.stuckTimer = (enemy.stuckTimer or 0) + dt
+  else
+    enemy.stuckTimer = 0
+  end
+
+  local lostTooLong = not ctx.canSee
+    and (enemy.lostTimer or 0) >= (def.blinkDelay or 1.1)
+  local blockedTooLong = (enemy.stuckTimer or 0) >= (def.blinkStuckTime or 0.35)
+  local canBlink = ctx.distance <= Data.enemyAI.sightRange
+    and (ctx.canSee or enemy.lastSeenX ~= nil)
+    and (lostTooLong or blockedTooLong)
+  if canBlink then
+    local blinkX, blinkY = findBlinkPoint(enemy, run, target)
+    if blinkX then
+      FX.ring(enemy.x, enemy.y, enemy.radius + 8, def.color)
+      enemy.x, enemy.y = blinkX, blinkY
+      FX.ring(enemy.x, enemy.y, enemy.radius + 10, def.color)
+      enemy.lostTimer = 0
+      enemy.stuckTimer = 0
+    else
+      enemy.lostTimer = (def.blinkDelay or 1.1) * 0.5
+      enemy.stuckTimer = 0
+    end
+  end
+
   if enemy.coneTimer <= 0 then
-    enemy.coneTimer = enemy.def.coneInterval
-    if ctx.canSee and ctx.distance <= enemy.def.coneRange then
+    enemy.coneTimer = def.coneInterval
+    if ctx.canSee and ctx.distance <= def.coneRange then
       local angle = Util.atan2(ctx.dy, ctx.dx)
       run:spawnHazard("cone", enemy.x, enemy.y, {
         angle = angle,
-        halfAngle = enemy.def.coneHalfAngle,
-        length = enemy.def.coneRange,
+        halfAngle = def.coneHalfAngle,
+        length = def.coneRange,
         life = 0.38,
         damage = 0,
       })
@@ -176,11 +221,11 @@ local function updateChrono(enemy, dt, run, ctx)
         run.player.y - enemy.y,
         run.player.x - enemy.x
       )
-      if ctx.distance <= enemy.def.coneRange
-        and angleDifference(playerAngle, angle) <= enemy.def.coneHalfAngle
+      if ctx.distance <= def.coneRange
+        and angleDifference(playerAngle, angle) <= def.coneHalfAngle
       then
-        run.player:freeze(enemy.def.coneLock)
-        run.player:takeDamage(enemy.damage * enemy.def.coneDamageScale, run)
+        run.player:freeze(def.coneLock)
+        run.player:takeDamage(enemy.damage * def.coneDamageScale, run)
         FX.add("¡Tiempo congelado!", run.player.x, run.player.y - 28, { 0.55, 0.72, 1.00 })
       end
     end
@@ -286,7 +331,14 @@ function Boss.drawOverlay(enemy)
 
   if enemy.def.bossKind == "chrono" then
     local t = love.timer.getTime()
-    love.graphics.setColor(0.48, 0.66, 1.00, 0.75)
+    local auraRadius = enemy.def.auraRadius or 120
+    local pulse = 0.06 + 0.025 * math.sin(t * 4)
+    love.graphics.setColor(0.42, 0.62, 1.00, pulse)
+    love.graphics.circle("fill", enemy.x, enemy.y, auraRadius)
+    love.graphics.setColor(0.62, 0.78, 1.00, 0.55)
+    love.graphics.setLineWidth(2)
+    love.graphics.circle("line", enemy.x, enemy.y, auraRadius)
+    love.graphics.setColor(0.72, 0.86, 1.00, 0.75)
     love.graphics.circle("line", enemy.x, enemy.y, enemy.radius + 5)
     love.graphics.line(
       enemy.x,
@@ -294,6 +346,7 @@ function Boss.drawOverlay(enemy)
       enemy.x + math.cos(t) * (enemy.radius + 4),
       enemy.y + math.sin(t) * (enemy.radius + 4)
     )
+    love.graphics.setLineWidth(1)
   elseif enemy.def.bossKind == "forge" then
     love.graphics.setColor(1.00, 0.35, 0.16, 0.35)
     love.graphics.circle("fill", enemy.x, enemy.y, enemy.radius + 10)

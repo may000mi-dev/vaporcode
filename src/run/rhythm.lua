@@ -13,6 +13,7 @@ local Rhythm = {
   nearest = 99,
   perfect = false,
   justBeat = false,
+  justStrongBeat = false,
   streak = 0,
   pulse = 1,
   click = nil,
@@ -106,6 +107,7 @@ function Rhythm.enter(song)
   Rhythm.nearest = 99
   Rhythm.perfect = false
   Rhythm.justBeat = false
+  Rhythm.justStrongBeat = false
   Rhythm.streak = 0
   Rhythm.pulse = 1
   ensureClick()
@@ -124,10 +126,14 @@ end
 function Rhythm.update(dt)
   Rhythm.t = Rhythm.t + dt
   Rhythm.justBeat = false
+  Rhythm.justStrongBeat = false
 
   while Rhythm.t >= Rhythm.nextBeat do
     Rhythm.beat = Rhythm.beat + 1
     Rhythm.justBeat = true
+    if Rhythm.beat % (Data.rhythm.beatsPerBar or 4) == 0 then
+      Rhythm.justStrongBeat = true
+    end
     Rhythm.nextBeat = Rhythm.nextBeat + Rhythm.spb
     if Rhythm.click and not Rhythm.muted then
       Rhythm.click:stop()

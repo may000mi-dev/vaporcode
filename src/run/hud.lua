@@ -286,15 +286,24 @@ function HUD.draw(run)
     love.graphics.print("Escudo (E) y Turbo (T) siempre disponibles", 20, 104)
   end
 
+  local beatsPerBar = Data.rhythm.beatsPerBar or 4
+  local strong = Data.colors.beatStrong
   local beatInBar = -1
   if Rhythm.beat > 0 then
-    beatInBar = Rhythm.beat % 4
+    beatInBar = Rhythm.beat % beatsPerBar
   end
-  for i = 0, 3 do
+  for i = 0, beatsPerBar - 1 do
     local dotRadius = 5
+    local isStrong = i == 0
     if i == beatInBar then
-      love.graphics.setColor(1.00, 0.85, 0.35)
+      if isStrong then
+        love.graphics.setColor(strong[1], strong[2], strong[3])
+      else
+        love.graphics.setColor(1.00, 0.85, 0.35)
+      end
       dotRadius = 5 * Rhythm.pulse
+    elseif isStrong then
+      love.graphics.setColor(strong[1] * 0.55, strong[2] * 0.55, strong[3] * 0.55)
     else
       love.graphics.setColor(0.25, 0.30, 0.35)
     end

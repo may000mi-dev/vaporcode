@@ -264,16 +264,43 @@ forge:update(0.01, Run)
 assert(#Run.hazards == forge.def.zoneCount, "la forja debe crear zonas de fuego")
 assert(Run.hazards[1].kind == "zone" and Run.hazards[1].delay > 0, "las zonas deben telegrafiarse")
 
--- Jefe Inquisidor del Tiempo: cono que congela.
+-- Jefe Inquisidor del Tiempo: aura, inmunidad a aturdimiento y reubicación.
 Run.hazards = {}
 Run.enemies = {}
 local chrono = Run:createEnemy("time_inquisitor", 100, 100, { noElite = true })
+assert(chrono.radius == Data.player.radius, "el Inquisidor debe medir lo mismo que el jugador")
+assert(Data.enemyTypes.time_inquisitor.hp > 500, "el Inquisidor debe tener más vida")
+chrono:applyStun(3)
+assert(chrono.stunTimer == 0, "los jefes no deben quedar aturdidos")
+
+Run.player.shield = 0
+Run.player.shieldTimer = 0
+Run.player.timeLockTimer = 0
+Run.player.invuln = 0
+Run.hp = Run.stats.maxHp
+chrono.x, chrono.y = Run.spawnX, Run.spawnY
+Run.player.x, Run.player.y = Run.spawnX, Run.spawnY
+chrono.auraTimer = 0
+local hpAura = Run.hp
+Boss.update(chrono, 0.01, Run, {
+  target = Run.player,
+  canSee = true,
+  distance = 0,
+  dx = 0,
+  dy = 0,
+  nx = 0,
+  ny = 0,
+})
+assert(Run.hp < hpAura, "el aura del Inquisidor debe dañar al jugador cercano")
+
+Run.hazards = {}
 Run.player.x = chrono.x + 100
 Run.player.y = chrono.y
 Run.player.timeLockTimer = 0
 Run.player.invuln = 0
 chrono.coneTimer = 0
 Boss.update(chrono, 0.01, Run, {
+  target = Run.player,
   canSee = true,
   distance = 100,
   dx = 100,
@@ -283,5 +310,39 @@ Boss.update(chrono, 0.01, Run, {
 })
 assert(Run.player.timeLockTimer > 0, "el cono debe congelar al jugador")
 assert(#Run.hazards >= 1 and Run.hazards[#Run.hazards].kind == "cone", "el cono debe dibujarse")
+
+-- Si queda bloqueado, el Inquisidor se reubica cerca del jugador.
+local originalDungeon = Run.dungeon
+Run.dungeon = {
+  moveCircle = function(_, x, y)
+    return x, y
+  end,
+  lineOfSight = function()
+    return true
+  end,
+  circleCollides = function()
+    return false
+  end,
+}
+chrono.x, chrono.y = Run.spawnX, Run.spawnY
+Run.player.x, Run.player.y = chrono.x + 200, chrono.y
+chrono.lastSeenX, chrono.lastSeenY = Run.player.x, Run.player.y
+chrono.stuckTimer = chrono.def.blinkStuckTime
+chrono.lostTimer = 0
+local stuckX, stuckY = chrono.x, chrono.y
+Boss.update(chrono, 0.01, Run, {
+  target = Run.player,
+  canSee = true,
+  distance = 200,
+  dx = 200,
+  dy = 0,
+  nx = 1,
+  ny = 0,
+})
+assert(
+  chrono.x ~= stuckX or chrono.y ~= stuckY,
+  "el Inquisidor debe reubicarse cuando queda bloqueado"
+)
+Run.dungeon = originalDungeon
 
 print("OK V6: roles, élites, hazards y jefes")
