@@ -152,7 +152,10 @@ entre 25 y 120 monedas; vende pasivas, mascotas y habilidades de ítem.
 
 ## Meta-progresión
 
-Persistente en `save.json` (versión 2, normalizado al cargar):
+Persistente en `save.json` (versión 3, normalizado al cargar). Se escribe al
+cambiar de piso, al terminar la run, al pausar y al perder el foco; usa
+`save.json.tmp` como respaldo para escrituras interrumpidas en Android. También
+guarda `settings.musicVolume` y `settings.effectsVolume`, acotados a 0..1.
 
 | Mejora | Efecto | Base | +Nivel | Costo base | Máx |
 |---|---|---|---|---|---|
@@ -161,7 +164,40 @@ Persistente en `save.json` (versión 2, normalizado al cargar):
 | Botas de presión | velocidad | 150 | +12 | 35 | 8 |
 
 El costo crece ×1.65 por nivel. También persisten monedas, récord de piso,
-mazmorras desbloqueadas y personajes desbloqueados.
+mazmorras desbloqueadas, personajes desbloqueados y volúmenes de audio.
+
+## Audio y configuración
+
+El menú abre Configuración con `C`. Desde ahí se ajustan música y efectos en pasos
+de 10%; cada cambio se guarda en `save.json`. La música es un bucle procedural de
+4 segundos generado con `love.sound` (11 kHz mono), con bajo, arpegio y pulso, y
+se reutiliza con `pitch` según el BPM de la mazmorra. Los efectos registran su
+volumen base en un bus (`src/utils/audio.lua`) para que el ajuste se aplique sin
+reiniciar la partida. Sin `love.audio` (tests) todo el bus queda inactivo.
+
+Configuración también permite borrar todos los datos: monedas, mejoras, récords,
+personajes, desbloqueos y ajustes. El borrado pide una segunda confirmación de
+4 segundos y reescribe un guardado limpio.
+
+## Sala de pruebas
+
+Se entra desde Configuración y usa una definición `Dungeons.sandbox` que no
+aparece en el menú ni en `Data.dungeons`. La run se marca con `run.sandbox`:
+
+- No hay oleadas automáticas, temporizador, salida ni jefes de piso.
+- El panel `PRUEBAS`/`F2` invoca enemigos y jefes del catálogo, da ítems en
+  cantidad x1 o x5, vacía el inventario y alterna invulnerabilidad.
+- Morir restaura la vida y limpia proyectiles/hazards; la sesión continúa.
+- Las monedas se contabilizan solo en `run.coinsEarned`; no se escriben en el
+  guardado. Tampoco se guardan desbloqueos de personaje, récords ni autosave.
+- La tienda está deshabilitada y los ítems de personaje no desbloquean nada.
+
+## Salir al menú
+
+El panel de pausa incluye `SALIR AL MENÚ`. El primer toque (o `Esc`) arma una
+confirmación de 3 segundos; el segundo sale. Se descartan piso, nivel e inventario
+de la partida actual, pero las monedas, mejoras y desbloqueos ya guardados se
+conservan. Al salir se guarda el progreso meta y se detiene la música.
 
 ## Rendimiento en el A55
 

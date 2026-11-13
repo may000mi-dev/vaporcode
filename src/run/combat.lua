@@ -114,8 +114,7 @@ function Combat.onEnemyKilled(run, enemy)
   if not enemy.def.noDrop then
     local coins = Data.economy.coinsBase
       + math.floor(enemy.xp / Data.economy.xpPerCoin)
-    Save.data.coins = Save.data.coins + coins
-    run.coinsEarned = run.coinsEarned + coins
+    run:addCoins(coins)
     run:addXp(enemy.xp)
   end
   local count = enemy.def.boss and 36 or 14

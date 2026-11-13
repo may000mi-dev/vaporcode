@@ -5,6 +5,7 @@ local Data = require("src.run.data")
 local Save = require("src.run.save")
 local State = require("src.estados")
 local FX = require("src.run.fx")
+local Audio = require("src.utils.audio")
 local Util = require("src.utils.util")
 
 local Progression = {}
@@ -49,6 +50,7 @@ end
 
 function Progression.checkLevel(run, dt)
   if run.over then return end
+  if run.sandbox then return end
 
   if run.exitOpen then
     local d2 = Util.dist2(
@@ -80,6 +82,7 @@ function Progression.checkLevel(run, dt)
 end
 
 function Progression.nextLevel(run)
+  if run.sandbox then return end
   local reached = run.depth + 1
   Save.recordLevel(reached)
   for _, dungeon in ipairs(Data.dungeons) do
@@ -114,6 +117,20 @@ function Progression.nextLevel(run)
 end
 
 function Progression.gameOver(run, reason)
+  if run.sandbox then
+    -- Morir en pruebas no cierra la sesión: restaura vida y limpia el peligro
+    -- inmediato para seguir probando el mismo enemigo.
+    run.hp = run.stats.maxHp
+    if run.player then
+      run.player.invuln = 2
+    end
+    run.projectiles = {}
+    run.hazards = {}
+    if run.shake then run:shake(4, 0.20) end
+    run:notify("Pruebas: vida restaurada", { 0.55, 1.00, 0.70 })
+    return
+  end
+
   if run.over then return end
   run.over = true
   run.paused = false
@@ -140,6 +157,7 @@ function Progression.gameOver(run, reason)
     snapshot = run.floorSnapshot,
   }
 
+  Audio.stopMusic()
   State.switch("gameover", run.gameOverInfo)
 end
 

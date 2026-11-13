@@ -13,6 +13,7 @@ local HUD = {}
 HUD.pauseButton = { x = 0, y = 10, w = 92, h = 36 }
 HUD.backpackButton = { x = 0, y = 10, w = 104, h = 36 }
 HUD.shopButton = { x = 0, y = 52, w = 104, h = 36 }
+HUD.sandboxButton = { x = 0, y = 94, w = 104, h = 36 }
 
 local inventoryX = 0
 local inventoryY = 493
@@ -26,6 +27,7 @@ function HUD.layout()
   HUD.pauseButton.x = width - 108
   HUD.backpackButton.x = width - 224
   HUD.shopButton.x = width - 224
+  HUD.sandboxButton.x = width - 224
   local strip = Data.inventory.maxActive * inventoryW
     + (Data.inventory.maxActive - 1) * inventoryGap
   inventoryX = (width - strip) * 0.5
@@ -49,6 +51,30 @@ end
 function HUD.hitShop(x, y)
   HUD.layout()
   return Util.inside(x, y, HUD.shopButton)
+end
+
+function HUD.hitSandbox(x, y)
+  HUD.layout()
+  return Util.inside(x, y, HUD.sandboxButton)
+end
+
+-- El panel de pausa calcula su botón de salida con el mismo tamaño que el
+-- dibujo; así el toque y la confirmación coinciden en cualquier pantalla.
+function HUD.pauseExitRect()
+  local panelW, panelH = 560, 390
+  local px = (Screen.width - panelW) * 0.5
+  local py = (Screen.height - panelH) * 0.5
+  local width, height = 340, 46
+  return {
+    x = px + (panelW - width) * 0.5,
+    y = py + 252,
+    w = width,
+    h = height,
+  }
+end
+
+function HUD.hitExitMenu(x, y)
+  return Util.inside(x, y, HUD.pauseExitRect())
 end
 
 function HUD.inventoryRect(index)
@@ -135,15 +161,24 @@ function HUD.draw(run)
   love.graphics.setColor(0.80, 0.85, 0.90)
   love.graphics.print(TextCache.format("coins", "Monedas %d", Save.data.coins), 398, 12)
 
-  local timeLeft = math.max(0, math.ceil(run.timeLeft or 0))
-  local warning = timeLeft <= Data.floor.warningTime
-  local pulse = warning and (0.65 + 0.35 * math.sin(love.timer.getTime() * 6)) or 1
-  love.graphics.setColor(0.95 * pulse, 0.35 * pulse, 0.30 * pulse)
-  love.graphics.print(
-    TextCache.format("hud-time", "Tiempo %02d:%02d", math.floor(timeLeft / 60), timeLeft % 60),
-    620,
-    12
-  )
+  if run.sandbox then
+    love.graphics.setColor(0.55, 0.90, 1.00)
+    love.graphics.print(
+      TextCache.format("hud-time-sandbox", "Sala de pruebas · tiempo libre"),
+      600,
+      12
+    )
+  else
+    local timeLeft = math.max(0, math.ceil(run.timeLeft or 0))
+    local warning = timeLeft <= Data.floor.warningTime
+    local pulse = warning and (0.65 + 0.35 * math.sin(love.timer.getTime() * 6)) or 1
+    love.graphics.setColor(0.95 * pulse, 0.35 * pulse, 0.30 * pulse)
+    love.graphics.print(
+      TextCache.format("hud-time", "Tiempo %02d:%02d", math.floor(timeLeft / 60), timeLeft % 60),
+      620,
+      12
+    )
+  end
 
   local hpRatio = 0
   if run.stats.maxHp > 0 then
@@ -273,6 +308,22 @@ function HUD.draw(run)
   love.graphics.setColor(shopOpen and 1.00 or 0.52, shopOpen and 0.88 or 0.58, shopOpen and 0.55 or 0.64)
   love.graphics.printf("TIENDA", shop.x, shop.y + 11, shop.w, "center")
 
+  if run.sandbox then
+    local sandbox = HUD.sandboxButton
+    love.graphics.setColor(0.08, 0.13, 0.11, 0.94)
+    love.graphics.rectangle("fill", sandbox.x, sandbox.y, sandbox.w, sandbox.h, 8, 8)
+    love.graphics.setColor(0.45, 0.95, 0.65)
+    love.graphics.rectangle("line", sandbox.x, sandbox.y, sandbox.w, sandbox.h, 8, 8)
+    love.graphics.setColor(0.76, 1.00, 0.86)
+    love.graphics.printf(
+      run.sandboxInvuln and "PRUEBAS · INV" or "PRUEBAS",
+      sandbox.x,
+      sandbox.y + 11,
+      sandbox.w,
+      "center"
+    )
+  end
+
   HUD.drawInventory(run)
   HUD.drawBoss(run)
 end
@@ -301,37 +352,38 @@ function HUD.drawBoss(run)
 end
 
 function HUD.drawPause(run)
-  local panelW, panelH = 560, 300
+  local panelW, panelH = 560, 390
   local px = (Screen.width - panelW) * 0.5
   local py = (Screen.height - panelH) * 0.5
 
-  love.graphics.setColor(0, 0, 0, 0.65)
+  love.graphics.setColor(0, 0, 0, 0.70)
   love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
-  love.graphics.setColor(0.06, 0.08, 0.11, 0.98)
+  love.graphics.setColor(0.06, 0.08, 0.11, 0.99)
   love.graphics.rectangle("fill", px, py, panelW, panelH, 12, 12)
   love.graphics.setColor(0.30, 0.50, 0.60)
   love.graphics.rectangle("line", px, py, panelW, panelH, 12, 12)
 
   love.graphics.setFont(Fonts.title)
   love.graphics.setColor(0.60, 0.90, 1.00)
-  love.graphics.printf("PAUSA", px, py + 25, panelW, "center")
+  love.graphics.printf("PAUSA", px, py + 22, panelW, "center")
 
   love.graphics.setFont(Fonts.body)
   love.graphics.setColor(0.80, 0.85, 0.90)
-  love.graphics.printf("Toca o pulsa P para continuar", px, py + 100, panelW, "center")
+  love.graphics.printf("Toca o pulsa P para continuar", px, py + 78, panelW, "center")
 
   love.graphics.setColor(0.60, 0.70, 0.80)
   love.graphics.printf(
     TextCache.format(
-      "pause-summary",
-      "Piso %d · Nv. %d · Monedas %d",
+      run.sandbox and "pause-summary-sandbox" or "pause-summary",
+      run.sandbox and "Sala de pruebas · Nv. %d · Sin progreso permanente"
+        or "Piso %d · Nv. %d · Monedas %d",
       run.depth,
       run.playerLevel,
       Save.data.coins
     ),
     px,
-    py + 140,
+    py + 112,
     panelW,
     "center"
   )
@@ -341,31 +393,108 @@ function HUD.drawPause(run)
   love.graphics.printf(
     "Izquierda: moverte · Centro: arrastra para mirar · A1/A2 se asignan en la mochila.",
     px,
-    py + 190,
+    py + 150,
     panelW,
     "center"
   )
   love.graphics.printf(
     "Teclado: WASD/flechas · R/F/E/T habilidades · B mochila · P pausa · F3 depuración",
     px,
-    py + 215,
+    py + 174,
     panelW,
     "center"
   )
   love.graphics.printf(
     "Válvulas: dispara o pisa · Paredes frágiles: Resonancia/Flecha · Cofres: acércate",
     px,
-    py + 240,
+    py + 198,
     panelW,
     "center"
   )
   love.graphics.printf(
     "Ítems: pasivas y mascotas activas son por run · Cofres ocultos: personajes",
     px,
-    py + 265,
+    py + 222,
     panelW,
     "center"
   )
+
+  local confirm = run.pauseExitConfirm
+  local button = HUD.pauseExitRect()
+  if confirm then
+    love.graphics.setColor(0.28, 0.08, 0.08, 0.98)
+  else
+    love.graphics.setColor(0.08, 0.16, 0.20, 0.98)
+  end
+  love.graphics.rectangle("fill", button.x, button.y, button.w, button.h, 8, 8)
+  love.graphics.setColor(confirm and 0.95 or 0.48, confirm and 0.30 or 0.78, confirm and 0.28 or 0.90)
+  love.graphics.setLineWidth(2)
+  love.graphics.rectangle("line", button.x, button.y, button.w, button.h, 8, 8)
+  love.graphics.setLineWidth(1)
+
+  love.graphics.setFont(Fonts.button)
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.printf(
+    confirm and "CONFIRMAR SALIDA" or "SALIR AL MENÚ",
+    button.x,
+    button.y + 13,
+    button.w,
+    "center"
+  )
+
+  love.graphics.setFont(Fonts.small)
+  if confirm then
+    love.graphics.setColor(1.00, 0.55, 0.45)
+    love.graphics.printf(
+      "¿Seguro? Toca de nuevo para salir.",
+      px,
+      py + 310,
+      panelW,
+      "center"
+    )
+    love.graphics.printf(
+      run.sandbox and "Se cierra la sesión de pruebas."
+        or "Se pierde el piso, el nivel y el inventario de esta partida.",
+      px,
+      py + 330,
+      panelW,
+      "center"
+    )
+    love.graphics.setColor(0.72, 0.62, 0.55)
+    love.graphics.printf(
+      "Confirmación válida por 3 segundos · P continúa",
+      px,
+      py + 352,
+      panelW,
+      "center"
+    )
+  else
+    love.graphics.setColor(0.90, 0.72, 0.45)
+    love.graphics.printf(
+      run.sandbox and "Salir cierra la sala de pruebas."
+        or "Salir al menú descarta el progreso de esta partida.",
+      px,
+      py + 310,
+      panelW,
+      "center"
+    )
+    love.graphics.setColor(0.62, 0.70, 0.76)
+    love.graphics.printf(
+      run.sandbox and "El guardado real queda intacto."
+        or "Las monedas, mejoras y desbloqueos ya guardados se conservan.",
+      px,
+      py + 330,
+      panelW,
+      "center"
+    )
+    love.graphics.printf(
+      "Esc también sale (doble pulsación)",
+      px,
+      py + 354,
+      panelW,
+      "center"
+    )
+  end
 end
 
 function HUD.drawDebug(run)

@@ -36,6 +36,11 @@ function Spawner.createEnemy(run, kind, x, y, options)
 end
 
 function Spawner.spawnEnemies(run)
+  if run.sandbox then
+    run.enemyCount = 0
+    return
+  end
+
   local count = run.def.spawnBase
     + math.floor((run.depth - 1) * Data.spawn.perDepth)
   count = math.min(count, Data.spawn.maxEnemies)

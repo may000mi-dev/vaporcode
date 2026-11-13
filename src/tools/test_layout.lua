@@ -44,6 +44,8 @@ local Backpack = require("src.run.backpack")
 local Shop = require("src.run.shop")
 local Menu = require("src.estados.menu")
 local Gameover = require("src.estados.gameover")
+local Config = require("src.estados.config")
+local Sandbox = require("src.run.sandbox")
 
 Save.load()
 
@@ -73,9 +75,18 @@ local function checkWide(width, height, expectedWidth, expectedScale)
 
   -- Todos los botones táctiles deben quedar dentro del área visible.
   Hud.layout()
-  for _, rect in ipairs({ Hud.pauseButton, Hud.backpackButton, Hud.shopButton }) do
+  for _, rect in ipairs({
+    Hud.pauseButton,
+    Hud.backpackButton,
+    Hud.shopButton,
+    Hud.sandboxButton,
+  }) do
     assert(insideScreen(rect, Screen.width, Screen.height), "botón del HUD fuera de pantalla")
   end
+  assert(
+    insideScreen(Hud.pauseExitRect(), Screen.width, Screen.height),
+    "botón de salir en pausa fuera de pantalla"
+  )
   for index = 1, Data.inventory.maxActive do
     assert(
       insideScreen(Hud.inventoryRect(index), Screen.width, Screen.height),
@@ -130,6 +141,33 @@ local function checkWide(width, height, expectedWidth, expectedScale)
   end
   for _, rect in ipairs(Menu.upgradeRects) do
     assert(insideScreen(rect, Screen.width, Screen.height), "mejora fuera de pantalla")
+  end
+  assert(
+    insideScreen(Menu.configRect, Screen.width, Screen.height),
+    "configuración fuera de pantalla"
+  )
+
+  Config.layout()
+  assert(insideScreen(Config.panel, Screen.width, Screen.height), "configuración fuera")
+  for _, rect in pairs(Config.rects) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "botón de configuración fuera")
+  end
+
+  Sandbox.reset()
+  Sandbox.activeTab = "enemies"
+  Sandbox.layout()
+  assert(insideScreen(Sandbox.panel, Screen.width, Screen.height), "sandbox fuera")
+  assert(insideScreen(Sandbox.closeRect, Screen.width, Screen.height), "cerrar sandbox fuera")
+  for _, rect in pairs(Sandbox.tabs) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "pestaña sandbox fuera")
+  end
+  for _, rect in ipairs(Sandbox.gridRects) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "enemigo sandbox fuera")
+  end
+  Sandbox.activeTab = "items"
+  Sandbox.layout()
+  for _, rect in ipairs(Sandbox.gridRects) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "ítem sandbox fuera")
   end
 
   Gameover.layout()

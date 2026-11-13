@@ -1,5 +1,6 @@
 -- rhythm.lua: reloj de pulso compartido y ventana de acierto.
 local Data = require("src.run.data")
+local Audio = require("src.utils.audio")
 
 local Rhythm = {
   song = nil,
@@ -36,7 +37,7 @@ local function ensureClick()
     end
 
     local click = love.audio.newSource(data, "static")
-    click:setVolume(0.22)
+    Audio.registerEffect(click, 0.22)
     return click
   end)
 
@@ -63,7 +64,7 @@ local function ensureLockedClick()
     end
 
     local click = love.audio.newSource(data, "static")
-    click:setVolume(0.30)
+    Audio.registerEffect(click, 0.30)
     return click
   end)
 
@@ -82,6 +83,15 @@ function Rhythm.playLockedClick()
   if Rhythm.lockedClick and not Rhythm.muted then
     Rhythm.lockedClick:stop()
     Rhythm.lockedClick:play()
+  end
+end
+
+-- Vista previa del pulso para ajustar el volumen de efectos.
+function Rhythm.playPreview()
+  ensureClick()
+  if Rhythm.click then
+    Rhythm.click:stop()
+    Rhythm.click:play()
   end
 end
 

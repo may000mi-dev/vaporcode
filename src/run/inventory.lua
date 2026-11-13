@@ -155,6 +155,7 @@ function Inventory.shopPrice(run, itemId)
 end
 
 function Inventory.buyItem(run, itemId)
+  if run.sandbox then return "sandbox" end
   local price = run:shopPrice(itemId)
   if not price then return "invalid" end
   if Save.data.coins < price then return "coins" end
@@ -190,6 +191,10 @@ function Inventory.openShop(run)
   if run.overlay == "shop" then
     run.overlay = nil
     run:clearInput()
+    return
+  end
+  if run.sandbox then
+    run:notify("La tienda no está disponible en pruebas", { 1.00, 0.65, 0.40 })
     return
   end
   if not Hud.shopUnlocked(run) then

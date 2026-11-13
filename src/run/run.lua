@@ -4,6 +4,7 @@
 -- Run:metodo(...) que usa el resto del juego y los tests.
 local Data = require("src.run.data")
 local State = require("src.estados")
+local Save = require("src.run.save")
 local Rhythm = require("src.run.rhythm")
 local Camera = require("src.utils.camera")
 local Screen = require("src.utils.screen")
@@ -15,6 +16,8 @@ local Input = require("src.utils.input")
 local Abilities = require("src.run.abilities")
 local Backpack = require("src.run.backpack")
 local Shop = require("src.run.shop")
+local Sandbox = require("src.run.sandbox")
+local Audio = require("src.utils.audio")
 local Floors = require("src.run.floors")
 
 local Run = {
@@ -46,6 +49,10 @@ local Run = {
   exitTimer = 0,
   paused = false,
   over = false,
+  sandbox = false,
+  sandboxInvuln = false,
+  pauseExitConfirm = false,
+  pauseExitTimer = 0,
   characterId = "amado",
   abilitySlot1 = nil,
   abilitySlot2 = nil,
@@ -125,6 +132,68 @@ function Run:clearInput()
     Run.aim:cancel()
   end
   Camera.cancelDrag()
+end
+
+-- Las monedas de la sala de pruebas no deben tocar el guardado real.
+function Run:addCoins(amount)
+  amount = math.max(0, math.floor(amount or 0))
+  Run.coinsEarned = Run.coinsEarned + amount
+  if not Run.sandbox then
+    Save.data.coins = Save.data.coins + amount
+  end
+end
+
+-- Persiste monedas y desbloqueos de la run actual. Android puede matar el
+-- proceso en segundo plano sin llamar love.quit; por eso se guarda al pausar.
+function Run:autosave()
+  if Run.sandbox then return end
+  if type(Save.data) == "table" then
+    Save.save()
+  end
+end
+
+function Run:setPaused(value)
+  Run.paused = value and true or false
+  Run.pauseExitConfirm = false
+  Run.pauseExitTimer = 0
+  if Run.paused then
+    Run.overlay = nil
+    Run:clearInput()
+    Audio.pauseMusic()
+    Run:autosave()
+  else
+    Audio.resumeMusic()
+  end
+end
+
+-- Primer toque arma la confirmación; el segundo sale y conserva monedas y
+-- mejoras ya guardadas. El temporizador se descuenta en Run.update.
+function Run:requestExitToMenu()
+  if not Run.pauseExitConfirm then
+    Run.pauseExitConfirm = true
+    Run.pauseExitTimer = 3
+    return
+  end
+  Run:exitToMenu()
+end
+
+function Run:exitToMenu()
+  Run.pauseExitConfirm = false
+  Run.pauseExitTimer = 0
+  Audio.stopMusic()
+  Run:autosave()
+  Run:clearInput()
+  State.switch("menu")
+end
+
+function Run:toggleSandbox()
+  if not Run.sandbox or Run.paused then return end
+  if Run.overlay == "sandbox" then
+    Run.overlay = nil
+  else
+    Run.overlay = "sandbox"
+  end
+  Run:clearInput()
 end
 
 function Run:updateFeatures(dt)
@@ -225,17 +294,30 @@ end
 function Run.update(dt)
   if Run.over then return end
 
+  if (Run.pauseExitTimer or 0) > 0 then
+    Run.pauseExitTimer = math.max(0, Run.pauseExitTimer - dt)
+    if Run.pauseExitTimer == 0 then
+      Run.pauseExitConfirm = false
+    end
+  end
+
   if Run.paused then
+    return
+  end
+
+  if Run.overlay == "sandbox" then
     return
   end
 
   Run:updateMana(dt)
   Run.abilityLockTimer = math.max(0, (Run.abilityLockTimer or 0) - dt)
   Run.inventoryFullTimer = math.max(0, (Run.inventoryFullTimer or 0) - dt)
-  Run.timeLeft = math.max(0, (Run.timeLeft or Data.floor.timeLimit) - dt)
-  if Run.timeLeft <= 0 then
-    Run:gameOver("timeout")
-    return
+  if not Run.sandbox then
+    Run.timeLeft = math.max(0, (Run.timeLeft or Data.floor.timeLimit) - dt)
+    if Run.timeLeft <= 0 then
+      Run:gameOver("timeout")
+      return
+    end
   end
 
   Rhythm.update(dt)
@@ -295,6 +377,7 @@ function Run.update(dt)
   Run:checkLevel(dt)
 
   if Run.over and State.name == "run" then
+    Audio.stopMusic()
     State.switch("gameover", Run.gameOverInfo)
   end
 end
@@ -306,7 +389,9 @@ function Run.draw()
 
   Camera.push()
   Run.dungeon:draw(Camera)
-  Run.dungeon:drawExit(Run.exitX, Run.exitY, Run.exitOpen)
+  if not Run.sandbox then
+    Run.dungeon:drawExit(Run.exitX, Run.exitY, Run.exitOpen)
+  end
   for _, valve in ipairs(Run.valves) do
     valve:draw()
   end
@@ -356,6 +441,8 @@ function Run.draw()
     Backpack.draw(Run)
   elseif Run.overlay == "shop" then
     Shop.draw(Run)
+  elseif Run.overlay == "sandbox" then
+    Sandbox.draw(Run)
   end
 
   if Run.paused then
@@ -377,12 +464,8 @@ function Run.keypressed(key, isrepeat)
     return
   end
 
-  if key == "p" then
-    Run.paused = not Run.paused
-    if Run.paused then
-      Run.overlay = nil
-      Run:clearInput()
-    end
+  if key == "p" and not isrepeat then
+    Run:setPaused(not Run.paused)
     return
   end
 
@@ -393,6 +476,24 @@ function Run.keypressed(key, isrepeat)
 
   if isrepeat then return end
 
+  if key == "f2" then
+    Run:toggleSandbox()
+    return
+  end
+
+  if Run.paused then
+    if key == "escape" then
+      Run:requestExitToMenu()
+    elseif key == "space" or key == "return" then
+      Run:setPaused(false)
+    end
+    return
+  end
+
+  if Run.overlay == "sandbox" then
+    return
+  end
+
   if key == "b" then
     Run:toggleBackpack()
     return
@@ -400,13 +501,6 @@ function Run.keypressed(key, isrepeat)
 
   if key == "v" then
     Run:openShop()
-    return
-  end
-
-  if Run.paused then
-    if key == "space" or key == "return" then
-      Run.paused = false
-    end
     return
   end
 
@@ -455,12 +549,24 @@ function Run:pressedAt(pointerId, x, y)
     return
   end
 
-  if Hud.hitPause(x, y) then
-    Run.paused = not Run.paused
-    if Run.paused then
-      Run.overlay = nil
-      Run:clearInput()
+  if Run.paused then
+    if Hud.hitExitMenu(x, y) then
+      Run:requestExitToMenu()
+      return
     end
+    Run:setPaused(false)
+    return
+  end
+
+  -- El panel de pruebas es modal: absorbe el toque antes del HUD para que
+  -- los botones que quedan detrás no abran otra capa por accidente.
+  if Run.overlay == "sandbox" then
+    Sandbox.pressed(Run, x, y)
+    return
+  end
+
+  if Hud.hitPause(x, y) then
+    Run:setPaused(true)
     return
   end
 
@@ -474,8 +580,8 @@ function Run:pressedAt(pointerId, x, y)
     return
   end
 
-  if Run.paused then
-    Run.paused = false
+  if Run.sandbox and Hud.hitSandbox(x, y) then
+    Run:toggleSandbox()
     return
   end
 
@@ -564,9 +670,8 @@ end
 
 function Run.focus(focused)
   if not focused and not Run.over then
-    Run.paused = true
-    Run.overlay = nil
-    Run:clearInput()
+    -- Al ir a segundo plano se pausa y se guarda el progreso alcanzado.
+    Run:setPaused(true)
   end
 end
 

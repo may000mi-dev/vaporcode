@@ -188,6 +188,7 @@ end
 
 function Player:takeDamage(amount, run)
   if run.over then return false end
+  if run.sandbox and run.sandboxInvuln then return false end
   if self.invuln > 0 then return false end
   if self.shieldTimer > 0 then return false end
 

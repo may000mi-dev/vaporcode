@@ -2,6 +2,7 @@
 local Screen = require("src.utils.screen")
 local State = require("src.estados")
 local Save = require("src.run.save")
+local Audio = require("src.utils.audio")
 local Fonts = require("src.utils.fonts")
 local Debug = require("src.utils.debug")
 
@@ -12,6 +13,8 @@ function love.load()
   Fonts.load()
   Screen.resize(love.graphics.getDimensions())
   Save.load()
+  Audio.setMusicVolume(Save.data.settings.musicVolume)
+  Audio.setEffectsVolume(Save.data.settings.effectsVolume)
   State.switch("menu")
 end
 
@@ -69,6 +72,14 @@ end
 
 function love.focus(focused)
   State.focus(focused)
+end
+
+function love.visible(visible)
+  -- Android puede ocultar la app sin cerrarla; se guarda por si el sistema
+  -- mata el proceso después. El respaldo temporal protege la escritura.
+  if not visible and Save.data then
+    Save.save()
+  end
 end
 
 function love.quit()

@@ -20,10 +20,11 @@ de tamaño o al entrar en pantalla completa.
 
 ## Estado
 
-MVP jugable (V6). Incluye combate automático, tres personajes, cinco habilidades,
+MVP jugable (V7). Incluye combate automático, tres personajes, cinco habilidades,
 enemigos por rol (torreta, mortero, invocador, trampero, sanador, cazador de maná),
 élites, hazards, cuatro jefes con fases, ítems pasivos, mascotas, mochila, tienda,
-alquimia y guardado versionado.
+alquimia, guardado versionado, configuración de audio, salida segura al menú y
+una sala de pruebas para enemigos e ítems.
 
 ## Ejecutar
 
@@ -55,7 +56,9 @@ sh src/tools/test_all.sh
 ```
 
 Suites en Lua puro (sin LÖVE): datos, mazmorras y línea de visión, personajes,
-habilidades, botín, estados, piso/reintento, cámara y caché de textos.
+habilidades, botín, estados, piso/reintento, cámara, caché de textos,
+aislamiento entre runs, guardado con respaldo, volúmenes de audio y aislamiento
+de la sala de pruebas.
 
 ## Controles
 
@@ -68,10 +71,13 @@ habilidades, botín, estados, piso/reintento, cámara y caché de textos.
 | Mochila | B | botón MOCHILA |
 | Tienda | V | botón TIENDA |
 | Pausa | P | botón PAUSA |
-| Silenciar | M | — |
+| Salir al menú | Esc en pausa (doble) | botón SALIR AL MENÚ |
+| Sala de pruebas | F2 (solo en pruebas) | botón PRUEBAS |
+| Silenciar pulso | M | — |
 | Depuración | F3 | — |
 
-Dentro de la mochila: `1`–`5` selecciona un activo, `Tab` recorre los 20 espacios,
+En el menú, `C` abre Configuración (música, efectos, borrar datos y sala de
+pruebas). Dentro de la mochila: `1`–`5` selecciona un activo, `Tab` recorre los 20 espacios,
 `Enter` activa el guardado o guarda el activo, `Q`/`W` asignan una habilidad
 guardada a A1/A2, `X` tira el ítem y `Escape` cierra (o cancela un intercambio).
 
@@ -89,10 +95,10 @@ src/
 │   ├── enemies.lua        -- tipos, élites, hazards, IA, aparición
 │   ├── items.lua          -- ítems, mascotas, espacios y reglas de tienda
 │   └── upgrades.lua       -- mejoras permanentes
-├── estados/               -- menú, pausa, game over
+├── estados/               -- menú, configuración, pausa, game over
 ├── run/                   -- partida; run.lua orquesta y monta los sistemas
 ├── tools/                 -- suites de test y empaquetado
-└── utils/                 -- input, cámara, joystick, JSON, textcache
+└── utils/                 -- input, cámara, joystick, JSON, audio, textcache
 docs/                      -- notas de diseño
 ```
 
@@ -101,11 +107,30 @@ juego, así que los datos se pueden mover entre archivos sin tocar el resto.
 
 ## Guardado
 
-JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 2.
-Al cargar se normaliza y se repara: valores inválidos caen a los predeterminados y
-la cripta y Amado siempre quedan desbloqueados.
+JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 3.
+Al cargar se normaliza y se repara: valores inválidos caen a los predeterminados,
+la cripta y Amado siempre quedan desbloqueados, y los volúmenes de música/efectos
+se acotan a 0..1.
+
+El progreso se guarda al cambiar de piso, al terminar la run, al pausar y cuando
+la app pierde el foco o se oculta; Android puede matar el proceso en segundo plano
+sin ejecutar `love.quit`. Cada guardado escribe primero `save.json.tmp` y luego el
+principal, así que una escritura interrumpida se recupera desde el respaldo.
+
+## Configuración y sala de pruebas
+
+Configuración (`C` en el menú) ajusta el volumen de la música y de los efectos en
+pasos de 10%, guarda los cambios y permite borrar todo el progreso con confirmación.
+La música es un bucle procedural corto generado en el dispositivo; no hay pistas
+externas que cargar.
+
+La sala de pruebas abre una run con oleadas desactivadas y tiempo libre. El panel
+`PRUEBAS` (o `F2`) lista enemigos y jefes para invocarlos, permite dar ítems en
+cantidad x1/x5, vaciar el inventario y activar invulnerabilidad. Las monedas,
+desbloqueos, récords y ajustes no se escriben desde la sala; al salir se conserva
+el guardado real tal como estaba.
 
 ## Documentación
 
 - `docs/design.md`: reglas de diseño, personajes, roles de enemigo, élites,
-  hazards, jefes, ítems y meta-progresión.
+  hazards, jefes, ítems, meta-progresión, audio y sala de pruebas.

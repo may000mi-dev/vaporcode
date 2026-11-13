@@ -11,6 +11,7 @@ local Menu = {
   dungeonRects = {},
   upgradeRects = {},
   characterRects = {},
+  configRect = { x = 0, y = 0, w = 404, h = 48 },
   characterId = "amado",
   selectedDungeonId = "cripta",
   message = nil,
@@ -37,6 +38,9 @@ function Menu.layout()
     rect.x = rightX + 20
     rect.y = 154 + (index - 1) * 58
   end
+
+  Menu.configRect.x = rightX + 20
+  Menu.configRect.y = 418
 end
 
 local function drawButton(rect, label, sub, enabled, selected, accent)
@@ -195,6 +199,8 @@ function Menu.keypressed(key, isrepeat)
     buy("maxHp")
   elseif key == "e" then
     buy("speed")
+  elseif key == "c" then
+    State.switch("config")
   elseif key == "return" or key == "space" then
     tryStart(Data.dungeonById[Menu.selectedDungeonId] or Data.dungeons[1])
   end
@@ -224,6 +230,10 @@ function Menu.mousepressed(x, y, button)
       return
     end
   end
+
+  if Util.inside(x, y, Menu.configRect) then
+    State.switch("config")
+  end
 end
 
 function Menu.touchpressed(id, x, y)
@@ -251,7 +261,7 @@ function Menu.draw()
 
   love.graphics.setFont(Fonts.subtitle)
   love.graphics.setColor(0.72, 0.78, 0.85)
-  love.graphics.printf("May000mi · Prototipo LÖVE 11.5 · V5", 0, 54, Screen.width, "center")
+  love.graphics.printf("May000mi · Prototipo LÖVE 11.5 · V7", 0, 54, Screen.width, "center")
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.55, 0.85, 0.95)
@@ -336,6 +346,15 @@ function Menu.draw()
     "center"
   )
 
+  drawButton(
+    Menu.configRect,
+    "CONFIGURACIÓN",
+    "Audio · borrar datos · sala de pruebas",
+    true,
+    false,
+    { 0.55, 0.85, 0.95 }
+  )
+
   if Menu.message and Menu.messageTimer > 0 then
     love.graphics.setFont(Fonts.body)
     love.graphics.setColor(1.00, 0.90, 0.50)
@@ -345,7 +364,7 @@ function Menu.draw()
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.55, 0.60, 0.68)
   love.graphics.printf(
-    "Toca personaje y mazmorra. Teclado: 1-3 mazmorra · A/S/D personaje · Q/W/E mejoras · Enter inicia",
+    "Toca personaje y mazmorra. Teclado: 1-3 mazmorra · A/S/D personaje · Q/W/E mejoras · C configuración · Enter inicia",
     0,
     522,
     Screen.width,

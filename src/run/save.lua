@@ -4,7 +4,31 @@ local Json = require("src.utils.json")
 
 local Save = {}
 local FILE = "save.json"
-local VERSION = 2
+local TEMP_FILE = "save.json.tmp"
+local VERSION = 3
+
+local function clamp01(value)
+  value = tonumber(value)
+  if not value then return nil end
+  return math.max(0, math.min(1, value))
+end
+
+-- Lee y valida un archivo. Devuelve la tabla decodificada o nil si falta,
+-- está incompleto o no es JSON válido.
+local function readSave(name)
+  if not love.filesystem.getInfo(name) then return nil end
+  local content = love.filesystem.read(name)
+  if not content then return nil end
+
+  local ok, data = pcall(Json.decode, content)
+  if not ok or type(data) ~= "table" then return nil end
+  return data
+end
+
+local function writeSave(name, content)
+  local ok, written = pcall(love.filesystem.write, name, content)
+  return ok and written and true or false
+end
 
 local function defaults()
   return {
@@ -14,6 +38,7 @@ local function defaults()
     upgrades = { damage = 0, maxHp = 0, speed = 0 },
     unlocked = { cripta = true, forja = false, catedral = false },
     characters = { amado = true, mar = false, amileth = false },
+    settings = { musicVolume = 0.6, effectsVolume = 0.8 },
   }
 end
 
@@ -47,27 +72,68 @@ local function normalize(data)
     end
   end
   out.characters.amado = true
+
+  if type(data.settings) == "table" then
+    out.settings.musicVolume = clamp01(data.settings.musicVolume)
+      or out.settings.musicVolume
+    out.settings.effectsVolume = clamp01(data.settings.effectsVolume)
+      or out.settings.effectsVolume
+  end
   return out
 end
 
 function Save.load()
   Save.data = defaults()
-  if not love.filesystem.getInfo(FILE) then return end
 
-  local content = love.filesystem.read(FILE)
-  if not content then return end
+  local data = readSave(FILE)
+  local fromTemp = false
+  if not data then
+    data = readSave(TEMP_FILE)
+    fromTemp = data ~= nil
+  end
+  if not data then return end
 
-  local ok, data = pcall(Json.decode, content)
-  if ok then
-    Save.data = normalize(data)
+  Save.data = normalize(data)
+  if fromTemp then
+    -- El principal quedó incompleto: se reescribe desde la copia temporal.
+    Save.save()
   end
 end
 
 function Save.save()
+  if type(Save.data) ~= "table" then return false end
+
   Save.data.version = VERSION
   local ok, content = pcall(Json.encode, Save.data)
-  if not ok then return false end
-  return love.filesystem.write(FILE, content)
+  if not ok or type(content) ~= "string" then return false end
+
+  -- Escribir primero la copia temporal protege contra Android matando el
+  -- proceso a mitad de la escritura principal: la próxima carga recupera
+  -- el progreso desde aquí. La copia se conserva como respaldo.
+  if not writeSave(TEMP_FILE, content) then return false end
+  if not writeSave(FILE, content) then return false end
+  return true
+end
+
+-- Borra el progreso persistente y deja una partida limpia con ajustes por
+-- defecto. Se escribe de inmediato para que el borrado sea definitivo.
+-- Los ajustes de audio viven en el guardado para sobrevivir entre sesiones.
+function Save.reset()
+  if love and love.filesystem and love.filesystem.remove then
+    pcall(love.filesystem.remove, FILE)
+    pcall(love.filesystem.remove, TEMP_FILE)
+  end
+  Save.data = defaults()
+  Save.save()
+  return Save.data
+end
+
+function Save.setVolumes(musicVolume, effectsVolume)
+  if type(Save.data) ~= "table" then return end
+  local settings = Save.data.settings
+  settings.musicVolume = clamp01(musicVolume) or settings.musicVolume
+  settings.effectsVolume = clamp01(effectsVolume) or settings.effectsVolume
+  Save.save()
 end
 
 function Save.unlock(id)

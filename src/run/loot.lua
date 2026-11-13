@@ -115,8 +115,7 @@ function Loot.openChest(run, chest)
   local coins = def.coinsBase + math.floor((depth - 1) * def.coinsPerDepth)
 
   run:addXp(xp)
-  Save.data.coins = Save.data.coins + coins
-  run.coinsEarned = run.coinsEarned + coins
+  run:addCoins(coins)
 
   FX.burst(chest.x, chest.y - 8, 16, def.color)
   FX.collect(chest.x, chest.y, 12, def.color, run.player.x, run.player.y)
@@ -152,14 +151,23 @@ function Loot.pickupItem(run, item, pet)
 
   if def.kind == "character" then
     local characterId = def.characterId
-    Save.unlockCharacter(characterId)
-    run.unlockNotices[characterId] = nil
-    FX.add(
-      "¡" .. Data.characters[characterId].name .. " desbloqueada!",
-      player.x,
-      player.y - 34,
-      def.color
-    )
+    if run.sandbox then
+      FX.add(
+        "Desbloqueo omitido en pruebas",
+        player.x,
+        player.y - 34,
+        def.color
+      )
+    else
+      Save.unlockCharacter(characterId)
+      run.unlockNotices[characterId] = nil
+      FX.add(
+        "¡" .. Data.characters[characterId].name .. " desbloqueada!",
+        player.x,
+        player.y - 34,
+        def.color
+      )
+    end
   else
     local status, added = run:addItemToInventory(item.itemId, item.amount)
     if status == "full" then
@@ -170,8 +178,7 @@ function Loot.pickupItem(run, item, pet)
       return false
     elseif status == "duplicate" then
       local reward = def.kind == "pet" and 8 or (5 * (item.amount or 1))
-      Save.data.coins = Save.data.coins + reward
-      run.coinsEarned = run.coinsEarned + reward
+      run:addCoins(reward)
       FX.add("+" .. reward .. " monedas", x, y - 24, { 1.00, 0.86, 0.35 })
     elseif status == "ok" then
       if def.kind == "passive" then

@@ -14,6 +14,8 @@ local Joystick = require("src.utils.joystick")
 local Buttons = require("src.utils.buttons")
 local Input = require("src.utils.input")
 local Rhythm = require("src.run.rhythm")
+local Audio = require("src.utils.audio")
+local Sandbox = require("src.run.sandbox")
 local Floor = require("src.run.floor")
 local FX = require("src.run.fx")
 local Util = require("src.utils.util")
@@ -22,10 +24,11 @@ local Floors = {}
 
 function Floors.enter(run, dungeonId, characterId, abilityId)
   run.def = Data.dungeonById[dungeonId] or Data.dungeons[1]
+  run.sandbox = run.def.sandbox == true
 
   if characterId
     and Data.characters[characterId]
-    and Save.isCharacterUnlocked(characterId) then
+    and (run.sandbox or Save.isCharacterUnlocked(characterId)) then
     run.characterId = characterId
   else
     run.characterId = "amado"
@@ -54,7 +57,7 @@ function Floors.enter(run, dungeonId, characterId, abilityId)
   run.manaIdleTimer = 0
   run.manaFlash = 0
   run.abilityLockTimer = 0
-  run.timeLeft = Data.floor.timeLimit
+  run.timeLeft = run.sandbox and 0 or Data.floor.timeLimit
   run.floorSnapshot = nil
   run.shadow = nil
   run.aim = Aim.new()
@@ -66,10 +69,20 @@ function Floors.enter(run, dungeonId, characterId, abilityId)
   run.hazards = {}
   run.inventory = {}
   run.storage = {}
+  -- Estado por partida que no debe sobrevivir a una run anterior. Sin este
+  -- reinicio, una mascota o pasiva de la run pasada seguiría activa aunque
+  -- su ítem ya no exista en el inventario.
+  run.passiveStacks = {}
+  run.pets = {}
+  run.petSnapshot = nil
+  run.fluteReady = false
   run.inventoryFullTimer = 0
   run.tornado = nil
   run.unlockNotices = {}
   run.overlay = nil
+  run.sandboxInvuln = false
+  run.pauseExitConfirm = false
+  run.pauseExitTimer = 0
   run.selectedInventory = 1
   run.selectedStorage = 1
   run.selectionSection = "active"
@@ -91,9 +104,14 @@ function Floors.enter(run, dungeonId, characterId, abilityId)
   run.xp = 0
   run.xpToNext = run:xpForLevel(run.playerLevel)
 
+  if run.sandbox then
+    Sandbox.reset()
+  end
+
   FX.clear()
   Input.reset()
   Rhythm.enter(run.def.song)
+  Audio.startMusic(run.def.song.bpm)
   run:enterLevel()
 end
 
@@ -161,7 +179,7 @@ function Floors.enterLevel(run)
   end
 
   FX.clear()
-  run.timeLeft = Data.floor.timeLimit
+  run.timeLeft = run.sandbox and 0 or Data.floor.timeLimit
   run:spawnEnemies()
   run.floorSnapshot = Floor.capture(run)
 end
@@ -173,6 +191,7 @@ function Floors.retryFloor(run, snapshot)
   end
 
   run.def = Data.dungeonById[snapshot.dungeonId] or Data.dungeons[1]
+  run.sandbox = run.def.sandbox == true
   run.over = false
   run.paused = false
   run.exitOpen = false
@@ -201,6 +220,7 @@ function Floors.retryFloor(run, snapshot)
   FX.clear()
   Input.reset()
   Rhythm.enter(run.def.song)
+  Audio.startMusic(run.def.song.bpm)
   run:enterLevel()
   return true
 end

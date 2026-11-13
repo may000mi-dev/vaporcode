@@ -174,6 +174,9 @@ function Storage.alchemyCandidates(run)
 end
 
 function Storage.combineAlchemy(run, candidate)
+  -- La alquimia gasta monedas reales; en pruebas se bloquea incluso si una
+  -- interfaz futura llegara a invocarla sin pasar por la tienda.
+  if run.sandbox then return false end
   if not candidate then return false end
   local storage = run.storage or {}
   local a = storage[candidate.index1]
