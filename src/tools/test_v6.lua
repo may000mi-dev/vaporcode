@@ -363,9 +363,10 @@ organ.armTimer = 0
 organ.summonTimer = 99
 organ.healerTimer = 99
 Run.player.x, Run.player.y = organ.x + 500, organ.y
+organ.lastSeenX, organ.lastSeenY = organ.x - 300, organ.y
 Boss.update(organ, 0.01, Run, {
   target = Run.player,
-  canSee = true,
+  canSee = false,
   distance = 500,
   dx = 500,
   dy = 0,
@@ -374,6 +375,8 @@ Boss.update(organ, 0.01, Run, {
 })
 assert(#Run.hazards == organ.def.zoneCount, "el Órgano debe crear zonas a distancia")
 assert(Run.hazards[1].kind == "zone" and Run.hazards[1].delay > 0, "las zonas deben telegrafiarse")
+assert(math.abs(Run.hazards[1].x - Run.player.x) < 1, "las zonas deben aparecer sobre el jugador")
+assert(math.abs(Run.hazards[1].y - Run.player.y) < 1, "las zonas deben seguir al jugador sin visión")
 assert(organ.armState == nil, "el brazo no debe lanzarse a distancia lejana")
 
 -- A media distancia el brazo atraviesa paredes y arrastra al jugador.

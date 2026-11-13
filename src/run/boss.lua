@@ -337,13 +337,13 @@ local function summonHealerAround(enemy, run)
   end
 end
 
-local function updateOrganZones(enemy, dt, run, ctx)
+local function updateOrganZones(enemy, dt, run)
   local def = enemy.def
   enemy.zoneTimer = (enemy.zoneTimer or def.zoneInterval) - dt
   if enemy.zoneTimer > 0 then return end
 
-  local tx, ty = organTargetPoint(enemy, run, ctx)
-  if not tx then return end
+  -- Igual que la Forja, las zonas apuntan al jugador aunque no haya visión.
+  local tx, ty = run.player.x, run.player.y
 
   enemy.zoneTimer = def.zoneInterval
   for i = 1, def.zoneCount do
@@ -473,7 +473,7 @@ local function updateOrgan(enemy, dt, run, ctx)
 
   if enemy.invulnTimer <= 0 then
     if ctx.distance > (def.zoneRange or 380) then
-      updateOrganZones(enemy, dt, run, ctx)
+      updateOrganZones(enemy, dt, run)
       if ctx.canSee then
         moveToward(enemy, dt, run, ctx.dx, ctx.dy, ctx.distance, 0.85)
       elseif not armBusy then
