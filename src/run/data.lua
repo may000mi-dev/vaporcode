@@ -11,6 +11,7 @@ local Characters = require("src.data.characters")
 local Dungeons = require("src.data.dungeons")
 local Enemies = require("src.data.enemies")
 local Items = require("src.data.items")
+local Story = require("src.data.story")
 local Upgrades = require("src.data.upgrades")
 
 Data.abilities = Abilities.abilities
@@ -38,6 +39,7 @@ Data.mark = Characters.mark
 Data.dungeons = Dungeons.dungeons
 Data.dungeonById = Dungeons.dungeonById
 Data.bossEvery = Dungeons.bossEvery
+Data.story = Story
 
 -- Los jefes viven en bosses.lua pero comparten el índice de enemigos
 -- (las mazmorras los referencian con la misma clave que a un enemigo).

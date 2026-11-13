@@ -33,6 +33,17 @@ local function retry()
     return
   end
 
+  if Gameover.info.mode == "story" then
+    State.switch(
+      "run",
+      Gameover.info.dungeonId or "cripta",
+      Gameover.info.characterId,
+      nil,
+      { resume = true }
+    )
+    return
+  end
+
   State.switch(
     "run",
     Gameover.info.dungeonId or "cripta",
@@ -126,15 +137,32 @@ function Gameover.draw()
   love.graphics.rectangle("line", px, py, panel.w, panel.h, 12, 12)
 
   local timeout = info.reason == "timeout"
+  local story = info.mode == "story"
+  local title
+  if story then
+    title = timeout and "EL NÚCLEO CEDE" or "LA MELODÍA SE CORTA"
+  else
+    title = timeout and "TIEMPO AGOTADO" or "DERROTA"
+  end
+
   love.graphics.setFont(Fonts.title)
   love.graphics.setColor(0.95, 0.40, 0.35)
-  love.graphics.printf(timeout and "TIEMPO AGOTADO" or "DERROTA", px, py + 30, panel.w, "center")
+  love.graphics.printf(title, px, py + 30, panel.w, "center")
 
   love.graphics.setFont(Fonts.body)
   love.graphics.setColor(0.82, 0.86, 0.92)
   if timeout then
     love.graphics.printf(
-      "No eliminaste a todos los enemigos a tiempo.",
+      story and "El núcleo se desestabilizó. Mar y Amileth siguen esperando."
+        or "No eliminaste a todos los enemigos a tiempo.",
+      px + 40,
+      py + 78,
+      480,
+      "center"
+    )
+  elseif story then
+    love.graphics.printf(
+      "La sustancia negra te alcanzó. El siguiente compás aún es tuyo.",
       px + 40,
       py + 78,
       480,
@@ -168,7 +196,8 @@ function Gameover.draw()
   love.graphics.setColor(0.65, 0.70, 0.78)
   if info.snapshot then
     love.graphics.printf(
-      "Reintentar restaura el inicio exacto de este piso.",
+      story and "Reintentar recupera el checkpoint de este piso."
+        or "Reintentar restaura el inicio exacto de este piso.",
       px + 40,
       py + 248,
       480,
@@ -185,7 +214,11 @@ function Gameover.draw()
   end
 
   drawButton(Gameover.rects.menu, "MENÚ", { 0.45, 0.70, 0.85 })
-  drawButton(Gameover.rects.retry, "REINTENTAR", { 0.90, 0.65, 0.30 })
+  drawButton(
+    Gameover.rects.retry,
+    story and "REINTENTAR PISO" or "REINTENTAR",
+    { 0.90, 0.65, 0.30 }
+  )
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.55, 0.60, 0.68)

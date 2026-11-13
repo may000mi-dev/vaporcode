@@ -590,18 +590,28 @@ function Dungeon:draw(camera)
   love.graphics.setColor(1, 1, 1)
 end
 
-function Dungeon:drawExit(x, y, open)
+function Dungeon:drawExit(x, y, open, kind, portalColor)
   local t = love.timer.getTime()
   local radius = 16 + math.sin(t * 4) * 2
+  kind = kind or "normal"
 
   love.graphics.setColor(0, 0, 0, 0.35)
   love.graphics.circle("fill", x, y + 2, radius + 4)
 
   if open then
-    love.graphics.setColor(0.35, 0.95, 0.65)
+    local cr, cg, cb = 0.35, 0.95, 0.65
+    if kind ~= "normal" and portalColor then
+      cr, cg, cb = portalColor[1], portalColor[2], portalColor[3]
+    end
+    love.graphics.setColor(cr, cg, cb)
     love.graphics.circle("fill", x, y, radius)
     love.graphics.setColor(0.80, 1.00, 0.90)
     love.graphics.circle("line", x, y, radius + 3)
+    if kind ~= "normal" then
+      love.graphics.setColor(cr, cg, cb, 0.65)
+      local ring = radius + 8 + math.sin(t * 3) * 2
+      love.graphics.circle("line", x, y, ring)
+    end
   else
     love.graphics.setColor(0.25, 0.30, 0.30)
     love.graphics.circle("fill", x, y, radius)

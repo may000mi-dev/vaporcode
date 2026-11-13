@@ -13,6 +13,8 @@ Roguelite de acción con ataques automáticos y ventanas de ritmo. El loop de un
 4. La salida se abre al morir el último enemigo; tocarla sube al siguiente piso.
 5. Cada 3 pisos hay jefe de mazmorra. Al morir se puede reintentar el piso exacto
    (instantánea) o volver al menú; monedas y mejoras permanentes se conservan.
+6. El Modo Historia encadena Cripta, Forja, Catedral y Torre con escenas,
+   checkpoints por piso y portales al cerrar cada capítulo.
 
 La cámara sigue al jugador con margen de arrastre; el área de juego es mayor que
 la pantalla y se explora moviéndose.
@@ -57,8 +59,11 @@ habilidades a ritmo y reduce enfriamientos.
 | Cripta de latón | inicial | 104 | autómata, caldera, artillero, maquinista, peste | Patriarca de Huesos y Cobre |
 | Forja de vapor | piso 2 | 124 | sabueso, centinela, saboteador | Forja Viviente |
 | Catedral de engranajes | piso 4 | 138 | espectro, engranaje, clérigo, inquisidor | Inquisidor del Tiempo |
+| Torre del Tiempo Detenido | solo historia | 150 | reutiliza espectros | Órgano del Tiempo |
 
-Los desbloqueos se guardan al alcanzar el piso indicado. `bossEvery = 3`.
+Los desbloqueos se guardan al alcanzar el piso indicado. `bossEvery = 3`; la Torre
+es la excepción narrativa: ocupa los pisos 10–12 y solo tiene jefe en el 12.
+La Torre no se desbloquea para el modo libre.
 
 ## Enemigos por rol
 
@@ -149,13 +154,43 @@ entre 25 y 120 monedas; vende pasivas, mascotas y habilidades de ítem.
 | Patriarca de Huesos y Cobre | invoca autómatas y dispara abanicos; fases en 66%/33% |
 | Forja Viviente | zonas de fuego (radio 58) e invoca sabuesos; 500 HP |
 | Inquisidor del Tiempo | dash telegrafiado y cono a 2x daño |
+| Órgano del Tiempo | jefe final; invoca espectros y lanza compases de rayos en fases |
+
+## Modo Historia
+
+Campaña de tres actos centrada en Amado, Mar y Amileth. Se entra desde el menú
+(`H` o el botón `MODO HISTORIA`) y usa las mismas reglas de combate, economía,
+mejoras y personajes que el modo libre.
+
+| Capítulo | Pisos | Jefes | Salida |
+|---|---|---|---|
+| Cripta de latón | 1–9 | 3, 6, 9 | portal rojo a la Forja |
+| Forja de vapor | 1–9 | 3, 6, 9 | portal rojo a la Catedral |
+| Catedral de engranajes | 1–9 | 3, 6, 9 | portal negro a la Torre |
+| Torre del Tiempo Detenido | 10–12 | 12 | final de la campaña |
+
+- **Escenas:** `src/data/story.lua` guarda prólogo, intros, cierres y desenlace;
+  `src/run/story_ui.lua` las muestra sin assets externos. Se avanzan con toque,
+  `Enter` o `Espacio`; `Esc` omite la escena actual.
+- **Checkpoint:** al entrar a cada piso se guarda capítulo, profundidad,
+  personaje y la instantánea completa. `CONTINUAR HISTORIA` retoma ese piso sin
+  repetir la intro ya vista.
+- **Derrota:** `REINTENTAR PISO` restaura el checkpoint; el menú conserva la
+  campaña para continuar después. La derrota por tiempo se narra como
+  desestabilización del núcleo.
+- **Final:** el piso 12 abre el desenlace. Al terminarlo se marca la historia
+  como completada y se borra el checkpoint, pero se conserva el resto del
+  progreso. `NUEVA HISTORIA` pide confirmación antes de reiniciar.
+- **Personajes:** se puede jugar con Mar o Amileth solo si ya están desbloqueados;
+  la narrativa sigue centrada en Amado.
 
 ## Meta-progresión
 
-Persistente en `save.json` (versión 3, normalizado al cargar). Se escribe al
+Persistente en `save.json` (versión 4, normalizado al cargar). Se escribe al
 cambiar de piso, al terminar la run, al pausar y al perder el foco; usa
 `save.json.tmp` como respaldo para escrituras interrumpidas en Android. También
-guarda `settings.musicVolume` y `settings.effectsVolume`, acotados a 0..1.
+guarda `settings.musicVolume`, `settings.effectsVolume` (0..1) y el estado del
+Modo Historia con su checkpoint validado por capítulo.
 
 | Mejora | Efecto | Base | +Nivel | Costo base | Máx |
 |---|---|---|---|---|---|
@@ -164,7 +199,8 @@ guarda `settings.musicVolume` y `settings.effectsVolume`, acotados a 0..1.
 | Botas de presión | velocidad | 150 | +12 | 35 | 8 |
 
 El costo crece ×1.65 por nivel. También persisten monedas, récord de piso,
-mazmorras desbloqueadas, personajes desbloqueados y volúmenes de audio.
+mazmorras desbloqueadas, personajes desbloqueados, volúmenes de audio y el
+checkpoint de la campaña.
 
 ## Audio y configuración
 

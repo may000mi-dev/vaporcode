@@ -12,6 +12,7 @@ local Menu = {
   upgradeRects = {},
   characterRects = {},
   configRect = { x = 0, y = 0, w = 404, h = 48 },
+  storyRect = { x = 0, y = 0, w = 404, h = 56 },
   characterId = "amado",
   selectedDungeonId = "cripta",
   message = nil,
@@ -39,6 +40,8 @@ function Menu.layout()
     rect.y = 154 + (index - 1) * 58
   end
 
+  Menu.storyRect.x = rightX + 20
+  Menu.storyRect.y = 342
   Menu.configRect.x = rightX + 20
   Menu.configRect.y = 418
 end
@@ -80,6 +83,10 @@ local function drawButton(rect, label, sub, enabled, selected, accent)
 end
 
 local function tryStart(def)
+  if def.storyOnly then
+    Menu.say("Esa mazmorra pertenece al Modo Historia.")
+    return
+  end
   if not Save.isCharacterUnlocked(Menu.characterId) then
     Menu.characterId = "amado"
   end
@@ -120,6 +127,36 @@ local function selectCharacter(id)
   Menu.characterId = id
 end
 
+local function openStory()
+  State.switch("historia", Menu.characterId)
+end
+
+local function storyLabel()
+  local story = Save.data.story
+  if Save.hasStoryCheckpoint() then return "CONTINUAR HISTORIA" end
+  if story and story.completed then return "HISTORIA COMPLETADA" end
+  return "MODO HISTORIA"
+end
+
+local function storySubtitle()
+  local story = Save.data.story
+  local chapter = story and story.chapterId
+    and Data.story.chapterById[story.chapterId]
+    or nil
+  if Save.hasStoryCheckpoint() and chapter then
+    return TextCache.format(
+      "menu-story-progress",
+      "%s · Piso %d",
+      chapter.name,
+      story.depth
+    )
+  end
+  if story and story.completed then
+    return "Final visto · puedes reiniciar la campaña"
+  end
+  return "Campaña narrativa · tres actos"
+end
+
 function Menu.say(text)
   Menu.message = text
   Menu.messageTimer = 2.4
@@ -146,13 +183,15 @@ function Menu.enter()
 
   Menu.dungeonRects = {}
   for _, dungeon in ipairs(Data.dungeons) do
-    Menu.dungeonRects[#Menu.dungeonRects + 1] = {
-      x = 0,
-      y = 0,
-      w = 404,
-      h = 46,
-      def = dungeon,
-    }
+    if not dungeon.storyOnly then
+      Menu.dungeonRects[#Menu.dungeonRects + 1] = {
+        x = 0,
+        y = 0,
+        w = 404,
+        h = 46,
+        def = dungeon,
+      }
+    end
   end
 
   Menu.upgradeRects = {}
@@ -199,6 +238,8 @@ function Menu.keypressed(key, isrepeat)
     buy("maxHp")
   elseif key == "e" then
     buy("speed")
+  elseif key == "h" then
+    openStory()
   elseif key == "c" then
     State.switch("config")
   elseif key == "return" or key == "space" then
@@ -231,6 +272,11 @@ function Menu.mousepressed(x, y, button)
     end
   end
 
+  if Util.inside(x, y, Menu.storyRect) then
+    openStory()
+    return
+  end
+
   if Util.inside(x, y, Menu.configRect) then
     State.switch("config")
   end
@@ -261,7 +307,7 @@ function Menu.draw()
 
   love.graphics.setFont(Fonts.subtitle)
   love.graphics.setColor(0.72, 0.78, 0.85)
-  love.graphics.printf("May000mi · Prototipo LÖVE 11.5 · V7", 0, 54, Screen.width, "center")
+  love.graphics.printf("May000mi · Prototipo LÖVE 11.5 · V8", 0, 54, Screen.width, "center")
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.55, 0.85, 0.95)
@@ -336,14 +382,13 @@ function Menu.draw()
     drawButton(rect, def.label, sub, Save.canBuy(rect.id), false)
   end
 
-  love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.60, 0.70, 0.78)
-  love.graphics.printf(
-    "A1/A2 se encuentran como ítems y se asignan desde la mochila. Escudo y Turbo siempre están activos.",
-    rightX + 20,
-    356,
-    404,
-    "center"
+  drawButton(
+    Menu.storyRect,
+    storyLabel(),
+    storySubtitle(),
+    true,
+    false,
+    { 0.72, 0.52, 1.00 }
   )
 
   drawButton(
@@ -364,7 +409,7 @@ function Menu.draw()
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.55, 0.60, 0.68)
   love.graphics.printf(
-    "Toca personaje y mazmorra. Teclado: 1-3 mazmorra · A/S/D personaje · Q/W/E mejoras · C configuración · Enter inicia",
+    "Toca personaje y mazmorra. Teclado: 1-3 mazmorra · A/S/D personaje · Q/W/E mejoras · H historia · C configuración · Enter inicia",
     0,
     522,
     Screen.width,

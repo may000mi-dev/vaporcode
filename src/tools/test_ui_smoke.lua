@@ -65,6 +65,7 @@ local Fonts = require("src.utils.fonts")
 local Save = require("src.run.save")
 local Menu = require("src.estados.menu")
 local Config = require("src.estados.config")
+local Historia = require("src.estados.historia")
 local Run = require("src.run.run")
 local Sandbox = require("src.run.sandbox")
 local Hud = require("src.run.hud")
@@ -80,6 +81,12 @@ Config.enter()
 Config.draw()
 Config.leave()
 
+Historia.enter("amado")
+Historia.draw()
+Historia.confirmNew = true
+Historia.draw()
+Historia.confirmNew = false
+
 Run.enter("sandbox", "amado")
 Run:setPaused(true)
 Hud.drawPause(Run)
@@ -90,4 +97,4 @@ Sandbox.reset()
 Sandbox.draw(Run)
 Run.overlay = nil
 
-print("OK dibujo de menú, configuración, pausa y sala de pruebas")
+print("OK dibujo de menú, historia, configuración, pausa y sala de pruebas")

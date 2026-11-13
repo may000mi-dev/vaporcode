@@ -155,8 +155,26 @@ function HUD.draw(run)
   love.graphics.rectangle("fill", 10, 8, 500, 122, 8, 8)
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.55, 0.85, 0.95)
-  love.graphics.print(TextCache.format("hud-floor", "%s · Piso %d", run.def.name, run.depth), 20, 12)
+  if run.mode == "story" then
+    love.graphics.setColor(0.78, 0.64, 1.00)
+    love.graphics.print(
+      TextCache.format(
+        "hud-floor-story",
+        "Historia · %s · Piso %d",
+        run.def.name,
+        run.depth
+      ),
+      20,
+      12
+    )
+  else
+    love.graphics.setColor(0.55, 0.85, 0.95)
+    love.graphics.print(
+      TextCache.format("hud-floor", "%s · Piso %d", run.def.name, run.depth),
+      20,
+      12
+    )
+  end
 
   love.graphics.setColor(0.80, 0.85, 0.90)
   love.graphics.print(TextCache.format("coins", "Monedas %d", Save.data.coins), 398, 12)
@@ -375,9 +393,11 @@ function HUD.drawPause(run)
   love.graphics.setColor(0.60, 0.70, 0.80)
   love.graphics.printf(
     TextCache.format(
-      run.sandbox and "pause-summary-sandbox" or "pause-summary",
+      run.sandbox and "pause-summary-sandbox"
+        or (run.mode == "story" and "pause-summary-story" or "pause-summary"),
       run.sandbox and "Sala de pruebas · Nv. %d · Sin progreso permanente"
-        or "Piso %d · Nv. %d · Monedas %d",
+        or (run.mode == "story" and "Historia · Piso %d · Nv. %d · Monedas %d"
+          or "Piso %d · Nv. %d · Monedas %d"),
       run.depth,
       run.playerLevel,
       Save.data.coins

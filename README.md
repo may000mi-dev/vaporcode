@@ -5,8 +5,10 @@ ataques automáticos y controles táctiles pensados para jugar en el teléfono c
 uno o dos pulgares. Prototipo para Android/Termux primero; escritorio después.
 
 - **Protagonista:** Amado, con Mar y Amileth desbloqueables.
-- **Run:** pisos generados con semilla, jefe cada 3 pisos, tres mazmorras con
-  canción y BPM propios.
+- **Run:** pisos generados con semilla, jefe cada 3 pisos, tres mazmorras base
+  con canción y BPM propios.
+- **Historia:** campaña de tres actos con escenas, checkpoints por piso y final
+  en la Torre del Tiempo Detenido.
 - **Meta-progresión:** monedas, mejoras permanentes, personajes y mazmorras
   desbloqueables que sobreviven entre partidas.
 
@@ -20,11 +22,11 @@ de tamaño o al entrar en pantalla completa.
 
 ## Estado
 
-MVP jugable (V7). Incluye combate automático, tres personajes, cinco habilidades,
+MVP jugable (V8). Incluye combate automático, tres personajes, cinco habilidades,
 enemigos por rol (torreta, mortero, invocador, trampero, sanador, cazador de maná),
-élites, hazards, cuatro jefes con fases, ítems pasivos, mascotas, mochila, tienda,
-alquimia, guardado versionado, configuración de audio, salida segura al menú y
-una sala de pruebas para enemigos e ítems.
+élites, hazards, cinco jefes con fases, ítems pasivos, mascotas, mochila, tienda,
+alquimia, guardado versionado, Modo Historia con checkpoints, configuración de
+audio, salida segura al menú y una sala de pruebas para enemigos e ítems.
 
 ## Ejecutar
 
@@ -56,7 +58,7 @@ sh src/tools/test_all.sh
 ```
 
 Suites en Lua puro (sin LÖVE): datos, mazmorras y línea de visión, personajes,
-habilidades, botín, estados, piso/reintento, cámara, caché de textos,
+habilidades, botín, estados, piso/reintento, historia, cámara, caché de textos,
 aislamiento entre runs, guardado con respaldo, volúmenes de audio y aislamiento
 de la sala de pruebas.
 
@@ -72,12 +74,13 @@ de la sala de pruebas.
 | Tienda | V | botón TIENDA |
 | Pausa | P | botón PAUSA |
 | Salir al menú | Esc en pausa (doble) | botón SALIR AL MENÚ |
+| Modo Historia | H (menú) | botón MODO HISTORIA |
 | Sala de pruebas | F2 (solo en pruebas) | botón PRUEBAS |
 | Silenciar pulso | M | — |
 | Depuración | F3 | — |
 
-En el menú, `C` abre Configuración (música, efectos, borrar datos y sala de
-pruebas). Dentro de la mochila: `1`–`5` selecciona un activo, `Tab` recorre los 20 espacios,
+En el menú, `H` abre Modo Historia y `C` abre Configuración (música, efectos,
+borrar datos y sala de pruebas). Dentro de la mochila: `1`–`5` selecciona un activo, `Tab` recorre los 20 espacios,
 `Enter` activa el guardado o guarda el activo, `Q`/`W` asignan una habilidad
 guardada a A1/A2, `X` tira el ítem y `Escape` cierra (o cancela un intercambio).
 
@@ -94,8 +97,9 @@ src/
 │   ├── dungeons.lua       -- mazmorras, índice por id, cadencia de jefes
 │   ├── enemies.lua        -- tipos, élites, hazards, IA, aparición
 │   ├── items.lua          -- ítems, mascotas, espacios y reglas de tienda
+│   ├── story.lua          -- actos, capítulos, escenas y lore
 │   └── upgrades.lua       -- mejoras permanentes
-├── estados/               -- menú, configuración, pausa, game over
+├── estados/               -- menú, historia, configuración, pausa, game over
 ├── run/                   -- partida; run.lua orquesta y monta los sistemas
 ├── tools/                 -- suites de test y empaquetado
 └── utils/                 -- input, cámara, joystick, JSON, audio, textcache
@@ -107,15 +111,33 @@ juego, así que los datos se pueden mover entre archivos sin tocar el resto.
 
 ## Guardado
 
-JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 3.
+JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 4.
 Al cargar se normaliza y se repara: valores inválidos caen a los predeterminados,
-la cripta y Amado siempre quedan desbloqueados, y los volúmenes de música/efectos
-se acotan a 0..1.
+la cripta y Amado siempre quedan desbloqueados, los volúmenes de música/efectos
+se acotan a 0..1 y el checkpoint de historia se valida contra su capítulo.
 
 El progreso se guarda al cambiar de piso, al terminar la run, al pausar y cuando
 la app pierde el foco o se oculta; Android puede matar el proceso en segundo plano
 sin ejecutar `love.quit`. Cada guardado escribe primero `save.json.tmp` y luego el
 principal, así que una escritura interrumpida se recupera desde el respaldo.
+El Modo Historia guarda al inicio de cada piso el capítulo, la profundidad, el
+personaje y la instantánea completa del piso para continuar exactamente ahí.
+
+## Modo Historia
+
+Se abre con el botón `MODO HISTORIA` del menú o con `H`. La campaña tiene tres
+actos y cuatro capítulos jugables:
+
+1. **Cripta de latón** (pisos 1–9), portal rojo hacia la Forja.
+2. **Forja de vapor** (pisos 1–9), portal rojo hacia la Catedral.
+3. **Catedral de engranajes** (pisos 1–9), portal negro hacia la Torre.
+4. **Torre del Tiempo Detenido** (pisos 10–12), jefe final y desenlace.
+
+Amado, Mar y Amileth se pueden elegir si ya están desbloqueados. La historia no
+regala personajes ni mejoras: usa la misma economía de la run libre. Al comenzar
+cada piso se guarda un checkpoint; `CONTINUAR HISTORIA` retoma ese piso sin repetir
+las escenas ya vistas. Morir permite `REINTENTAR PISO` o volver al menú; reiniciar
+la campaña pide confirmación y conserva monedas, mejoras y desbloqueos.
 
 ## Configuración y sala de pruebas
 
@@ -133,4 +155,4 @@ el guardado real tal como estaba.
 ## Documentación
 
 - `docs/design.md`: reglas de diseño, personajes, roles de enemigo, élites,
-  hazards, jefes, ítems, meta-progresión, audio y sala de pruebas.
+  hazards, jefes, ítems, Modo Historia, meta-progresión, audio y sala de pruebas.

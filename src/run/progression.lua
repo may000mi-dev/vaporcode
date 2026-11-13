@@ -3,6 +3,7 @@
 -- como métodos para conservar la API run:metodo(...).
 local Data = require("src.run.data")
 local Save = require("src.run.save")
+local Story = require("src.run.story")
 local State = require("src.estados")
 local FX = require("src.run.fx")
 local Audio = require("src.utils.audio")
@@ -83,6 +84,10 @@ end
 
 function Progression.nextLevel(run)
   if run.sandbox then return end
+  if Story.isStory(run) then
+    return Progression.nextStoryLevel(run)
+  end
+
   local reached = run.depth + 1
   Save.recordLevel(reached)
   for _, dungeon in ipairs(Data.dungeons) do
@@ -114,6 +119,56 @@ function Progression.nextLevel(run)
       { 1.00, 0.86, 0.35 }
     )
   end
+end
+
+function Progression.nextStoryLevel(run)
+  local chapter = run.storyChapter
+  if not chapter then return end
+
+  if run.depth < chapter.endDepth then
+    local reached = run.depth + 1
+    Save.recordLevel(reached)
+    for _, dungeon in ipairs(Data.dungeons) do
+      if not dungeon.storyOnly and reached >= dungeon.unlockLevel then
+        Save.unlock(dungeon.id)
+      end
+    end
+    Save.save()
+
+    run.depth = reached
+    run.hp = math.min(
+      run.stats.maxHp,
+      run.hp + math.floor(run.stats.maxHp * Data.player.nextLevelHealPercent)
+    )
+    local unlockMessages = run:commitUnlockNotices()
+    run.overlay = nil
+    run:enterLevel()
+    FX.add(
+      "Piso " .. run.depth,
+      run.player.x,
+      run.player.y - 26,
+      { 0.50, 1.00, 0.70 }
+    )
+    for index, message in ipairs(unlockMessages) do
+      FX.add(
+        message,
+        run.player.x,
+        run.player.y - 44 - index * 16,
+        { 1.00, 0.86, 0.35 }
+      )
+    end
+    return
+  end
+
+  Save.recordLevel(run.depth)
+  Save.save()
+  run:startStoryScene(chapter.outroScene, function()
+    if chapter.nextChapter then
+      run:advanceStoryChapter()
+    else
+      run:finishStory()
+    end
+  end)
 end
 
 function Progression.gameOver(run, reason)
@@ -148,6 +203,8 @@ function Progression.gameOver(run, reason)
     coins = Save.data.coins,
     dungeon = run.def.name,
     dungeonId = run.def.id,
+    mode = run.mode or "free",
+    storyChapterId = run.storyChapterId,
     character = character.name,
     characterId = run.characterId,
     ability = ability and ability.name or "Sin habilidad",

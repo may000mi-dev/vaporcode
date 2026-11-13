@@ -5,7 +5,7 @@ local Json = require("src.utils.json")
 local Save = {}
 local FILE = "save.json"
 local TEMP_FILE = "save.json.tmp"
-local VERSION = 3
+local VERSION = 4
 
 local function clamp01(value)
   value = tonumber(value)
@@ -30,6 +30,17 @@ local function writeSave(name, content)
   return ok and written and true or false
 end
 
+local function defaultStory()
+  return {
+    active = false,
+    completed = false,
+    chapterId = nil,
+    depth = 1,
+    characterId = "amado",
+    checkpoint = nil,
+  }
+end
+
 local function defaults()
   return {
     version = VERSION,
@@ -39,7 +50,65 @@ local function defaults()
     unlocked = { cripta = true, forja = false, catedral = false },
     characters = { amado = true, mar = false, amileth = false },
     settings = { musicVolume = 0.6, effectsVolume = 0.8 },
+    story = defaultStory(),
   }
+end
+
+local function validCheckpoint(checkpoint)
+  if type(checkpoint) ~= "table" or type(checkpoint.stats) ~= "table" then
+    return false
+  end
+  local stats = checkpoint.stats
+  return type(checkpoint.seed) == "number"
+    and type(checkpoint.dungeonId) == "string"
+    and type(checkpoint.playerLevel) == "number"
+    and type(checkpoint.hp) == "number"
+    and type(checkpoint.xp) == "number"
+    and type(checkpoint.xpToNext) == "number"
+    and type(checkpoint.mana) == "number"
+    and type(checkpoint.manaMax) == "number"
+    and type(checkpoint.timeLeft) == "number"
+    and type(stats.damage) == "number"
+    and type(stats.maxHp) == "number"
+    and type(stats.speed) == "number"
+    and type(stats.attackRate) == "number"
+end
+
+local function normalizeStory(data)
+  local out = defaultStory()
+  if type(data) ~= "table" then return out end
+
+  out.completed = data.completed and true or false
+  local chapter = type(data.chapterId) == "string"
+    and Data.story.chapterById[data.chapterId]
+    or nil
+  if not chapter then return out end
+
+  out.chapterId = chapter.id
+  local depth = math.floor(tonumber(data.depth) or chapter.startDepth)
+  out.depth = math.max(chapter.startDepth, math.min(depth, chapter.endDepth))
+  if Data.characters[data.characterId] then
+    out.characterId = data.characterId
+  end
+
+  if data.active and validCheckpoint(data.checkpoint) then
+    local checkpoint = data.checkpoint
+    local cpDepth = math.floor(tonumber(checkpoint.depth) or out.depth)
+    if cpDepth >= chapter.startDepth and cpDepth <= chapter.endDepth then
+      checkpoint.depth = cpDepth
+      checkpoint.dungeonId = chapter.dungeonId
+      checkpoint.mode = "story"
+      checkpoint.storyChapterId = chapter.id
+      if not Data.characters[checkpoint.characterId] then
+        checkpoint.characterId = "amado"
+      end
+      out.active = true
+      out.depth = cpDepth
+      out.characterId = checkpoint.characterId
+      out.checkpoint = checkpoint
+    end
+  end
+  return out
 end
 
 local function normalize(data)
@@ -79,6 +148,8 @@ local function normalize(data)
     out.settings.effectsVolume = clamp01(data.settings.effectsVolume)
       or out.settings.effectsVolume
   end
+
+  out.story = normalizeStory(data.story)
   return out
 end
 
@@ -126,6 +197,59 @@ function Save.reset()
   Save.data = defaults()
   Save.save()
   return Save.data
+end
+
+function Save.hasStoryCheckpoint()
+  local story = Save.data and Save.data.story
+  return story ~= nil
+    and story.active == true
+    and type(story.checkpoint) == "table"
+end
+
+function Save.setStoryCheckpoint(chapterId, snapshot)
+  if type(Save.data) ~= "table" or not validCheckpoint(snapshot) then
+    return false
+  end
+  local chapter = Data.story.chapterById[chapterId]
+  if not chapter then return false end
+  local depth = math.floor(tonumber(snapshot.depth) or 0)
+  if depth < chapter.startDepth or depth > chapter.endDepth then
+    return false
+  end
+
+  local story = Save.data.story
+  story.active = true
+  story.completed = false
+  story.chapterId = chapterId
+  story.depth = math.max(
+    chapter.startDepth,
+    math.min(math.floor(tonumber(snapshot.depth) or chapter.startDepth), chapter.endDepth)
+  )
+  if Data.characters[snapshot.characterId] then
+    story.characterId = snapshot.characterId
+  end
+  snapshot.mode = "story"
+  snapshot.storyChapterId = chapterId
+  story.checkpoint = snapshot
+  Save.save()
+  return true
+end
+
+function Save.completeStory()
+  local story = Save.data and Save.data.story
+  if not story then return false end
+  story.active = false
+  story.completed = true
+  story.checkpoint = nil
+  Save.save()
+  return true
+end
+
+function Save.resetStory()
+  if type(Save.data) ~= "table" then return false end
+  Save.data.story = defaultStory()
+  Save.save()
+  return true
 end
 
 function Save.setVolumes(musicVolume, effectsVolume)

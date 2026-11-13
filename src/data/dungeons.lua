@@ -39,6 +39,19 @@ Dungeons.dungeons = {
     hpScale = 0.20,
     damageScale = 0.12,
   },
+  {
+    id = "torre",
+    name = "Torre del Tiempo Detenido",
+    unlockLevel = 999,
+    storyOnly = true,
+    desc = "Los recuerdos de Amado se defienden del último compás.",
+    song = { name = "Eco del último compás", bpm = 150 },
+    enemies = { "espectro", "engranaje", "clerigo", "inquisidor" },
+    boss = "time_organ",
+    spawnBase = 7,
+    hpScale = 0.26,
+    damageScale = 0.15,
+  },
 }
 Dungeons.dungeonById = {}
 for _, dungeon in ipairs(Dungeons.dungeons) do

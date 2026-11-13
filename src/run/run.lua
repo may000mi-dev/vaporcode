@@ -19,6 +19,7 @@ local Shop = require("src.run.shop")
 local Sandbox = require("src.run.sandbox")
 local Audio = require("src.utils.audio")
 local Floors = require("src.run.floors")
+local StoryUI = require("src.run.story_ui")
 
 local Run = {
   def = nil,
@@ -50,6 +51,14 @@ local Run = {
   paused = false,
   over = false,
   sandbox = false,
+  mode = "free",
+  storyChapterId = nil,
+  storyChapter = nil,
+  storyPendingIntroScene = nil,
+  storyScene = nil,
+  storySceneIndex = nil,
+  storySceneDone = nil,
+  exitKind = "normal",
   sandboxInvuln = false,
   pauseExitConfirm = false,
   pauseExitTimer = 0,
@@ -96,11 +105,48 @@ local function sys(name)
   return module
 end
 
-function Run.enter(dungeonId, characterId, abilityId)
+function Run.enter(dungeonId, characterId, abilityId, options)
   if type(dungeonId) == "table" then
     return Run.retryFloor(dungeonId)
   end
-  return Floors.enter(Run, dungeonId, characterId, abilityId)
+
+  if type(options) == "table" and options.resume then
+    local story = Save.data.story
+    local chapter = story and story.chapterId
+      and Data.story.chapterById[story.chapterId]
+      or nil
+    if not story or not story.active or not story.checkpoint or not chapter then
+      return Floors.enter(
+        Run,
+        "cripta",
+        characterId,
+        nil,
+        { mode = "story", chapterId = "cripta" }
+      )
+    end
+
+    local resumeCharacter = story.characterId or characterId
+    local checkpoint = story.checkpoint
+    Floors.enter(
+      Run,
+      chapter.dungeonId,
+      resumeCharacter,
+      nil,
+      { mode = "story", chapterId = chapter.id, intro = false }
+    )
+    if not Run.retryFloor(checkpoint) then
+      Floors.enter(
+        Run,
+        chapter.dungeonId,
+        resumeCharacter,
+        nil,
+        { mode = "story", chapterId = chapter.id, intro = false }
+      )
+    end
+    return
+  end
+
+  return Floors.enter(Run, dungeonId, characterId, abilityId, options)
 end
 
 function Run.retryFloor(snapshot)
@@ -157,7 +203,9 @@ function Run:setPaused(value)
   Run.pauseExitConfirm = false
   Run.pauseExitTimer = 0
   if Run.paused then
-    Run.overlay = nil
+    if Run.overlay ~= "story" then
+      Run.overlay = nil
+    end
     Run:clearInput()
     Audio.pauseMusic()
     Run:autosave()
@@ -309,6 +357,11 @@ function Run.update(dt)
     return
   end
 
+  if Run.overlay == "story" then
+    StoryUI.update(Run, dt)
+    return
+  end
+
   Run:updateMana(dt)
   Run.abilityLockTimer = math.max(0, (Run.abilityLockTimer or 0) - dt)
   Run.inventoryFullTimer = math.max(0, (Run.inventoryFullTimer or 0) - dt)
@@ -390,7 +443,13 @@ function Run.draw()
   Camera.push()
   Run.dungeon:draw(Camera)
   if not Run.sandbox then
-    Run.dungeon:drawExit(Run.exitX, Run.exitY, Run.exitOpen)
+    Run.dungeon:drawExit(
+      Run.exitX,
+      Run.exitY,
+      Run.exitOpen,
+      Run.exitKind,
+      Run.storyChapter and Run.storyChapter.portalColor or nil
+    )
   end
   for _, valve in ipairs(Run.valves) do
     valve:draw()
@@ -443,6 +502,8 @@ function Run.draw()
     Shop.draw(Run)
   elseif Run.overlay == "sandbox" then
     Sandbox.draw(Run)
+  elseif Run.overlay == "story" then
+    StoryUI.draw(Run)
   end
 
   if Run.paused then
@@ -455,6 +516,16 @@ function Run.drawDebug()
 end
 
 function Run.keypressed(key, isrepeat)
+  if Run.paused then
+    Run:setPaused(false)
+    return
+  end
+
+  if Run.overlay == "story" then
+    StoryUI.keypressed(Run, key, isrepeat)
+    return
+  end
+
   if key == "escape" and Run.overlay then
     if Run.pendingStorageIndex then
       Run.pendingStorageIndex = nil
@@ -555,6 +626,11 @@ function Run:pressedAt(pointerId, x, y)
       return
     end
     Run:setPaused(false)
+    return
+  end
+
+  if Run.overlay == "story" then
+    StoryUI.pressed(Run, x, y)
     return
   end
 
@@ -688,6 +764,7 @@ local systems = {
   sys("src.run.storage"),
   sys("src.run.loot"),
   sys("src.run.slots"),
+  sys("src.run.story_flow"),
 }
 
 for _, system in ipairs(systems) do

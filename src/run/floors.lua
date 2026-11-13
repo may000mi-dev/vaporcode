@@ -17,14 +17,27 @@ local Rhythm = require("src.run.rhythm")
 local Audio = require("src.utils.audio")
 local Sandbox = require("src.run.sandbox")
 local Floor = require("src.run.floor")
+local Story = require("src.run.story")
 local FX = require("src.run.fx")
 local Util = require("src.utils.util")
 
 local Floors = {}
 
-function Floors.enter(run, dungeonId, characterId, abilityId)
+function Floors.enter(run, dungeonId, characterId, abilityId, options)
+  options = options or {}
   run.def = Data.dungeonById[dungeonId] or Data.dungeons[1]
   run.sandbox = run.def.sandbox == true
+  run.mode = options.mode == "story" and "story" or "free"
+  run.storyChapterId = nil
+  run.storyChapter = nil
+  run.storyPendingIntroScene = nil
+  if run.mode == "story" then
+    local chapter = Data.story.chapterById[options.chapterId]
+      or Data.story.chapterById.cripta
+    run.storyChapter = chapter
+    run.storyChapterId = chapter.id
+    run.def = Data.dungeonById[chapter.dungeonId] or run.def
+  end
 
   if characterId
     and Data.characters[characterId]
@@ -41,8 +54,10 @@ function Floors.enter(run, dungeonId, characterId, abilityId)
     run.abilitySlot1 = abilityId
   end
 
-  run.seed = os.time() + math.floor(love.timer.getTime() * 1000)
-  run.depth = 1
+  run.seed = options.seed
+    or (os.time() + math.floor(love.timer.getTime() * 1000))
+  run.depth = run.mode == "story" and run.storyChapter.startDepth or 1
+  run.exitKind = "normal"
   run.playerLevel = 1
   run.kills = 0
   run.coinsEarned = 0
@@ -80,6 +95,9 @@ function Floors.enter(run, dungeonId, characterId, abilityId)
   run.tornado = nil
   run.unlockNotices = {}
   run.overlay = nil
+  run.storyScene = nil
+  run.storySceneIndex = nil
+  run.storySceneDone = nil
   run.sandboxInvuln = false
   run.pauseExitConfirm = false
   run.pauseExitTimer = 0
@@ -106,6 +124,10 @@ function Floors.enter(run, dungeonId, characterId, abilityId)
 
   if run.sandbox then
     Sandbox.reset()
+  end
+
+  if run.mode == "story" and options.intro ~= false then
+    run.storyPendingIntroScene = run.storyChapter.introScene
   end
 
   FX.clear()
@@ -181,7 +203,16 @@ function Floors.enterLevel(run)
   FX.clear()
   run.timeLeft = run.sandbox and 0 or Data.floor.timeLimit
   run:spawnEnemies()
+  run.exitKind = Story.exitKind(run)
   run.floorSnapshot = Floor.capture(run)
+  if run.mode == "story" then
+    run:saveStoryCheckpoint()
+    local sceneId = run.storyPendingIntroScene
+    run.storyPendingIntroScene = nil
+    if sceneId then
+      run:startStoryScene(sceneId, nil)
+    end
+  end
 end
 
 function Floors.retryFloor(run, snapshot)
@@ -192,6 +223,17 @@ function Floors.retryFloor(run, snapshot)
 
   run.def = Data.dungeonById[snapshot.dungeonId] or Data.dungeons[1]
   run.sandbox = run.def.sandbox == true
+  run.storyChapter = run.storyChapterId
+    and Data.story.chapterById[run.storyChapterId]
+    or nil
+  if run.mode == "story" and not run.storyChapter then
+    run.mode = "free"
+    run.storyChapterId = nil
+  end
+  run.storyPendingIntroScene = nil
+  run.storyScene = nil
+  run.storySceneIndex = nil
+  run.storySceneDone = nil
   run.over = false
   run.paused = false
   run.exitOpen = false

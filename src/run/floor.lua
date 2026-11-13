@@ -27,6 +27,8 @@ function Floor.capture(run)
     seed = run.seed,
     depth = run.depth,
     dungeonId = run.def and run.def.id,
+    mode = run.mode or "free",
+    storyChapterId = run.storyChapterId,
     characterId = run.characterId,
     abilitySlot1 = run.abilitySlot1,
     abilitySlot2 = run.abilitySlot2,
@@ -66,6 +68,8 @@ function Floor.restore(run, snapshot)
 
   run.seed = snapshot.seed
   run.depth = snapshot.depth
+  run.mode = snapshot.mode or "free"
+  run.storyChapterId = snapshot.storyChapterId
   run.characterId = snapshot.characterId
   run.abilitySlot1 = snapshot.abilitySlot1
   run.abilitySlot2 = snapshot.abilitySlot2

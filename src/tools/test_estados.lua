@@ -12,6 +12,9 @@ end
 package.preload["src.estados.config"] = function()
   return { enter = function() entered.config = true end }
 end
+package.preload["src.estados.historia"] = function()
+  return { enter = function() entered.historia = true end }
+end
 package.preload["src.run.run"] = function()
   return { enter = function() entered.run = true end }
 end
@@ -29,5 +32,8 @@ assert(State.name == "gameover" and entered.gameover, "debe cargar gameover")
 
 State.switch("config")
 assert(State.name == "config" and entered.config, "debe cargar configuración")
+
+State.switch("historia")
+assert(State.name == "historia" and entered.historia, "debe cargar historia")
 
 print("OK ruteo de estados")

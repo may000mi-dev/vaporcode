@@ -209,6 +209,49 @@ local function updateGuardian(enemy, dt, run, ctx)
   end
 end
 
+local function startOrganPhase(enemy, run)
+  enemy.invulnTimer = enemy.def.phaseDuration
+  local count = enemy.def.beamCount
+  for i = 0, count - 1 do
+    run:spawnHazard("beam", enemy.x, enemy.y, {
+      angle = (math.pi * 2 / count) * i + enemy.bossPhase * 0.35,
+      rotation = enemy.def.beamRotation,
+      length = enemy.def.beamLength,
+      width = enemy.def.beamWidth,
+      damage = enemy.def.beamDamage,
+      life = enemy.def.phaseDuration,
+      interval = Data.hazards.beamTick,
+      color = { 0.78, 0.46, 1.00 },
+    })
+  end
+  FX.add("¡Compás del fin!", enemy.x, enemy.y - 48, { 0.88, 0.62, 1.00 })
+  if run.shake then run:shake(8, 0.40) end
+end
+
+local function updateOrgan(enemy, dt, run, ctx)
+  enemy.invulnTimer = math.max(0, enemy.invulnTimer - dt)
+  enemy.summonTimer = enemy.summonTimer - dt
+  if enemy.summonTimer <= 0 then
+    enemy.summonTimer = enemy.def.summonInterval
+    summonAround(enemy, run, enemy.def.summonKind)
+  end
+
+  if enemy.invulnTimer <= 0 and ctx.canSee then
+    if ctx.distance > (enemy.def.keepDistance or 0) then
+      moveToward(enemy, dt, run, ctx.dx, ctx.dy, ctx.distance, 0.85)
+    end
+  elseif enemy.invulnTimer <= 0 then
+    enemy:updateSearch(dt, run)
+  end
+
+  local ratio = enemy.maxHp > 0 and enemy.hp / enemy.maxHp or 0
+  local threshold = enemy.def.phaseThresholds[enemy.bossPhase]
+  if threshold and ratio <= threshold and enemy.invulnTimer <= 0 then
+    enemy.bossPhase = enemy.bossPhase + 1
+    startOrganPhase(enemy, run)
+  end
+end
+
 function Boss.update(enemy, dt, run, ctx)
   local kind = enemy.def.bossKind or "guardian"
   if kind == "patriarch" then
@@ -217,6 +260,8 @@ function Boss.update(enemy, dt, run, ctx)
     updateForge(enemy, dt, run)
   elseif kind == "chrono" then
     updateChrono(enemy, dt, run, ctx)
+  elseif kind == "organ" then
+    updateOrgan(enemy, dt, run, ctx)
   else
     updateGuardian(enemy, dt, run, ctx)
   end
@@ -252,6 +297,21 @@ function Boss.drawOverlay(enemy)
   elseif enemy.def.bossKind == "forge" then
     love.graphics.setColor(1.00, 0.35, 0.16, 0.35)
     love.graphics.circle("fill", enemy.x, enemy.y, enemy.radius + 10)
+  elseif enemy.def.bossKind == "organ" then
+    local t = love.timer.getTime()
+    love.graphics.setColor(0.62, 0.32, 0.95, 0.30)
+    love.graphics.circle("fill", enemy.x, enemy.y, enemy.radius + 14)
+    love.graphics.setColor(0.86, 0.62, 1.00, 0.80)
+    love.graphics.circle("line", enemy.x, enemy.y, enemy.radius + 7)
+    for i = 0, 3 do
+      local a = t * 1.2 + i * (math.pi * 0.5)
+      love.graphics.line(
+        enemy.x + math.cos(a) * (enemy.radius + 5),
+        enemy.y + math.sin(a) * (enemy.radius + 5),
+        enemy.x + math.cos(a) * (enemy.radius + 16),
+        enemy.y + math.sin(a) * (enemy.radius + 16)
+      )
+    end
   end
 end
 
