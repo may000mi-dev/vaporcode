@@ -27,7 +27,18 @@ function Player.new(x, y, characterId)
   self.slowTimer = 0
   self.slowFactor = 1
   self.timeLockTimer = 0
+  self.pullTimer = 0
+  self.pullTotal = 0
   return self
+end
+
+function Player:startPull(x, y, duration)
+  self.pullStartX = self.x
+  self.pullStartY = self.y
+  self.pullX = x
+  self.pullY = y
+  self.pullTotal = math.max(0.01, duration or 0.4)
+  self.pullTimer = self.pullTotal
 end
 
 function Player:applySlow(duration, factor)
@@ -138,6 +149,40 @@ function Player:update(dt, dx, dy, run)
   end
   if self.timeLockTimer > 0 then
     dx, dy = 0, 0
+  end
+
+  if self.pullTimer > 0 then
+    self.pullTimer = math.max(0, self.pullTimer - dt)
+    local progress = 1
+    if self.pullTotal > 0 then
+      progress = 1 - self.pullTimer / self.pullTotal
+    end
+    progress = Util.clamp(progress, 0, 1)
+
+    self.x = self.pullStartX + (self.pullX - self.pullStartX) * progress
+    self.y = self.pullStartY + (self.pullY - self.pullStartY) * progress
+
+    local pdx = self.pullX - self.x
+    local pdy = self.pullY - self.y
+    local pmag = math.sqrt(pdx * pdx + pdy * pdy)
+    if pmag > 0.001 then
+      self.facingX = pdx / pmag
+      self.facingY = pdy / pmag
+    end
+
+    self.moving = false
+    self.moveX = 0
+    self.moveY = 0
+    self:updateShield(dt)
+    self.spinTimer = math.max(0, self.spinTimer - dt)
+    self.attackTimer = math.max(0, self.attackTimer - dt)
+
+    if self.pullTimer <= 0 then
+      self.x, self.y = self.pullX, self.pullY
+      self.pullStartX, self.pullStartY = nil, nil
+      self.pullX, self.pullY = nil, nil
+    end
+    return
   end
 
   local mag = math.sqrt(dx * dx + dy * dy)

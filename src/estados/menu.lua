@@ -212,7 +212,7 @@ function Menu.draw()
 
   love.graphics.setFont(Fonts.title)
   love.graphics.setColor(0.55, 0.90, 1.00)
-  love.graphics.printf("ROGUELIKE STEAMPUNK MUSICAL", px, py + 8, panel.w, "center")
+  love.graphics.printf("VaporCode", px, py + 8, panel.w, "center")
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(0.72, 0.78, 0.85)

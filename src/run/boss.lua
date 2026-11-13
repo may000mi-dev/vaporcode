@@ -15,6 +15,14 @@ function Boss.init(enemy)
   enemy.auraTimer = 0
   enemy.lostTimer = 0
   enemy.stuckTimer = 0
+  if def.bossKind == "organ" then
+    enemy.armTimer = def.armFirstDelay or 2.2
+    enemy.armState = nil
+    enemy.armWindupTimer = 0
+    enemy.armPullTimer = 0
+    enemy.armAttachedPlayer = nil
+    enemy.healerTimer = def.healerFirstDelay or 5.0
+  end
 end
 
 local function moveToward(enemy, dt, run, dx, dy, distance, scale)
@@ -52,8 +60,9 @@ local function summonAround(enemy, run, kind)
     math.sin(angle) * distance,
     def.radius
   )
-  run:createEnemy(kind, x, y, { noElite = true })
+  local minion = run:createEnemy(kind, x, y, { noElite = true })
   FX.ring(x, y, def.radius + 6, def.color)
+  return minion
 end
 
 local function startPatriarchPhase(enemy, run)
@@ -254,8 +263,175 @@ local function updateGuardian(enemy, dt, run, ctx)
   end
 end
 
+local function organTargetPoint(enemy, run, ctx)
+  local target = ctx.target or run.player
+  if ctx.canSee then
+    return target.x, target.y
+  end
+  if enemy.lastSeenX then
+    return enemy.lastSeenX, enemy.lastSeenY
+  end
+end
+
+local function nearestWalkablePoint(run, x, y, radius)
+  if run.dungeon.nearestWalkable then
+    local nx, ny = run.dungeon:nearestWalkable(
+      x,
+      y,
+      radius,
+      math.max(120, radius * 6)
+    )
+    if nx then return nx, ny end
+  end
+  return x, y
+end
+
+local function organSummonPool(enemy)
+  if enemy.summonPool then return enemy.summonPool end
+
+  local pool = {}
+  for _, kind in ipairs(Data.bestiaryOrder) do
+    local def = Data.enemyTypes[kind]
+    if def and not def.boss then
+      pool[#pool + 1] = kind
+    end
+  end
+  enemy.summonPool = pool
+  return pool
+end
+
+local function organSummonCount(run)
+  local count = 0
+  for _, enemy in ipairs(run.enemies) do
+    if not enemy.dead and enemy.summonedByOrgan then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+local function summonRandomAround(enemy, run)
+  if organSummonCount(run) >= (enemy.def.summonTotalCap or 8) then return end
+
+  local pool = organSummonPool(enemy)
+  if #pool == 0 then return end
+
+  local start = love.math.random(1, #pool)
+  for offset = 0, #pool - 1 do
+    local kind = pool[((start - 1 + offset) % #pool) + 1]
+    if countKind(run, kind) < (enemy.def.summonCap or 2) then
+      local minion = summonAround(enemy, run, kind)
+      if minion then
+        minion.summonedByOrgan = true
+        return minion
+      end
+    end
+  end
+end
+
+local function summonHealerAround(enemy, run)
+  if countKind(run, "clerigo") >= (enemy.def.healerCap or 2) then return end
+  local minion = summonAround(enemy, run, "clerigo")
+  if minion then
+    minion.summonedByOrgan = true
+  end
+end
+
+local function updateOrganZones(enemy, dt, run, ctx)
+  local def = enemy.def
+  enemy.zoneTimer = (enemy.zoneTimer or def.zoneInterval) - dt
+  if enemy.zoneTimer > 0 then return end
+
+  local tx, ty = organTargetPoint(enemy, run, ctx)
+  if not tx then return end
+
+  enemy.zoneTimer = def.zoneInterval
+  for i = 1, def.zoneCount do
+    local angle = (math.pi * 2 / def.zoneCount) * (i - 1)
+      + love.math.random() * 0.5
+    local offset = i == 1 and 0 or def.zoneRadius * 1.15
+    run:spawnHazard("zone", tx + math.cos(angle) * offset, ty + math.sin(angle) * offset, {
+      radius = def.zoneRadius,
+      delay = def.zoneDelay,
+      life = def.zoneDuration,
+      damage = def.zoneDamage,
+      interval = 0.5,
+      color = { 0.78, 0.46, 1.00 },
+    })
+  end
+end
+
+local function updateOrganArmState(enemy, dt, run)
+  if enemy.armState == "windup" then
+    enemy.armWindupTimer = enemy.armWindupTimer - dt
+    if enemy.armWindupTimer <= 0 then
+      local def = enemy.def
+      local player = run.player
+      local distance = Util.dist(enemy.x, enemy.y, player.x, player.y)
+      local angle = Util.atan2(player.y - enemy.y, player.x - enemy.x)
+      local close = def.armCloseDistance or (enemy.radius + player.radius + 18)
+      local reach = (def.armRange or def.zoneRange or 380) + player.radius
+      local aligned = angleDifference(angle, enemy.armAngle)
+        <= (def.armHalfAngle or 0.34)
+
+      if distance > close and distance <= reach and aligned then
+        local tx = enemy.x + math.cos(angle) * close
+        local ty = enemy.y + math.sin(angle) * close
+        tx, ty = nearestWalkablePoint(run, tx, ty, player.radius)
+        player:startPull(tx, ty, def.armPullDuration or 0.40)
+        enemy.armState = "pull"
+        enemy.armPullTimer = def.armPullDuration or 0.40
+        enemy.armAttachedPlayer = player
+        FX.add("¡Enganchado!", player.x, player.y - 30, { 0.88, 0.62, 1.00 })
+        FX.ring(player.x, player.y, player.radius + 8, { 0.88, 0.62, 1.00 })
+        if run.shake then run:shake(4, 0.18) end
+      else
+        enemy.armState = nil
+        enemy.armAttachedPlayer = nil
+      end
+      enemy.armTimer = def.armInterval or 4.8
+    end
+    return true
+  end
+
+  if enemy.armState == "pull" then
+    enemy.armPullTimer = enemy.armPullTimer - dt
+    if enemy.armPullTimer <= 0 then
+      enemy.armState = nil
+      enemy.armAttachedPlayer = nil
+    end
+    return true
+  end
+  return false
+end
+
+local function tryStartOrganArm(enemy, run, ctx)
+  if enemy.armState or enemy.armTimer > 0 then return false end
+
+  local target = ctx.target or run.player
+  if target ~= run.player then return false end
+  if not ctx.canSee and not enemy.lastSeenX then return false end
+
+  local tx, ty = organTargetPoint(enemy, run, ctx)
+  if not tx then return false end
+
+  enemy.armState = "windup"
+  enemy.armWindupTimer = enemy.def.armWindup or 0.55
+  enemy.armAngle = Util.atan2(ty - enemy.y, tx - enemy.x)
+  enemy.armAttachedPlayer = nil
+  FX.add(
+    "¡Brazo del compás!",
+    enemy.x,
+    enemy.y - enemy.radius - 16,
+    { 0.88, 0.62, 1.00 }
+  )
+  return true
+end
+
 local function startOrganPhase(enemy, run)
   enemy.invulnTimer = enemy.def.phaseDuration
+  enemy.armState = nil
+  enemy.armAttachedPlayer = nil
   local count = enemy.def.beamCount
   for i = 0, count - 1 do
     run:spawnHazard("beam", enemy.x, enemy.y, {
@@ -274,24 +450,49 @@ local function startOrganPhase(enemy, run)
 end
 
 local function updateOrgan(enemy, dt, run, ctx)
+  local def = enemy.def
   enemy.invulnTimer = math.max(0, enemy.invulnTimer - dt)
+  enemy.armTimer = math.max(0, (enemy.armTimer or 0) - dt)
+  local armBusy = updateOrganArmState(enemy, dt, run)
+
   enemy.summonTimer = enemy.summonTimer - dt
   if enemy.summonTimer <= 0 then
-    enemy.summonTimer = enemy.def.summonInterval
-    summonAround(enemy, run, enemy.def.summonKind)
+    enemy.summonTimer = def.summonInterval
+    summonRandomAround(enemy, run)
   end
 
-  if enemy.invulnTimer <= 0 and ctx.canSee then
-    if ctx.distance > (enemy.def.keepDistance or 0) then
-      moveToward(enemy, dt, run, ctx.dx, ctx.dy, ctx.distance, 0.85)
+  enemy.healerTimer = math.max(0, (enemy.healerTimer or 0) - dt)
+  local bossRatio = enemy.maxHp > 0 and enemy.hp / enemy.maxHp or 0
+  local playerRatio = run.stats.maxHp > 0 and run.hp / run.stats.maxHp or 0
+  local winning = bossRatio <= (def.healerBossHp or 0.70)
+    and playerRatio >= bossRatio + (def.healerLead or 0.20)
+  if enemy.healerTimer <= 0 and winning then
+    summonHealerAround(enemy, run)
+    enemy.healerTimer = def.healerInterval or 7.0
+  end
+
+  if enemy.invulnTimer <= 0 then
+    if ctx.distance > (def.zoneRange or 380) then
+      updateOrganZones(enemy, dt, run, ctx)
+      if ctx.canSee then
+        moveToward(enemy, dt, run, ctx.dx, ctx.dy, ctx.distance, 0.85)
+      elseif not armBusy then
+        enemy:updateSearch(dt, run)
+      end
+    elseif ctx.distance > (def.closeRange or 150) then
+      if not armBusy then
+        tryStartOrganArm(enemy, run, ctx)
+      end
+      if not ctx.canSee and not enemy.armState then
+        enemy:updateSearch(dt, run)
+      end
+    elseif not ctx.canSee then
+      enemy:updateSearch(dt, run)
     end
-  elseif enemy.invulnTimer <= 0 then
-    enemy:updateSearch(dt, run)
   end
 
-  local ratio = enemy.maxHp > 0 and enemy.hp / enemy.maxHp or 0
-  local threshold = enemy.def.phaseThresholds[enemy.bossPhase]
-  if threshold and ratio <= threshold and enemy.invulnTimer <= 0 then
+  local threshold = def.phaseThresholds[enemy.bossPhase]
+  if threshold and bossRatio <= threshold and enemy.invulnTimer <= 0 then
     enemy.bossPhase = enemy.bossPhase + 1
     startOrganPhase(enemy, run)
   end
@@ -364,6 +565,32 @@ function Boss.drawOverlay(enemy)
         enemy.x + math.cos(a) * (enemy.radius + 16),
         enemy.y + math.sin(a) * (enemy.radius + 16)
       )
+    end
+
+    if enemy.armState == "windup" then
+      local reach = enemy.def.armRange or enemy.def.zoneRange or 380
+      local ex = enemy.x + math.cos(enemy.armAngle) * reach
+      local ey = enemy.y + math.sin(enemy.armAngle) * reach
+      local pulse = 0.22 + 0.18 * math.sin(t * 14)
+      love.graphics.setColor(0.88, 0.62, 1.00, pulse)
+      love.graphics.setLineWidth(7)
+      love.graphics.line(enemy.x, enemy.y, ex, ey)
+      love.graphics.setColor(0.96, 0.86, 1.00, 0.90)
+      love.graphics.setLineWidth(2)
+      love.graphics.line(enemy.x, enemy.y, ex, ey)
+      love.graphics.circle("line", ex, ey, 8)
+      love.graphics.setLineWidth(1)
+    elseif enemy.armState == "pull" and enemy.armAttachedPlayer then
+      local player = enemy.armAttachedPlayer
+      love.graphics.setColor(0.88, 0.62, 1.00, 0.35)
+      love.graphics.setLineWidth(8)
+      love.graphics.line(enemy.x, enemy.y, player.x, player.y)
+      love.graphics.setColor(0.96, 0.86, 1.00, 0.95)
+      love.graphics.setLineWidth(3)
+      love.graphics.line(enemy.x, enemy.y, player.x, player.y)
+      love.graphics.setColor(0.96, 0.86, 1.00, 0.85)
+      love.graphics.circle("line", player.x, player.y, player.radius + 7)
+      love.graphics.setLineWidth(1)
     end
   end
 end

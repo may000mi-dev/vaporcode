@@ -345,4 +345,152 @@ assert(
 )
 Run.dungeon = originalDungeon
 
+
+-- Jefe Órgano: zonas a distancia, brazo a media distancia y clérigos si va perdiendo.
+Run.hazards = {}
+Run.enemies = {}
+Run.projectiles = {}
+Run.player.pullTimer = 0
+Run.player.shield = 0
+Run.player.shieldTimer = 0
+Run.player.timeLockTimer = 0
+Run.player.invuln = 0
+Run.hp = Run.stats.maxHp
+local organ = Run:createEnemy("time_organ", Run.spawnX, Run.spawnY, { noElite = true })
+Run.enemies = { organ }
+organ.zoneTimer = 0
+organ.armTimer = 0
+organ.summonTimer = 99
+organ.healerTimer = 99
+Run.player.x, Run.player.y = organ.x + 500, organ.y
+Boss.update(organ, 0.01, Run, {
+  target = Run.player,
+  canSee = true,
+  distance = 500,
+  dx = 500,
+  dy = 0,
+  nx = 1,
+  ny = 0,
+})
+assert(#Run.hazards == organ.def.zoneCount, "el Órgano debe crear zonas a distancia")
+assert(Run.hazards[1].kind == "zone" and Run.hazards[1].delay > 0, "las zonas deben telegrafiarse")
+assert(organ.armState == nil, "el brazo no debe lanzarse a distancia lejana")
+
+-- A media distancia el brazo atraviesa paredes y arrastra al jugador.
+Run.hazards = {}
+organ.x, organ.y = Run.spawnX, Run.spawnY
+Run.player.x, Run.player.y = organ.x + 250, organ.y
+organ.invulnTimer = 0
+organ.bossPhase = 3
+organ.zoneTimer = 99
+organ.summonTimer = 99
+organ.healerTimer = 99
+organ.armTimer = 0
+organ.armState = nil
+organ.lastSeenX, organ.lastSeenY = Run.player.x, Run.player.y
+local armCtx = {
+  target = Run.player,
+  canSee = false,
+  distance = 250,
+  dx = 250,
+  dy = 0,
+  nx = 1,
+  ny = 0,
+}
+Boss.update(organ, 0.01, Run, armCtx)
+assert(organ.armState == "windup", "el brazo debe iniciar aunque una pared corte la visión")
+Boss.update(organ, organ.def.armWindup + 0.01, Run, armCtx)
+assert(organ.armState == "pull", "el brazo debe enganchar al jugador")
+assert(Run.player.pullTimer > 0, "el jugador debe quedar arrastrado")
+local pullX = Run.player.pullX
+assert(pullX and math.abs(pullX - organ.x) <= organ.def.armCloseDistance + 1, "el destino debe quedar cerca del jefe")
+
+local beforePullX = Run.player.x
+local realDungeon = Run.dungeon
+Run.dungeon = {
+  moveCircle = function()
+    error("el arrastre no debe usar colisiones")
+  end,
+}
+Run.player:update(0.05, 1, 0, Run)
+Run.dungeon = realDungeon
+assert(Run.player.x ~= beforePullX, "el arrastre debe mover al jugador sin colisionar")
+Run.player.pullTimer = 0
+Run.player.pullX, Run.player.pullY = nil, nil
+Run.player.pullStartX, Run.player.pullStartY = nil, nil
+
+-- Cerca se conservan los rayos y no se lanzan zonas ni el brazo.
+Run.hazards = {}
+organ.invulnTimer = 0
+organ.armTimer = 0
+organ.armState = nil
+organ.armAttachedPlayer = nil
+organ.armPullTimer = 0
+organ.zoneTimer = 0
+organ.summonTimer = 99
+organ.healerTimer = 99
+Run.player.x, Run.player.y = organ.x + 100, organ.y
+Boss.update(organ, 0.01, Run, {
+  target = Run.player,
+  canSee = true,
+  distance = 100,
+  dx = 100,
+  dy = 0,
+  nx = 1,
+  ny = 0,
+})
+assert(#Run.hazards == 0 and organ.armState == nil, "de cerca no debe usar zonas ni brazo")
+
+-- Todas las invocaciones regulares, sin jefes de pisos anteriores.
+Run.enemies = { organ }
+organ.summonTimer = 0
+organ.armTimer = 99
+organ.healerTimer = 99
+Boss.update(organ, 0.01, Run, {
+  target = Run.player,
+  canSee = true,
+  distance = 100,
+  dx = 100,
+  dy = 0,
+  nx = 1,
+  ny = 0,
+})
+assert(#Run.enemies == 2, "el Órgano debe invocar aliados")
+assert(Run.enemies[2].summonedByOrgan, "la invocación debe marcarse como del jefe")
+local poolSet = {}
+for _, kind in ipairs(organ.summonPool) do
+  local def = Data.enemyTypes[kind]
+  assert(def and not def.boss, "la invocación no puede ser un jefe")
+  poolSet[kind] = true
+end
+assert(poolSet.automaton and poolSet.inquisidor, "deben estar todos los enemigos regulares")
+assert(not poolSet.bone_patriarch and not poolSet.time_inquisitor, "no deben aparecer jefes anteriores")
+
+-- Si el jugador va ganando, invoca clérigos que curan al jefe.
+Run.enemies = { organ }
+organ.hp = math.floor(organ.maxHp * 0.5)
+Run.hp = Run.stats.maxHp
+organ.bossPhase = 3
+organ.invulnTimer = 0
+organ.healerTimer = 0
+organ.summonTimer = 99
+organ.armTimer = 99
+Boss.update(organ, 0.01, Run, {
+  target = Run.player,
+  canSee = true,
+  distance = 100,
+  dx = 100,
+  dy = 0,
+  nx = 1,
+  ny = 0,
+})
+assert(#Run.enemies == 2 and Run.enemies[2].kind == "clerigo", "el Órgano debe invocar clérigos")
+local organHealer = Run.enemies[2]
+organHealer.x, organHealer.y = organ.x + 20, organ.y
+organHealer.shootTimer = 0
+local organHpBefore = organ.hp
+organHealer:updateHealer(0.01, Run, 20, 1, 0)
+assert(organ.hp > organHpBefore, "los clérigos deben curar al Órgano")
+
+
 print("OK V6: roles, élites, hazards y jefes")

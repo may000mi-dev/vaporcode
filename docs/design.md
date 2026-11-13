@@ -176,7 +176,7 @@ entre 25 y 120 monedas; vende pasivas, mascotas y habilidades de ítem.
 | Patriarca de Huesos y Cobre | invoca autómatas y dispara abanicos; fases en 66%/33% |
 | Forja Viviente | zonas de fuego (radio 58) e invoca sabuesos; 500 HP |
 | Inquisidor del Tiempo | tamaño del jugador; aura de daño, cono congelante y reubicación si queda bloqueado; 560 HP |
-| Órgano del Tiempo | jefe final; invoca espectros y lanza compases de rayos en fases |
+| Órgano del Tiempo | jefe final; rayos de cerca, brazo que arrastra a media distancia y zonas de fuego a distancia; invoca aliados y clérigos cuando va perdiendo |
 
 Todos los jefes son inmunes al aturdimiento para que la Pólvora o el Perro no
 anulen sus patrones de ataque. Al morir sueltan una Resonancia del personaje de la
