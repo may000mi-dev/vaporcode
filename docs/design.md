@@ -177,6 +177,33 @@ Los valores viven en `Balance.floor.atrition` y la lógica en
 límite actual; al avanzar aparece un aviso de atrición junto al número de piso.
 Historia conserva 300 s y 15% de curación, y la sala de pruebas queda exenta.
 
+## Director Dinámico (Modo Infinito)
+
+Al limpiar un piso se registran tres métricas del piso actual:
+
+- `floorTime`: segundos jugados hasta que muere el último enemigo. No cuenta
+  pausas, escenas ni el retraso de apertura de la salida.
+- `damageTaken`: daño real descontado de la vida; el daño absorbido por escudo
+  no cuenta.
+- `endHpRatio`: vida actual / vida máxima al limpiar el piso.
+
+Con esas métricas el Director decide el modificador del siguiente piso:
+
+| Estado | Condición | Efecto |
+|---|---|---|
+| Alta presión | `floorTime < 45` y (`damageTaken == 0` o `endHpRatio >= 0.85`) | Presupuesto ×1.20 y 1 élite garantizado extra. |
+| Baja presión | `endHpRatio < 0.25` o `floorTime > 120` | Presupuesto ×0.85; élites limitados a un afijo. |
+| Estándar | Cualquier otro caso | Sin cambios. |
+
+El modificador se calcula al limpiar el piso y se aplica al entrar al siguiente;
+un reintento conserva el modificador del piso que se está repitiendo. El aviso
+aparece durante 4 s bajo el HUD y permanece visible en la pausa. Los valores
+viven en `Balance.director` y la lógica en `src/run/director.lua`.
+
+Solo se ejecuta con `run.mode == "free"` y `run.sandbox == false`. Historia no
+registra métricas ni altera presupuesto o afijos, y la sala de pruebas queda
+exenta.
+
 ## Memorias de jefe y Sobrecarga (Modo Infinito)
 
 En los pisos de jefe (múltiplos de `bossEvery`) el jefe hereda 1–2 memorias de los

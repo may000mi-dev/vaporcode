@@ -1,6 +1,7 @@
 -- player.lua: personaje controlado por el jugador y ataque automático.
 local Data = require("src.run.data")
 local Util = require("src.utils.util")
+local Director = require("src.run.director")
 
 local Player = {}
 Player.__index = Player
@@ -248,7 +249,12 @@ function Player:takeDamage(amount, run, sourceEnemy)
   end
 
   if amount > 0 then
+    local before = run.hp
     run.hp = run.hp - amount
+    local lost = math.max(0, before - run.hp)
+    if lost > 0 then
+      Director.onPlayerDamaged(run, lost)
+    end
     if run.shake then run:shake(3, 0.16) end
     if sourceEnemy and sourceEnemy.onDamageDealt then
       sourceEnemy:onDamageDealt(amount, run)

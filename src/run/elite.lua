@@ -2,6 +2,7 @@
 -- En Modo Historia se conserva la tirada original de un solo afijo; en
 -- Infinito la probabilidad y la cantidad de afijos escalan con la profundidad.
 local Data = require("src.run.data")
+local Director = require("src.run.director")
 
 local Elites = {}
 
@@ -106,9 +107,16 @@ function Elites.roll(run, def, options)
     return {}
   end
 
-  local count = options.forceTwoAffixes
-    and 2
-    or (forced and 1 or Elites.affixCount(run.depth, rng))
+  local count
+  if Director.suppressDoubleAffixes(run) then
+    count = 1
+  elseif options.forceTwoAffixes then
+    count = 2
+  elseif forced then
+    count = 1
+  else
+    count = Elites.affixCount(run.depth, rng)
+  end
   return pickUnique(rng, count)
 end
 

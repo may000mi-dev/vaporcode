@@ -11,6 +11,7 @@ local Util = require("src.utils.util")
 local Threat = require("src.run.threat")
 local Compases = require("src.run.compases")
 local Atricion = require("src.run.atrition")
+local Director = require("src.run.director")
 
 local Progression = {}
 
@@ -79,6 +80,7 @@ function Progression.checkLevel(run, dt)
   end
 
   if run.enemyCount == 0 then
+    Director.completeFloor(run)
     run.exitTimer = run.exitTimer + dt
     if run.exitTimer > Data.player.exitDelay then
       run.exitOpen = true

@@ -166,13 +166,15 @@ soporte/control desde el 8). Si el presupuesto supera 10 se divide en 2 o 3
 oleadas, con un máximo de 18 enemigos activos; la salida se bloquea hasta limpiar
 todas las oleadas. La **atrición** reduce la curación entre pisos (15% → 0%) y
 el tiempo límite (300 → 210 s) según la profundidad, desde el piso 10 ya no hay
-curación automática. Cada 3 pisos entra un **compás** (Presión, Sobrecarga,
-Legión, Eco, Hambruna, Cacería, Sello o Coro) y los élites suman afijos según la
-profundidad. En los pisos de jefe, los compases activos dejan **memorias** en el
-jefe (Furia, Eco, Sifón, Regeneración, Guardia o Fortificado) y la pelea tiene un
-límite de **3 minutos**: al agotarse, la Sobrecarga crítica termina la run. Los
-Clérigos siempre nacen escoltados por un tanque. El detalle está en
-`docs/design.md`.
+curación automática. El **Director Dinámico** mide tiempo, daño y vida al limpiar
+cada piso: si el jugador domina, sube el presupuesto y añade un élite; si sufre,
+lo reduce y suspende los élites de doble afijo. Cada 3 pisos entra un **compás**
+(Presión, Sobrecarga, Legión, Eco, Hambruna, Cacería, Sello o Coro) y los élites
+suman afijos según la profundidad. En los pisos de jefe, los compases activos
+dejan **memorias** en el jefe (Furia, Eco, Sifón, Regeneración, Guardia o
+Fortificado) y la pelea tiene un límite de **3 minutos**: al agotarse, la
+Sobrecarga crítica termina la run. Los Clérigos siempre nacen escoltados por
+un tanque. El detalle está en `docs/design.md`.
 
 **Personajes** muestra el retrato procedural, estadísticas base, pasiva, estado de
 Historia y resonancias. Cada jefe derrotado suelta una resonancia del personaje de

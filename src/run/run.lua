@@ -23,6 +23,7 @@ local StoryUI = require("src.run.story_ui")
 local Threat = require("src.run.threat")
 local Compases = require("src.run.compases")
 local Atricion = require("src.run.atrition")
+local Director = require("src.run.director")
 
 local Run = {
   def = nil,
@@ -376,6 +377,7 @@ function Run.update(dt)
     end
   end
 
+  Director.update(Run, dt)
   Rhythm.update(dt)
   Compases.update(Run, dt)
   Abilities.update(Run, dt)

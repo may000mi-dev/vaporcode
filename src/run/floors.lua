@@ -20,6 +20,7 @@ local Floor = require("src.run.floor")
 local Story = require("src.run.story")
 local Compases = require("src.run.compases")
 local Atricion = require("src.run.atrition")
+local Director = require("src.run.director")
 local FX = require("src.run.fx")
 local Util = require("src.utils.util")
 
@@ -74,6 +75,7 @@ function Floors.enter(run, dungeonId, characterId, abilityId, options)
   run.manaIdleTimer = 0
   run.manaFlash = 0
   run.abilityLockTimer = 0
+  run.director = nil
   run.timeLeft = run.sandbox and 0 or Atricion.timeLimit(run)
   run.floorSnapshot = nil
   run.shadow = nil
@@ -205,6 +207,7 @@ function Floors.enterLevel(run)
 
   FX.clear()
   run.timeLeft = run.sandbox and 0 or Atricion.timeLimit(run)
+  Director.beginFloor(run)
   run:spawnEnemies()
   run.exitKind = Story.exitKind(run)
   run.floorSnapshot = Floor.capture(run)

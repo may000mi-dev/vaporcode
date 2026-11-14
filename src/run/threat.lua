@@ -3,6 +3,7 @@
 local Data = require("src.run.data")
 local Util = require("src.utils.util")
 local Compases = require("src.run.compases")
+local Director = require("src.run.director")
 
 local Threat = {}
 
@@ -449,8 +450,20 @@ function Threat.spawnFromQueue(run)
           state.hunterSpawned = true
         end
 
+        local directorElite = false
+        if (state.directorElitePending or 0) > 0
+          and not (options and options.forceElite)
+        then
+          options = options or {}
+          options.forceElite = true
+          directorElite = true
+        end
+
         local enemy = run:createEnemy(kind, x, y, options)
         if enemy then
+          if directorElite then
+            state.directorElitePending = state.directorElitePending - 1
+          end
           enemy.threatWave = state.activeWave
           state.spawned = state.spawned + 1
           active = active + 1
@@ -470,7 +483,14 @@ function Threat.startFloor(run)
 
   local roomCount = Threat.roomCount(run)
   local budget, size = Threat.calculateBudget(run, roomCount)
-  budget = math.max(1, math.floor(budget * Compases.threatMultiplier(run)))
+  budget = math.max(
+    1,
+    math.floor(
+      budget
+        * Compases.threatMultiplier(run)
+        * Director.threatMultiplier(run)
+    )
+  )
   local units, spent = Threat.generateComposition(run, budget)
   spent = Threat.applyGuarantees(run, units, budget, spent)
   local waves = Threat.splitWaves(run, units, spent, roomCount)
@@ -496,6 +516,7 @@ function Threat.startFloor(run)
     killsTotal = 0,
     hunterAffix = Compases.hunterAffix(run),
     hunterSpawned = false,
+    directorElitePending = Director.extraEliteCount(run),
   }
   run.threat = state
 

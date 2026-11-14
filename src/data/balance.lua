@@ -28,6 +28,30 @@ Balance.floor = {
   },
 }
 
+-- Director Dinámico del Modo Infinito: evalúa el piso terminado y ajusta el
+-- siguiente. Los umbrales son deliberadamente simples para poder balancearlos.
+Balance.director = {
+  highTime = 45,
+  highHpRatio = 0.85,
+  lowHpRatio = 0.25,
+  lowTime = 120,
+  highThreatMultiplier = 1.20,
+  lowThreatMultiplier = 0.85,
+  highExtraElites = 1,
+  suppressDoubleAffixes = true,
+  noticeDuration = 4.0,
+  colors = {
+    high = { 1.00, 0.55, 0.30 },
+    low = { 0.45, 0.85, 1.00 },
+    standard = { 0.70, 0.78, 0.86 },
+  },
+  messages = {
+    high = "Director de la Torre: Alerta de Amenaza Elevada",
+    low = "Director de la Torre: Calibración Defensiva",
+    standard = "Director de la Torre: Ritmo Estándar",
+  },
+}
+
 -- Válvulas de presión: trampas activables al pisarlas o dispararles.
 Balance.valve = {
   radius = 11,

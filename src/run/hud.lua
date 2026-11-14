@@ -9,6 +9,7 @@ local Util = require("src.utils.util")
 local Debug = require("src.utils.debug")
 local TextCache = require("src.utils.textcache")
 local Atricion = require("src.run.atrition")
+local Director = require("src.run.director")
 
 local HUD = {}
 
@@ -388,6 +389,35 @@ function HUD.draw(run)
 
   HUD.drawInventory(run)
   HUD.drawBoss(run)
+  HUD.drawDirectorNotice(run)
+end
+
+function HUD.drawDirectorNotice(run)
+  local text, color = Director.currentNotice(run)
+  if not text then return end
+
+  local state = run.director
+  local alpha = math.min(1, (state.noticeTimer or 0) / 0.4)
+  local w = 460
+  local x = (Screen.width - w) * 0.5
+  local y = 190
+
+  love.graphics.setColor(0.05, 0.06, 0.08, 0.82 * alpha)
+  love.graphics.rectangle("fill", x, y, w, 24, 6, 6)
+  love.graphics.setFont(Fonts.small)
+  love.graphics.setColor(
+    color and color[1] or 0.80,
+    color and color[2] or 0.85,
+    color and color[3] or 0.90,
+    alpha
+  )
+  love.graphics.printf(
+    TextCache.format("hud-director-notice", "%s", text),
+    x,
+    y + 5,
+    w,
+    "center"
+  )
 end
 
 function HUD.drawBoss(run)
@@ -453,6 +483,14 @@ function HUD.drawPause(run)
   love.graphics.setFont(Fonts.title)
   love.graphics.setColor(0.60, 0.90, 1.00)
   love.graphics.printf("PAUSA", px, py + 22, panelW, "center")
+
+  local director = Director.active(run)
+  if director and director.state ~= "standard" then
+    local color = director.color
+    love.graphics.setFont(Fonts.small)
+    love.graphics.setColor(color[1], color[2], color[3], 0.95)
+    love.graphics.printf(director.message, px, py + 54, panelW, "center")
+  end
 
   love.graphics.setFont(Fonts.body)
   love.graphics.setColor(0.80, 0.85, 0.90)

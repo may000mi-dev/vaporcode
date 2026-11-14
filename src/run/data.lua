@@ -24,6 +24,7 @@ Data.exchangeableSet = Abilities.exchangeableSet
 Data.player = Balance.player
 Data.economy = Balance.economy
 Data.floor = Balance.floor
+Data.director = Balance.director
 Data.valve = Balance.valve
 Data.destructible = Balance.destructible
 Data.chest = Balance.chest

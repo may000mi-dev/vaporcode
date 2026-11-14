@@ -3,6 +3,7 @@ package.path = "./?.lua;" .. package.path
 
 local Data = require("src.run.data")
 local Threat = require("src.run.threat")
+local Director = require("src.run.director")
 
 local function rng(seed)
   local state = seed or 1
@@ -47,12 +48,13 @@ local function fakeRun(depth, pool, roomCount, seed)
   run.dungeon.randomFloorPoint = function(_, _, _, _, _, _)
     return 100 + #run.enemies * 20, 100
   end
-  run.createEnemy = function(self, kind, x, y)
+  run.createEnemy = function(self, kind, x, y, options)
     local enemy = {
       kind = kind,
       x = x,
       y = y,
       dead = false,
+      options = options,
     }
     self.enemies[#self.enemies + 1] = enemy
     return enemy
@@ -210,6 +212,31 @@ end
 assert(state.complete, "la sala debe completarse al limpiar todas las oleadas")
 assert(not Threat.pending(run), "una sala completa ya no bloquea la salida")
 assert(#run.enemies == 0, "no deben quedar enemigos al completar la sala")
+
+-- Director: alta presión suma presupuesto y un élite; baja presión lo recorta.
+local highRun = fakeRun(10, Data.dungeons[3].enemies, 7, 4321)
+highRun.director = {
+  next = Director.evaluate({ floorTime = 30, damageTaken = 0, endHpRatio = 1 }),
+}
+Director.beginFloor(highRun)
+local highState = Threat.startFloor(highRun)
+assert(highState.budget == 33, "alta presión debe subir el presupuesto a 33")
+local forcedElites = 0
+for _, enemy in ipairs(highRun.enemies) do
+  if enemy.options and enemy.options.forceElite then
+    forcedElites = forcedElites + 1
+  end
+end
+assert(forcedElites >= 1, "alta presión debe garantizar al menos un élite")
+
+local lowRun = fakeRun(10, Data.dungeons[3].enemies, 7, 8765)
+lowRun.director = {
+  next = Director.evaluate({ floorTime = 130, damageTaken = 10, endHpRatio = 0.20 }),
+}
+Director.beginFloor(lowRun)
+local lowState = Threat.startFloor(lowRun)
+assert(lowState.budget == 23, "baja presión debe reducir el presupuesto a 23")
+assert(Director.suppressDoubleAffixes(lowRun), "baja presión suspende doble afijo")
 
 -- Mazmorra pequeña: el presupuesto baja y se fuerza el reparto en dos oleadas.
 local small = fakeRun(1, Data.dungeons[1].enemies, 4, 9)
