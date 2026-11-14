@@ -8,6 +8,7 @@ local Save = require("src.run.save")
 local Util = require("src.utils.util")
 local Debug = require("src.utils.debug")
 local TextCache = require("src.utils.textcache")
+local Atricion = require("src.run.atrition")
 
 local HUD = {}
 
@@ -68,7 +69,7 @@ function HUD.pauseExitRect()
   local width, height = 340, 46
   return {
     x = px + (panelW - width) * 0.5,
-    y = py + 252,
+    y = py + 270,
     w = width,
     h = height,
   }
@@ -484,6 +485,26 @@ function HUD.drawPause(run)
     detailY = detailY + 14
   end
 
+  if Atricion.enabled(run) then
+    local nextHeal = Atricion.floorHealPercent(run, run.depth + 1)
+    local limit = Atricion.timeLimit(run)
+    love.graphics.setColor(0.95, 0.64, 0.36)
+    love.graphics.printf(
+      TextCache.format(
+        "pause-atrition",
+        "Atrición: curación próx. piso %d%% · límite %d:%02d",
+        math.floor(nextHeal * 100 + 0.5),
+        math.floor(limit / 60),
+        limit % 60
+      ),
+      px,
+      detailY,
+      panelW,
+      "center"
+    )
+    detailY = detailY + 14
+  end
+
   local boss = run.boss
   if boss and not boss.dead and boss.memoryEnrageTimer then
     local seconds = math.max(0, math.ceil(boss.memoryEnrageTimer))
@@ -575,7 +596,7 @@ function HUD.drawPause(run)
     love.graphics.printf(
       "¿Seguro? Toca de nuevo para salir.",
       px,
-      py + 310,
+      py + 328,
       panelW,
       "center"
     )
@@ -583,7 +604,7 @@ function HUD.drawPause(run)
       run.sandbox and "Se cierra la sesión de pruebas."
         or "Se pierde el piso, el nivel y el inventario de esta partida.",
       px,
-      py + 330,
+      py + 348,
       panelW,
       "center"
     )
@@ -591,7 +612,7 @@ function HUD.drawPause(run)
     love.graphics.printf(
       "Confirmación válida por 3 segundos · P continúa",
       px,
-      py + 352,
+      py + 370,
       panelW,
       "center"
     )
@@ -601,7 +622,7 @@ function HUD.drawPause(run)
       run.sandbox and "Salir cierra la sala de pruebas."
         or "Salir al menú descarta el progreso de esta partida.",
       px,
-      py + 310,
+      py + 328,
       panelW,
       "center"
     )
@@ -610,14 +631,14 @@ function HUD.drawPause(run)
       run.sandbox and "El guardado real queda intacto."
         or "Las monedas, mejoras y desbloqueos ya guardados se conservan.",
       px,
-      py + 330,
+      py + 348,
       panelW,
       "center"
     )
     love.graphics.printf(
       "Esc también sale (doble pulsación)",
       px,
-      py + 354,
+      py + 370,
       panelW,
       "center"
     )

@@ -164,8 +164,10 @@ En Modo Infinito los pisos usan un **presupuesto de amenaza** según profundidad
 tamaño de la mazmorra, con roles garantizados (distancia desde el piso 4,
 soporte/control desde el 8). Si el presupuesto supera 10 se divide en 2 o 3
 oleadas, con un máximo de 18 enemigos activos; la salida se bloquea hasta limpiar
-todas las oleadas. Cada 3 pisos entra un **compás** (Presión, Sobrecarga, Legión,
-Eco, Hambruna, Cacería, Sello o Coro) y los élites suman afijos según la
+todas las oleadas. La **atrición** reduce la curación entre pisos (15% → 0%) y
+el tiempo límite (300 → 210 s) según la profundidad, desde el piso 10 ya no hay
+curación automática. Cada 3 pisos entra un **compás** (Presión, Sobrecarga,
+Legión, Eco, Hambruna, Cacería, Sello o Coro) y los élites suman afijos según la
 profundidad. En los pisos de jefe, los compases activos dejan **memorias** en el
 jefe (Furia, Eco, Sifón, Regeneración, Guardia o Fortificado) y la pelea tiene un
 límite de **3 minutos**: al agotarse, la Sobrecarga crítica termina la run. Los

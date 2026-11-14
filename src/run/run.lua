@@ -22,6 +22,7 @@ local Floors = require("src.run.floors")
 local StoryUI = require("src.run.story_ui")
 local Threat = require("src.run.threat")
 local Compases = require("src.run.compases")
+local Atricion = require("src.run.atrition")
 
 local Run = {
   def = nil,
@@ -368,7 +369,7 @@ function Run.update(dt)
   Run.abilityLockTimer = math.max(0, (Run.abilityLockTimer or 0) - dt)
   Run.inventoryFullTimer = math.max(0, (Run.inventoryFullTimer or 0) - dt)
   if not Run.sandbox then
-    Run.timeLeft = math.max(0, (Run.timeLeft or Data.floor.timeLimit) - dt)
+    Run.timeLeft = math.max(0, (Run.timeLeft or Atricion.timeLimit(Run)) - dt)
     if Run.timeLeft <= 0 then
       Run:gameOver("timeout")
       return

@@ -10,6 +10,22 @@ Balance.economy = {
 Balance.floor = {
   timeLimit = 300,
   warningTime = 60,
+  -- Atrición del Modo Infinito: el desgaste crece con la profundidad. Los
+  -- rangos usan maxDepth inclusivo; el último rango cubre el resto de la run.
+  atrition = {
+    timeLimitByDepth = {
+      { maxDepth = 3, seconds = 300 },
+      { maxDepth = 6, seconds = 270 },
+      { maxDepth = 9, seconds = 240 },
+      { maxDepth = math.huge, seconds = 210 },
+    },
+    healByDepth = {
+      { maxDepth = 3, percent = 0.15 },
+      { maxDepth = 6, percent = 0.10 },
+      { maxDepth = 9, percent = 0.05 },
+      { maxDepth = math.huge, percent = 0.00 },
+    },
+  },
 }
 
 -- Válvulas de presión: trampas activables al pisarlas o dispararles.

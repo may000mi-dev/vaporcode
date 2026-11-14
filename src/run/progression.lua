@@ -10,6 +10,7 @@ local Audio = require("src.utils.audio")
 local Util = require("src.utils.util")
 local Threat = require("src.run.threat")
 local Compases = require("src.run.compases")
+local Atricion = require("src.run.atrition")
 
 local Progression = {}
 
@@ -112,14 +113,19 @@ function Progression.nextLevel(run)
   Save.save()
 
   run.depth = reached
-  run.hp = math.min(
-    run.stats.maxHp,
-    run.hp + math.floor(
-      run.stats.maxHp
-        * Data.player.nextLevelHealPercent
-        * Compases.playerHealingMultiplier(run)
+  local healedPercent
+  if Atricion.enabled(run) then
+    _, healedPercent = Atricion.applyFloorHeal(run, run.depth)
+  else
+    run.hp = math.min(
+      run.stats.maxHp,
+      run.hp + math.floor(
+        run.stats.maxHp
+          * Data.player.nextLevelHealPercent
+          * Compases.playerHealingMultiplier(run)
+      )
     )
-  )
+  end
   local unlockMessages = run:commitUnlockNotices()
   run.overlay = nil
   run:enterLevel()
@@ -129,6 +135,18 @@ function Progression.nextLevel(run)
     run.player.y - 26,
     { 0.50, 1.00, 0.70 }
   )
+  if healedPercent then
+    FX.add(
+      string.format(
+        "Atrición: curación %d%% · límite %s",
+        math.floor(healedPercent * 100 + 0.5),
+        Atricion.formatClock(Atricion.timeLimit(run))
+      ),
+      run.player.x,
+      run.player.y - 44,
+      { 0.95, 0.64, 0.36 }
+    )
+  end
   for index, message in ipairs(unlockMessages) do
     FX.add(
       message,

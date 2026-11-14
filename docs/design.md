@@ -9,7 +9,8 @@ Roguelite de acción con ataques automáticos y ventanas de ritmo. El loop de un
 
 1. Entrar a un piso generado con semilla (tamaño, salas y contenido varían).
 2. Moverse con joystick; el ataque básico dispara solo al enemigo más cercano.
-3. Limpiar el piso antes de que se agote el tiempo (300 s, aviso a los 60 s).
+3. Limpiar el piso antes de que se agote el tiempo (300 s en Historia;
+   300→210 s en Infinito, aviso a los 60 s).
 4. La salida se abre al morir el último enemigo; tocarla sube al siguiente piso.
 5. Cada 3 pisos hay jefe de mazmorra; en los demás el Guardián de la Caldera
    puede aparecer como jefe opcional. Al morir se puede reintentar el piso exacto
@@ -154,6 +155,27 @@ activa. El HUD muestra la etiqueta `Compás I · Presión · Sobrecarga`.
 
 Las garantías se integran al presupuesto de amenaza de la oleada. Los datos están
 en `src/data/compases.lua` y el estado/actualización en `src/run/compases.lua`.
+
+## Atrición (Modo Infinito)
+
+Solo se aplica con `run.mode == "free"` y `run.sandbox == false`. El desgaste
+crece con la profundidad y obliga a depender de ítems, pasivas o botiquines:
+
+| Pisos | Curación al entrar | Tiempo límite |
+|---|---:|---:|
+| 1–3 | 15% de vida máxima | 300 s |
+| 4–6 | 10% | 270 s |
+| 7–9 | 5% | 240 s |
+| 10+ | 0% | 210 s |
+
+La curación conserva el multiplicador de Compases (por ejemplo, Hambruna); por
+eso puede ser menor que el porcentaje base. El tiempo se reinicia al entrar o
+reintentar el piso con el límite de esa profundidad. El aviso de 60 s no cambia.
+
+Los valores viven en `Balance.floor.atrition` y la lógica en
+`src/run/atrition.lua`. La pausa muestra la curación del siguiente piso y el
+límite actual; al avanzar aparece un aviso de atrición junto al número de piso.
+Historia conserva 300 s y 15% de curación, y la sala de pruebas queda exenta.
 
 ## Memorias de jefe y Sobrecarga (Modo Infinito)
 
