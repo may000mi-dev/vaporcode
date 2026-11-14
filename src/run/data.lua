@@ -80,6 +80,7 @@ Data.elite = Enemies.elite
 Data.hazards = Enemies.hazards
 Data.enemyAI = Enemies.enemyAI
 Data.spawn = Enemies.spawn
+Data.threat = Enemies.threat
 
 Data.items = Items.items
 Data.itemPool = Items.itemPool

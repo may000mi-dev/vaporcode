@@ -111,6 +111,44 @@ ser élite.
 - **blindado**: escudo de 50.
 - **espectral**: se vuelve intocable 0.5 s cada 2 s.
 
+## Presupuesto de amenaza (Modo Infinito)
+
+Solo se aplica con `run.mode == "free"` y `run.sandbox == false`. El Modo Historia
+conserva el spawn plano de `Enemies.spawn` para no alterar la campaña. La lógica
+vive en `src/run/threat.lua`; los costos y constantes en `src/data/enemies.lua`.
+
+Cada enemigo tiene un costo de amenaza y roles para las garantías:
+
+| Enemigo | Costo | Roles |
+|---|---:|---|
+| Autómata, Sabueso | 1 | melee |
+| Caldera, Espectro, Peste | 2 | melee/tank, ranged, control |
+| Engranaje, Centinela, Artillero, Maquinista, Saboteador | 3 | melee/tank, ranged/static, ranged/area, support/summoner, control/trapper |
+| Clérigo, Inquisidor | 4 | support/healer, control/ranged/disruptor |
+
+El presupuesto del piso crece con la profundidad y con el tamaño de la mazmorra:
+
+```text
+sizeMultiplier = clamp(roomCount / 7, 0.7, 1.3)
+P = floor((6 + (depth - 1) * 2.5) * sizeMultiplier)
+```
+
+Las salas se generan para gastar `P`. Desde el piso 4 se reservan al menos 2 puntos
+en un rol a distancia; desde el piso 8, al menos 4 puntos en soporte o control. Si
+la mazmorra no tiene el enemigo exacto, se usan sus alternativas de rol (por
+ejemplo Maquinista o Saboteador). El resto se rellena al azar respetando el costo.
+
+Las oleadas dependen del presupuesto:
+
+- `P <= 10`: 1 oleada; si `roomCount < 5`, se fuerzan 2 oleadas pequeñas.
+- `11 <= P <= 20`: 2 oleadas (60% / 40%).
+- `P > 20`: 3 oleadas (40% / 30% / 30%).
+
+El spawn activo se limita a 18 enemigos. Si una oleada no cabe, el resto espera en
+cola y entra conforme mueren enemigos. La oleada siguiente se activa al matar al
+70% de la actual. La salida permanece bloqueada hasta desplegar todas las oleadas
+y dejar la sala en 0 enemigos. El HUD muestra `Oleada N/M` y el total pendiente.
+
 ## Hazards del piso
 
 - **Fuego**: daño por tick cada 0.5 s.

@@ -3,6 +3,7 @@ local Data = require("src.run.data")
 local Fonts = require("src.utils.fonts")
 local Screen = require("src.utils.screen")
 local Rhythm = require("src.run.rhythm")
+local Threat = require("src.run.threat")
 local Save = require("src.run.save")
 local Util = require("src.utils.util")
 local Debug = require("src.utils.debug")
@@ -317,13 +318,19 @@ function HUD.draw(run)
       love.graphics.printf("¡Salida abierta!", 380, 70, 96, "center")
     else
       love.graphics.setColor(0.86, 0.92, 1.00)
-      love.graphics.printf(
-        TextCache.format("hud-remaining", "Faltan %d", run.enemyCount or 0),
-        380,
-        70,
-        96,
-        "center"
-      )
+      local text
+      if run.threat and run.threat.enabled then
+        text = TextCache.format(
+          "hud-threat-remaining",
+          "Oleada %d/%d · %d",
+          run.threat.activeWave or 1,
+          #run.threat.waves,
+          Threat.remainingTotal(run)
+        )
+      else
+        text = TextCache.format("hud-remaining", "Faltan %d", run.enemyCount or 0)
+      end
+      love.graphics.printf(text, 360, 70, 140, "center")
     end
   end
 

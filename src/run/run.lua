@@ -20,6 +20,7 @@ local Sandbox = require("src.run.sandbox")
 local Audio = require("src.utils.audio")
 local Floors = require("src.run.floors")
 local StoryUI = require("src.run.story_ui")
+local Threat = require("src.run.threat")
 
 local Run = {
   def = nil,
@@ -426,6 +427,7 @@ function Run.update(dt)
   Run:updatePets(dt)
   Run:updateTornado(dt)
   Run:cleanup()
+  Threat.updateWaves(Run)
   FX.update(dt)
   Run:checkLevel(dt)
 

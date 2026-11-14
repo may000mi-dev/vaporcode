@@ -8,6 +8,7 @@ local State = require("src.estados")
 local FX = require("src.run.fx")
 local Audio = require("src.utils.audio")
 local Util = require("src.utils.util")
+local Threat = require("src.run.threat")
 
 local Progression = {}
 
@@ -52,6 +53,12 @@ end
 function Progression.checkLevel(run, dt)
   if run.over then return end
   if run.sandbox then return end
+
+  -- La salida no se abre hasta desplegar todas las oleadas y limpiar la sala.
+  if Threat.pending(run) then
+    run.exitTimer = 0
+    return
+  end
 
   if run.exitOpen then
     local d2 = Util.dist2(

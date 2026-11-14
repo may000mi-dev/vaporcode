@@ -6,6 +6,7 @@ local Save = require("src.run.save")
 local FX = require("src.run.fx")
 local Util = require("src.utils.util")
 local Targeting = require("src.run.targeting")
+local Threat = require("src.run.threat")
 
 local Combat = {}
 
@@ -110,6 +111,7 @@ end
 
 function Combat.onEnemyKilled(run, enemy)
   run.kills = run.kills + 1
+  Threat.onEnemyKilled(run, enemy)
 
   if not enemy.def.noDrop then
     local coins = Data.economy.coinsBase

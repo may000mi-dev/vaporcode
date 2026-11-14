@@ -160,6 +160,12 @@ cualquier mazmorra desbloqueada; si falta una condición, la ficha explica cuál
 La **Torre del Tiempo Detenido** solo aparece cuando Historia está completada con
 los tres personajes.
 
+En Modo Infinito los pisos usan un **presupuesto de amenaza** según profundidad y
+tamaño de la mazmorra, con roles garantizados (distancia desde el piso 4,
+soporte/control desde el 8). Si el presupuesto supera 10 se divide en 2 o 3
+oleadas, con un máximo de 18 enemigos activos; la salida se bloquea hasta limpiar
+todas las oleadas. El detalle está en `docs/design.md`.
+
 **Personajes** muestra el retrato procedural, estadísticas base, pasiva, estado de
 Historia y resonancias. Cada jefe derrotado suelta una resonancia del personaje de
 la run; al recogerla se obtiene un punto para subir una mejora permanente desde

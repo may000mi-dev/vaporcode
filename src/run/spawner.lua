@@ -6,6 +6,7 @@ local Save = require("src.run.save")
 local Enemy = require("src.run.enemy")
 local Hazard = require("src.run.hazard")
 local Projectile = require("src.run.projectile")
+local Threat = require("src.run.threat")
 local Chest = require("src.run.chest")
 local Shadow = require("src.run.shadow")
 local Pet = require("src.run.pet")
@@ -41,43 +42,27 @@ end
 
 function Spawner.spawnEnemies(run)
   if run.sandbox then
+    run.threat = nil
     run.enemyCount = 0
     return
   end
 
-  local count = run.def.spawnBase
-    + math.floor((run.depth - 1) * Data.spawn.perDepth)
-  count = math.min(count, Data.spawn.maxEnemies)
-
-  local pool = run.def.enemies
-
-  for _ = 1, count do
-    local kind = pool[run.dungeon.rng:random(1, #pool)]
-    local def = Data.enemyTypes[kind]
-    local x, y = run.dungeon:randomFloorPoint(
-      run.spawnX,
-      run.spawnY,
-      Data.spawn.minDistance,
-      def.radius
-    )
-
-    if x then
-      run:createEnemy(kind, x, y)
+  local function rollBoss()
+    if run.depth % Data.bossEvery == 0 then
+      return run.def.boss or "guardian"
+    elseif run.def.boss
+      and run.dungeon.rng:random() < (Data.spawn.guardianChance or 0.12)
+    then
+      -- El antiguo Guardián de la Caldera aparece como jefe opcional en
+      -- pisos que no tienen un jefe fijo.
+      return "guardian"
     end
+    return nil
   end
 
-  local bossKind
-  if run.depth % Data.bossEvery == 0 then
-    bossKind = run.def.boss or "guardian"
-  elseif run.def.boss
-    and run.dungeon.rng:random() < (Data.spawn.guardianChance or 0.12)
-  then
-    -- El antiguo Guardián de la Caldera aparece como jefe opcional en
-    -- pisos que no tienen un jefe fijo.
-    bossKind = "guardian"
-  end
+  local function spawnBoss(bossKind)
+    if not bossKind then return end
 
-  if bossKind then
     local bossDef = Data.enemyTypes[bossKind]
     local bx, by = run.dungeon:randomFloorPoint(
       run.spawnX,
@@ -103,6 +88,36 @@ function Spawner.spawnEnemies(run)
       })
       run.boss = boss
     end
+  end
+
+  if Threat.enabled(run) then
+    -- El jefe ocupa su lugar antes de la horda para respetar el tope de 18.
+    spawnBoss(rollBoss())
+    Threat.startFloor(run)
+  else
+    run.threat = nil
+    local count = run.def.spawnBase
+      + math.floor((run.depth - 1) * Data.spawn.perDepth)
+    count = math.min(count, Data.spawn.maxEnemies)
+
+    local pool = run.def.enemies
+    for _ = 1, count do
+      local kind = pool[run.dungeon.rng:random(1, #pool)]
+      local def = Data.enemyTypes[kind]
+      local x, y = run.dungeon:randomFloorPoint(
+        run.spawnX,
+        run.spawnY,
+        Data.spawn.minDistance,
+        def.radius
+      )
+
+      if x then
+        run:createEnemy(kind, x, y)
+      end
+    end
+
+    -- El Modo Historia conserva el orden original: horda y luego jefe.
+    spawnBoss(rollBoss())
   end
 
   run.enemyCount = #run.enemies
