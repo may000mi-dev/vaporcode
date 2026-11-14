@@ -166,8 +166,11 @@ soporte/control desde el 8). Si el presupuesto supera 10 se divide en 2 o 3
 oleadas, con un máximo de 18 enemigos activos; la salida se bloquea hasta limpiar
 todas las oleadas. Cada 3 pisos entra un **compás** (Presión, Sobrecarga, Legión,
 Eco, Hambruna, Cacería, Sello o Coro) y los élites suman afijos según la
-profundidad. Los Clérigos siempre nacen escoltados por un tanque. El detalle está
-en `docs/design.md`.
+profundidad. En los pisos de jefe, los compases activos dejan **memorias** en el
+jefe (Furia, Eco, Sifón, Regeneración, Guardia o Fortificado) y la pelea tiene un
+límite de **3 minutos**: al agotarse, la Sobrecarga crítica termina la run. Los
+Clérigos siempre nacen escoltados por un tanque. El detalle está en
+`docs/design.md`.
 
 **Personajes** muestra el retrato procedural, estadísticas base, pasiva, estado de
 Historia y resonancias. Cada jefe derrotado suelta una resonancia del personaje de

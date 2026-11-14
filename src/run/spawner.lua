@@ -8,6 +8,7 @@ local Hazard = require("src.run.hazard")
 local Projectile = require("src.run.projectile")
 local Threat = require("src.run.threat")
 local Compases = require("src.run.compases")
+local BossMemories = require("src.run.boss_memories")
 local Elites = require("src.run.elite")
 local Chest = require("src.run.chest")
 local Shadow = require("src.run.shadow")
@@ -164,6 +165,7 @@ function Spawner.spawnEnemies(run)
         noElite = true,
       })
       run.boss = boss
+      BossMemories.attach(run, boss)
     end
   end
 

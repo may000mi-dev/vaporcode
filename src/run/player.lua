@@ -237,6 +237,8 @@ function Player:takeDamage(amount, run, sourceEnemy)
   if self.invuln > 0 then return false end
   if self.shieldTimer > 0 then return false end
 
+  -- Sifón debe contar el impacto aunque el escudo absorba todo el daño.
+  local incoming = amount
   self.shieldDelay = self.character.shieldRepairDelay or 0
 
   if self.shield > 0 then
@@ -251,6 +253,10 @@ function Player:takeDamage(amount, run, sourceEnemy)
     if sourceEnemy and sourceEnemy.onDamageDealt then
       sourceEnemy:onDamageDealt(amount, run)
     end
+  end
+
+  if incoming > 0 and sourceEnemy and sourceEnemy.onPlayerDamaged then
+    sourceEnemy:onPlayerDamaged(incoming, run)
   end
 
   self.invuln = Data.player.invulnTime

@@ -137,9 +137,12 @@ function Gameover.draw()
   love.graphics.rectangle("line", px, py, panel.w, panel.h, 12, 12)
 
   local timeout = info.reason == "timeout"
+  local critical = info.reason == "boss_enrage"
   local story = info.mode == "story"
   local title
-  if story then
+  if critical then
+    title = "SOBRECARGA CRÍTICA"
+  elseif story then
     title = timeout and "EL NÚCLEO CEDE" or "LA MELODÍA SE CORTA"
   else
     title = timeout and "TIEMPO AGOTADO" or "DERROTA"
@@ -151,7 +154,15 @@ function Gameover.draw()
 
   love.graphics.setFont(Fonts.body)
   love.graphics.setColor(0.82, 0.86, 0.92)
-  if timeout then
+  if critical then
+    love.graphics.printf(
+      "La memoria del jefe desbordó los 3 minutos. La sala colapsó.",
+      px + 40,
+      py + 78,
+      480,
+      "center"
+    )
+  elseif timeout then
     love.graphics.printf(
       story and "El núcleo se desestabilizó. Mar y Amileth siguen esperando."
         or "No eliminaste a todos los enemigos a tiempo.",

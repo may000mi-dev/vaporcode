@@ -597,6 +597,15 @@ function Enemy:takeDamage(amount, run, source)
     amount = amount * (1 - Data.elite.guardianDamageReduction)
   end
 
+  -- Fortificado protege mientras el jefe siga por encima del umbral. La
+  -- memoria se rompe al cruzar el porcentaje y no vuelve a activarse.
+  if self.memoryFortified
+    and self.maxHp > 0
+    and self.hp > self.maxHp * (self.memoryFortifiedThreshold or 0)
+  then
+    amount = amount * (1 - (self.memoryFortifiedReduction or 0))
+  end
+
   if (self.shield or 0) > 0 then
     local absorbed = math.min(self.shield, amount)
     self.shield = self.shield - absorbed
@@ -611,6 +620,18 @@ function Enemy:takeDamage(amount, run, source)
 
   self.hp = self.hp - amount
   self.hitFlash = 1
+
+  if amount > 0 and self.memoryRegenIdleTimer then
+    self.memoryRegenIdleTimer = 0
+  end
+
+  if self.memoryFortified
+    and self.maxHp > 0
+    and self.hp <= self.maxHp * (self.memoryFortifiedThreshold or 0)
+  then
+    self.memoryFortified = false
+    FX.add("Fortificado roto", self.x, self.y - self.radius - 20, { 0.70, 0.80, 0.92 })
+  end
 
   if run
     and run.player

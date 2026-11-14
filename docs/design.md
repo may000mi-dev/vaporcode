@@ -155,6 +155,33 @@ activa. El HUD muestra la etiqueta `Compás I · Presión · Sobrecarga`.
 Las garantías se integran al presupuesto de amenaza de la oleada. Los datos están
 en `src/data/compases.lua` y el estado/actualización en `src/run/compases.lua`.
 
+## Memorias de jefe y Sobrecarga (Modo Infinito)
+
+En los pisos de jefe (múltiplos de `bossEvery`) el jefe hereda 1–2 memorias de los
+compases activos. La selección es determinista, no repite memorias y se toma en el
+orden de la ventana; si dos compases apuntan a la misma memoria, solo cuenta una.
+Las memorias viven en `src/data/boss_memories.lua` y la lógica en
+`src/run/boss_memories.lua`.
+
+| Compás | Memoria | Efecto |
+|---|---|---|
+| Presión | Furia | Tras 45 s, +25% de velocidad y daño. |
+| Sobrecarga | Sifón | Sus impactos drenan 8 de maná y añaden 1 s a una recarga. |
+| Legión / Cacería | Guardia | Dos élites aleatorios del piso protegen al jefe. |
+| Eco | Eco | Hazard telegrafiado 1.3 s sobre el jugador cada 12 s; radio 64. |
+| Hambruna / Coro | Regeneración | Tras 3 s sin recibir daño, cura 1% de vida máxima por segundo. |
+| Sello | Fortificado | Recibe 30% menos daño hasta bajar al 66% de vida; luego se rompe. |
+
+Todos los jefes del Infinito, incluido el Guardián opcional, tienen un límite global
+de **180 s** (`BossMemories.enrageSeconds`). Al agotarse se dispara la **Sobrecarga
+Crítica** y la run termina sin tirada defensiva: no se puede esperar a vencer al
+jefe por desgaste. El HUD muestra las memorias y el tiempo restante; la pausa
+repite la lista y el aviso inicial aparece al comenzar el combate. Historia no
+recibe memorias ni Sobrecarga, y la sala de pruebas queda exenta.
+
+Los proyectos, hazards y ataques directos del jefe propagan `sourceEnemy` para que
+Sifón y Vampírico solo actúen cuando el daño llega al jugador.
+
 ## Presupuesto de amenaza (Modo Infinito)
 
 Solo se aplica con `run.mode == "free"` y `run.sandbox == false`. El Modo Historia

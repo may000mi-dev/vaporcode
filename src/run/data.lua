@@ -7,6 +7,7 @@ local Data = {}
 local Abilities = require("src.data.abilities")
 local Balance = require("src.data.balance")
 local Bosses = require("src.data.bosses")
+local BossMemories = require("src.data.boss_memories")
 local Characters = require("src.data.characters")
 local Compases = require("src.data.compases")
 local Dungeons = require("src.data.dungeons")
@@ -40,6 +41,7 @@ Data.mark = Characters.mark
 Data.dungeons = Dungeons.dungeons
 Data.dungeonById = Dungeons.dungeonById
 Data.bossEvery = Dungeons.bossEvery
+Data.bossMemories = BossMemories
 Data.brokenAutomata = Bosses.brokenAutomata
 Data.story = Story
 

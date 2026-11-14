@@ -1,6 +1,7 @@
 -- boss.lua: mecánicas de los jefes por mazmorra.
 local Data = require("src.run.data")
 local Compases = require("src.run.compases")
+local BossMemories = require("src.run.boss_memories")
 local Util = require("src.utils.util")
 local FX = require("src.run.fx")
 
@@ -118,10 +119,13 @@ local function startPatriarchPhase(enemy, run)
       rotation = enemy.def.beamRotation,
       length = enemy.def.beamLength,
       width = enemy.def.beamWidth,
-      damage = enemy.def.beamDamage * Compases.enemyDamageMultiplier(run),
+      damage = enemy.def.beamDamage
+        * Compases.enemyDamageMultiplier(run)
+        * BossMemories.damageMultiplier(enemy),
       life = enemy.def.phaseDuration,
       interval = Data.hazards.beamTick,
       color = { 0.88, 0.78, 0.48 },
+      sourceEnemy = enemy,
     })
   end
   FX.add("¡Jaula de cadenas!", enemy.x, enemy.y - 42, { 1.00, 0.82, 0.36 })
@@ -167,9 +171,12 @@ local function updateForge(enemy, dt, run)
         radius = enemy.def.zoneRadius,
         delay = enemy.def.zoneDelay,
         life = enemy.def.zoneDuration,
-        damage = enemy.def.zoneDamage * Compases.enemyDamageMultiplier(run),
+        damage = enemy.def.zoneDamage
+          * Compases.enemyDamageMultiplier(run)
+          * BossMemories.damageMultiplier(enemy),
         interval = 0.5,
         color = { 1.00, 0.24, 0.14 },
+        sourceEnemy = enemy,
       })
     end
   end
@@ -226,6 +233,7 @@ local function spawnChronoEcho(enemy, run)
     damage = enemy.damage * (def.echoDamageScale or 0.8),
     interval = 1,
     color = def.echoColor,
+    sourceEnemy = enemy,
   })
   FX.ring(player.x, player.y, def.echoRadius or 64, def.echoColor)
 end
@@ -284,7 +292,7 @@ local function updateChrono(enemy, dt, run, ctx)
     if Util.dist2(enemy.x, enemy.y, run.player.x, run.player.y) <= reach * reach
       and run.dungeon:lineOfSight(enemy.x, enemy.y, run.player.x, run.player.y)
     then
-      run.player:takeDamage(enemy.damage * (def.auraDamageScale or 0.12), run)
+      run.player:takeDamage(enemy.damage * (def.auraDamageScale or 0.12), run, enemy)
     end
   end
 
@@ -339,7 +347,7 @@ local function updateChrono(enemy, dt, run, ctx)
         and angleDifference(playerAngle, angle) <= def.coneHalfAngle
       then
         run.player:freeze(def.coneLock)
-        run.player:takeDamage(enemy.damage * def.coneDamageScale, run)
+        run.player:takeDamage(enemy.damage * def.coneDamageScale, run, enemy)
         FX.add("¡Tiempo congelado!", run.player.x, run.player.y - 28, { 0.55, 0.72, 1.00 })
       end
     end
@@ -358,7 +366,8 @@ local function updateGuardian(enemy, dt, run, ctx)
           enemy.y,
           enemy.phase + i * (math.pi * 2 / Data.enemyAI.bossProjectileCount),
           enemy.damage * Data.enemyAI.bossDamageScale,
-          true
+          true,
+          { sourceEnemy = enemy }
         )
       end
       if run.shake then run:shake(5, 0.30) end
@@ -449,9 +458,12 @@ local function updateOrganZones(enemy, dt, run)
       radius = def.zoneRadius,
       delay = def.zoneDelay,
       life = def.zoneDuration,
-      damage = def.zoneDamage * Compases.enemyDamageMultiplier(run),
+      damage = def.zoneDamage
+        * Compases.enemyDamageMultiplier(run)
+        * BossMemories.damageMultiplier(enemy),
       interval = 0.5,
       color = { 0.78, 0.46, 1.00 },
+      sourceEnemy = enemy,
     })
   end
 end
@@ -531,10 +543,13 @@ local function startOrganPhase(enemy, run)
       rotation = enemy.def.beamRotation,
       length = enemy.def.beamLength,
       width = enemy.def.beamWidth,
-      damage = enemy.def.beamDamage * Compases.enemyDamageMultiplier(run),
+      damage = enemy.def.beamDamage
+        * Compases.enemyDamageMultiplier(run)
+        * BossMemories.damageMultiplier(enemy),
       life = enemy.def.phaseDuration,
       interval = Data.hazards.beamTick,
       color = { 0.78, 0.46, 1.00 },
+      sourceEnemy = enemy,
     })
   end
   FX.add("¡Compás del fin!", enemy.x, enemy.y - 48, { 0.88, 0.62, 1.00 })
@@ -591,6 +606,8 @@ local function updateOrgan(enemy, dt, run, ctx)
 end
 
 function Boss.update(enemy, dt, run, ctx)
+  if BossMemories.update(enemy, dt, run) then return end
+
   local kind = enemy.def.bossKind or "guardian"
   if kind == "patriarch" then
     updatePatriarch(enemy, dt, run, ctx)
@@ -685,6 +702,8 @@ function Boss.drawOverlay(enemy)
       love.graphics.setLineWidth(1)
     end
   end
+
+  BossMemories.drawOverlay(enemy)
 end
 
 return Boss

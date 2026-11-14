@@ -101,13 +101,14 @@ function Elites.roll(run, def, options)
     return {}
   end
 
-  if rng:random() >= Elites.chanceAt(run.depth) then
+  local forced = options.forceElite == true
+  if not forced and rng:random() >= Elites.chanceAt(run.depth) then
     return {}
   end
 
   local count = options.forceTwoAffixes
     and 2
-    or Elites.affixCount(run.depth, rng)
+    or (forced and 1 or Elites.affixCount(run.depth, rng))
   return pickUnique(rng, count)
 end
 

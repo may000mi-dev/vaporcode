@@ -410,6 +410,30 @@ function HUD.drawBoss(run)
   love.graphics.rectangle("fill", x + 8, y + 14, w - 16, 5, 2, 2)
   love.graphics.setColor(0.85, 0.25, 0.45)
   love.graphics.rectangle("fill", x + 8, y + 14, (w - 16) * ratio, 5, 2, 2)
+
+  if boss.memoryEnrageTimer then
+    local seconds = math.max(0, math.ceil(boss.memoryEnrageTimer))
+    local minutes = math.floor(seconds / 60)
+    local rest = seconds % 60
+    local text
+    if boss.memoryLabel then
+      text = TextCache.format(
+        "hud-boss-memories",
+        "%s · %d:%02d",
+        boss.memoryLabel,
+        minutes,
+        rest
+      )
+    else
+      text = TextCache.format("hud-boss-enrage", "Sobrecarga %d:%02d", minutes, rest)
+    end
+    if boss.memoryRageActive or seconds <= 30 then
+      love.graphics.setColor(1.00, 0.45, 0.38)
+    else
+      love.graphics.setColor(0.86, 0.74, 0.50)
+    end
+    love.graphics.print(text, x + 8, y + 24)
+  end
 end
 
 function HUD.drawPause(run)
@@ -452,38 +476,72 @@ function HUD.drawPause(run)
   )
 
   love.graphics.setFont(Fonts.small)
+  local detailY = py + 136
   if run.compases then
     love.graphics.setColor(0.90, 0.76, 0.42)
     love.graphics.printf(TextCache.format("pause-compas", "%s", run.compases.label),
-      px, py + 136, panelW, "center")
+      px, detailY, panelW, "center")
+    detailY = detailY + 14
   end
 
+  local boss = run.boss
+  if boss and not boss.dead and boss.memoryEnrageTimer then
+    local seconds = math.max(0, math.ceil(boss.memoryEnrageTimer))
+    local minutes = math.floor(seconds / 60)
+    local rest = seconds % 60
+    local text
+    if boss.memoryLabel then
+      text = TextCache.format(
+        "pause-boss-memories",
+        "Memorias del jefe: %s · Sobrecarga %d:%02d",
+        boss.memoryLabel,
+        minutes,
+        rest
+      )
+    else
+      text = TextCache.format(
+        "pause-boss-enrage",
+        "Sobrecarga del jefe: %d:%02d",
+        minutes,
+        rest
+      )
+    end
+    if boss.memoryRageActive or seconds <= 30 then
+      love.graphics.setColor(1.00, 0.45, 0.38)
+    else
+      love.graphics.setColor(0.82, 0.68, 0.46)
+    end
+    love.graphics.printf(text, px, detailY, panelW, "center")
+    detailY = detailY + 14
+  end
+
+  local footerY = math.max(py + 150, detailY + 4)
   love.graphics.setColor(0.55, 0.62, 0.70)
   love.graphics.printf(
     "Izquierda: moverte · Centro: arrastra para mirar · A1/A2 se asignan en la mochila.",
     px,
-    py + 150,
+    footerY,
     panelW,
     "center"
   )
   love.graphics.printf(
     "Teclado: WASD/flechas · R/F/E/T habilidades · B mochila · P pausa · F3 depuración",
     px,
-    py + 174,
+    footerY + 24,
     panelW,
     "center"
   )
   love.graphics.printf(
     "Válvulas: dispara o pisa · Paredes frágiles: Resonancia/Flecha · Cofres: acércate",
     px,
-    py + 198,
+    footerY + 48,
     panelW,
     "center"
   )
   love.graphics.printf(
     "Ítems: pasivas y mascotas activas son por run · Cofres ocultos: personajes",
     px,
-    py + 222,
+    footerY + 72,
     panelW,
     "center"
   )
