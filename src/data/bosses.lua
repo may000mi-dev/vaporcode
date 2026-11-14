@@ -92,9 +92,8 @@ Bosses.types = {
     color = { 0.56, 0.28, 0.82 },
     boss = true,
     bossKind = "organ",
-    -- Bandas de distancia: cerca quedan los rayos, a media distancia el brazo
-    -- arrastra al jugador y lejos se replican las zonas de la Forja.
-    closeRange = 150,
+    -- Lejos replica las zonas de la Forja; dentro de ese alcance el brazo
+    -- persigue al jugador. Los rayos aparecen en las fases.
     zoneRange = 380,
     zoneInterval = 2.4,
     zoneCount = 3,
@@ -105,7 +104,6 @@ Bosses.types = {
     armInterval = 4.8,
     armFirstDelay = 2.2,
     armWindup = 0.55,
-    armHalfAngle = 0.34,
     armPullDuration = 0.40,
     armCloseDistance = 86,
     summonInterval = 6.0,
@@ -127,6 +125,15 @@ Bosses.types = {
   },
 }
 
+-- Cuando un jefe baja de la mitad de su vida, algunas invocaciones
+-- desatan una horda de autómatas rotos alrededor del aliado.
+Bosses.brokenAutomata = {
+  hpThreshold = 0.50,
+  chance = 0.30,
+  minCount = 3,
+  maxCount = 10,
+}
+
 Bosses.bestiaryOrder = {
   "guardian", "bone_patriarch", "living_forge", "time_inquisitor", "time_organ",
 }
@@ -138,11 +145,11 @@ Bosses.bestiary = {
   },
   bone_patriarch = {
     name = "Patriarca de Huesos y Cobre",
-    desc = "Invoca autómatas y gira una jaula de rayos al bajar de vida.",
+    desc = "Invoca autómatas, gira una jaula de rayos y bajo el 50% puede desatar autómatas rotos.",
   },
   living_forge = {
     name = "Forja Viviente",
-    desc = "Permanece inmóvil, crea zonas de fuego e invoca sabuesos.",
+    desc = "Permanece inmóvil, crea zonas de fuego e invoca sabuesos; bajo el 50% puede desatar autómatas rotos.",
   },
   time_inquisitor = {
     name = "Inquisidor del Tiempo",
@@ -150,7 +157,7 @@ Bosses.bestiary = {
   },
   time_organ = {
     name = "Órgano del Tiempo",
-    desc = "De cerca barre con rayos, a media distancia arrastra con su brazo y de lejos crea zonas; invoca aliados y clérigos si va perdiendo.",
+    desc = "Rayos, brazo que persigue y zonas de fuego; invoca aliados, clérigos y autómatas rotos si va perdiendo.",
   },
 }
 

@@ -117,6 +117,20 @@ Sandbox.pressed(Run, target.x + 2, target.y + 2)
 assert(#Run.enemies == 1, "el panel debe invocar exactamente un enemigo")
 assert(Run.overlay == nil, "invocar debe cerrar el panel para pelear")
 
+-- Con cantidad x5, el mismo botón crea cinco enemigos del tipo elegido.
+Run.enemies = {}
+Run.boss = nil
+Run.overlay = "sandbox"
+Sandbox.quantity = 5
+Sandbox.pressed(Run, target.x + 2, target.y + 2)
+assert(#Run.enemies == 5, "cantidad x5 debe invocar cinco enemigos")
+for _, enemy in ipairs(Run.enemies) do
+  assert(enemy.kind == "automaton", "los cinco enemigos deben ser del tipo elegido")
+end
+Run.enemies = {}
+Run.boss = nil
+Sandbox.quantity = 1
+
 -- La pestaña de ítems debe usar ids válidos y entregar el objeto a la run.
 Run.inventory = {}
 Run.storage = {}

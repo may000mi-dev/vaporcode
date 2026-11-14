@@ -103,30 +103,40 @@ function Sandbox.layout()
   }
 end
 
-local function spawnEnemy(run, id)
+local function spawnEnemy(run, id, amount)
   local def = Data.enemyTypes[id]
   if not def then return end
 
-  local x, y = run.dungeon:randomFloorPoint(
-    run.player.x,
-    run.player.y,
-    150,
-    def.radius or 14
-  )
-  if not x then
-    x = run.player.x + 130
-    y = run.player.y
-  end
+  local spawned = 0
+  for _ = 1, amount or 1 do
+    local x, y = run.dungeon:randomFloorPoint(
+      run.player.x,
+      run.player.y,
+      150,
+      def.radius or 14
+    )
+    if not x then
+      x = run.player.x + 130
+      y = run.player.y
+    end
 
-  local enemy = run:createEnemy(id, x, y, { noElite = true })
-  if not enemy then return end
-  if def.boss then
-    run.boss = enemy
+    local enemy = run:createEnemy(id, x, y, { noElite = true })
+    if enemy then
+      spawned = spawned + 1
+      if def.boss then
+        run.boss = enemy
+      end
+    end
   end
+  if spawned == 0 then return end
 
   run.overlay = nil
   run:clearInput()
-  run:notify("Invocado: " .. (def.name or id), def.color)
+  local label = def.name or id
+  if spawned > 1 then
+    label = label .. " x" .. spawned
+  end
+  run:notify("Invocado: " .. label, def.color)
 end
 
 local function giveItem(run, id)
@@ -186,7 +196,7 @@ function Sandbox.pressed(run, x, y)
   for _, rect in ipairs(Sandbox.gridRects) do
     if Util.inside(x, y, rect) then
       if Sandbox.activeTab == "enemies" then
-        spawnEnemy(run, rect.id)
+        spawnEnemy(run, rect.id, Sandbox.quantity)
       else
         giveItem(run, rect.id)
       end

@@ -8,8 +8,9 @@ uno o dos pulgares. Prototipo para Android/Termux primero; escritorio después.
   mejoras permanentes.
 - **Modos:** **Historia** (tres perspectivas con escenas y checkpoints) e
   **Infinito** (personaje + mazmorra desbloqueada).
-- **Run:** pisos generados con semilla, jefe cada 3 pisos y mazmorras con canción
-  y BPM propios. La Torre se abre al completar las tres historias.
+- **Run:** pisos generados con semilla, jefe cada 3 pisos, Guardián de la Caldera
+  opcional en los demás y contador de enemigos junto al metrónomo. Cada mazmorra
+  tiene canción y BPM propios. La Torre se abre al completar las tres historias.
 - **Meta-progresión:** resonancias de jefe, mejoras por personaje, monedas,
   personajes, mazmorras y Bestiario persistente.
 

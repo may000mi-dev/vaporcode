@@ -310,6 +310,23 @@ function HUD.draw(run)
     love.graphics.circle("fill", 404 + i * 16, 92, dotRadius)
   end
 
+  if not run.sandbox then
+    love.graphics.setFont(Fonts.small)
+    if run.exitOpen then
+      love.graphics.setColor(0.40, 1.00, 0.60)
+      love.graphics.printf("¡Salida abierta!", 380, 70, 96, "center")
+    else
+      love.graphics.setColor(0.86, 0.92, 1.00)
+      love.graphics.printf(
+        TextCache.format("hud-remaining", "Faltan %d", run.enemyCount or 0),
+        380,
+        70,
+        96,
+        "center"
+      )
+    end
+  end
+
   local pause = HUD.pauseButton
   love.graphics.setColor(0.08, 0.10, 0.13, 0.90)
   love.graphics.rectangle("fill", pause.x, pause.y, pause.w, pause.h, 8, 8)

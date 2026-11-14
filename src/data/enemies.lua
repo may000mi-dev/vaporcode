@@ -262,6 +262,7 @@ Enemies.spawn = {
   minDistance = 210,
   bossMinDistance = 280,
   bossFallbackDistance = 180,
+  guardianChance = 0.12,
 }
 Enemies.enemyAI = {
   sightRange = 420,

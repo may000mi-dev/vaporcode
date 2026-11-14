@@ -39,6 +39,7 @@ Data.mark = Characters.mark
 Data.dungeons = Dungeons.dungeons
 Data.dungeonById = Dungeons.dungeonById
 Data.bossEvery = Dungeons.bossEvery
+Data.brokenAutomata = Bosses.brokenAutomata
 Data.story = Story
 
 -- Los jefes viven en bosses.lua pero comparten el índice de enemigos

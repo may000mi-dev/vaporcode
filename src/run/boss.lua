@@ -47,6 +47,40 @@ local function countKind(run, kind)
   return count
 end
 
+local function spawnBrokenAutomata(run, origin)
+  local cfg = Data.brokenAutomata
+  local def = Data.enemyTypes.broken_automaton
+  if not cfg or not def then return end
+
+  local total = love.math.random(cfg.minCount, cfg.maxCount)
+  local start = love.math.random() * math.pi * 2
+  for i = 1, total do
+    local angle = start + (i - 1) * (math.pi * 2 / total)
+    local distance = (origin.radius or 0) + def.radius + 10
+    local x, y = run.dungeon:moveCircle(
+      origin.x,
+      origin.y,
+      math.cos(angle) * distance,
+      math.sin(angle) * distance,
+      def.radius
+    )
+    local automaton = run:createEnemy("broken_automaton", x, y, { noElite = true })
+    if automaton then
+      FX.ring(x, y, def.radius + 5, def.color)
+    end
+  end
+  FX.add("¡Autómatas rotos!", origin.x, origin.y - 28, def.color)
+end
+
+local function maybeSpawnBrokenAutomata(enemy, run, origin)
+  local cfg = Data.brokenAutomata
+  if not cfg then return end
+  local ratio = enemy.maxHp > 0 and enemy.hp / enemy.maxHp or 1
+  if ratio >= cfg.hpThreshold then return end
+  if love.math.random() >= cfg.chance then return end
+  spawnBrokenAutomata(run, origin)
+end
+
 local function summonAround(enemy, run, kind)
   local def = Data.enemyTypes[kind]
   if not def then return end
@@ -62,6 +96,9 @@ local function summonAround(enemy, run, kind)
   )
   local minion = run:createEnemy(kind, x, y, { noElite = true })
   FX.ring(x, y, def.radius + 6, def.color)
+  if minion then
+    maybeSpawnBrokenAutomata(enemy, run, minion)
+  end
   return minion
 end
 
@@ -263,16 +300,6 @@ local function updateGuardian(enemy, dt, run, ctx)
   end
 end
 
-local function organTargetPoint(enemy, run, ctx)
-  local target = ctx.target or run.player
-  if ctx.canSee then
-    return target.x, target.y
-  end
-  if enemy.lastSeenX then
-    return enemy.lastSeenX, enemy.lastSeenY
-  end
-end
-
 local function nearestWalkablePoint(run, x, y, radius)
   if run.dungeon.nearestWalkable then
     local nx, ny = run.dungeon:nearestWalkable(
@@ -363,20 +390,22 @@ end
 
 local function updateOrganArmState(enemy, dt, run)
   if enemy.armState == "windup" then
+    local player = run.player
+    -- El brazo persigue la posición actual: no usa lastSeen ni línea de visión.
+    enemy.armAngle = Util.atan2(player.y - enemy.y, player.x - enemy.x)
     enemy.armWindupTimer = enemy.armWindupTimer - dt
     if enemy.armWindupTimer <= 0 then
       local def = enemy.def
-      local player = run.player
       local distance = Util.dist(enemy.x, enemy.y, player.x, player.y)
-      local angle = Util.atan2(player.y - enemy.y, player.x - enemy.x)
+      local angle = enemy.armAngle
       local close = def.armCloseDistance or (enemy.radius + player.radius + 18)
       local reach = (def.armRange or def.zoneRange or 380) + player.radius
-      local aligned = angleDifference(angle, enemy.armAngle)
-        <= (def.armHalfAngle or 0.34)
 
-      if distance > close and distance <= reach and aligned then
-        local tx = enemy.x + math.cos(angle) * close
-        local ty = enemy.y + math.sin(angle) * close
+      if distance <= reach then
+        -- Si ya está dentro, el tirón lo retiene en el sitio unos instantes.
+        local pullDistance = math.min(close, distance)
+        local tx = enemy.x + math.cos(angle) * pullDistance
+        local ty = enemy.y + math.sin(angle) * pullDistance
         tx, ty = nearestWalkablePoint(run, tx, ty, player.radius)
         player:startPull(tx, ty, def.armPullDuration or 0.40)
         enemy.armState = "pull"
@@ -405,19 +434,14 @@ local function updateOrganArmState(enemy, dt, run)
   return false
 end
 
-local function tryStartOrganArm(enemy, run, ctx)
+local function tryStartOrganArm(enemy, run)
   if enemy.armState or enemy.armTimer > 0 then return false end
 
-  local target = ctx.target or run.player
-  if target ~= run.player then return false end
-  if not ctx.canSee and not enemy.lastSeenX then return false end
-
-  local tx, ty = organTargetPoint(enemy, run, ctx)
-  if not tx then return false end
-
+  -- Siempre apunta al jugador actual, aunque esté oculto tras un muro.
+  local player = run.player
   enemy.armState = "windup"
   enemy.armWindupTimer = enemy.def.armWindup or 0.55
-  enemy.armAngle = Util.atan2(ty - enemy.y, tx - enemy.x)
+  enemy.armAngle = Util.atan2(player.y - enemy.y, player.x - enemy.x)
   enemy.armAttachedPlayer = nil
   FX.add(
     "¡Brazo del compás!",
@@ -479,15 +503,15 @@ local function updateOrgan(enemy, dt, run, ctx)
       elseif not armBusy then
         enemy:updateSearch(dt, run)
       end
-    elseif ctx.distance > (def.closeRange or 150) then
+    else
+      -- Dentro del alcance de las zonas el brazo es el ataque por defecto:
+      -- así no hay descanso detrás de muros ni en distancias cortas.
       if not armBusy then
-        tryStartOrganArm(enemy, run, ctx)
+        tryStartOrganArm(enemy, run)
       end
       if not ctx.canSee and not enemy.armState then
         enemy:updateSearch(dt, run)
       end
-    elseif not ctx.canSee then
-      enemy:updateSearch(dt, run)
     end
   end
 

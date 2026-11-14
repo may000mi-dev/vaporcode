@@ -390,7 +390,8 @@ organ.summonTimer = 99
 organ.healerTimer = 99
 organ.armTimer = 0
 organ.armState = nil
-organ.lastSeenX, organ.lastSeenY = Run.player.x, Run.player.y
+-- El último avistamiento queda lejos: el brazo debe ignorarlo.
+organ.lastSeenX, organ.lastSeenY = organ.x - 300, organ.y - 300
 local armCtx = {
   target = Run.player,
   canSee = false,
@@ -402,6 +403,7 @@ local armCtx = {
 }
 Boss.update(organ, 0.01, Run, armCtx)
 assert(organ.armState == "windup", "el brazo debe iniciar aunque una pared corte la visión")
+assert(math.abs(organ.armAngle) < 0.001, "el brazo debe apuntar al jugador actual, no a lastSeen")
 Boss.update(organ, organ.def.armWindup + 0.01, Run, armCtx)
 assert(organ.armState == "pull", "el brazo debe enganchar al jugador")
 assert(Run.player.pullTimer > 0, "el jugador debe quedar arrastrado")
@@ -422,7 +424,7 @@ Run.player.pullTimer = 0
 Run.player.pullX, Run.player.pullY = nil, nil
 Run.player.pullStartX, Run.player.pullStartY = nil, nil
 
--- Cerca se conservan los rayos y no se lanzan zonas ni el brazo.
+-- Cerca, sin rayos de fase, el brazo es el ataque por defecto.
 Run.hazards = {}
 organ.invulnTimer = 0
 organ.armTimer = 0
@@ -432,17 +434,26 @@ organ.armPullTimer = 0
 organ.zoneTimer = 0
 organ.summonTimer = 99
 organ.healerTimer = 99
-Run.player.x, Run.player.y = organ.x + 100, organ.y
-Boss.update(organ, 0.01, Run, {
+Run.player.x, Run.player.y = organ.x + 60, organ.y
+Run.player.pullTimer = 0
+local closeCtx = {
   target = Run.player,
   canSee = true,
-  distance = 100,
-  dx = 100,
+  distance = 60,
+  dx = 60,
   dy = 0,
   nx = 1,
   ny = 0,
-})
-assert(#Run.hazards == 0 and organ.armState == nil, "de cerca no debe usar zonas ni brazo")
+}
+Boss.update(organ, 0.01, Run, closeCtx)
+assert(#Run.hazards == 0, "de cerca no debe usar zonas")
+assert(organ.armState == "windup", "de cerca el brazo debe ser el ataque por defecto")
+Boss.update(organ, organ.def.armWindup + 0.01, Run, closeCtx)
+assert(organ.armState == "pull", "el brazo debe enganchar también de cerca")
+assert(Run.player.pullTimer > 0, "de cerca el tirón debe retener al jugador")
+Run.player.pullTimer = 0
+Run.player.pullX, Run.player.pullY = nil, nil
+Run.player.pullStartX, Run.player.pullStartY = nil, nil
 
 -- Todas las invocaciones regulares, sin jefes de pisos anteriores.
 Run.enemies = { organ }
@@ -494,6 +505,98 @@ organHealer.shootTimer = 0
 local organHpBefore = organ.hp
 organHealer:updateHealer(0.01, Run, 20, 1, 0)
 assert(organ.hp > organHpBefore, "los clérigos deben curar al Órgano")
+
+
+-- El Guardián de la Caldera aparece como jefe opcional en pisos sin jefe fijo.
+local function fixedRng(value)
+  return {
+    random = function(_, a, b)
+      if a and b then return a end
+      return value
+    end,
+  }
+end
+
+local originalRng = Run.dungeon.rng
+Run.dungeon.rng = fixedRng(0.5)
+Run.depth = 2
+Run.enemies = {}
+Run.boss = nil
+Run:spawnEnemies()
+assert(Run.boss == nil, "sin tirada favorable no debe aparecer el Guardián opcional")
+
+Run.dungeon.rng = fixedRng(0)
+Run.enemies = {}
+Run.boss = nil
+Run:spawnEnemies()
+assert(Run.boss and Run.boss.kind == "guardian", "el Guardián debe aparecer en pisos sin jefe fijo")
+
+Run.dungeon.rng = fixedRng(0)
+Run.depth = 3
+Run.enemies = {}
+Run.boss = nil
+Run:spawnEnemies()
+assert(Run.boss and Run.boss.kind == Data.dungeons[1].boss, "los pisos de jefe conservan su jefe fijo")
+Run.dungeon.rng = originalRng
+
+-- Bajo el 50% de vida, las invocaciones pueden soltar 3..10 autómatas rotos.
+local function countKind(run, kind)
+  local total = 0
+  for _, enemy in ipairs(run.enemies) do
+    if not enemy.dead and enemy.kind == kind then
+      total = total + 1
+    end
+  end
+  return total
+end
+
+local originalRandom = love.math.random
+local function forceRandom(flat, useMax)
+  love.math.random = function(a, b)
+    if a and b then
+      return useMax and b or a
+    end
+    return flat
+  end
+end
+
+local patriarch = Run:createEnemy("bone_patriarch", Run.spawnX, Run.spawnY, {
+  noElite = true,
+})
+local function summonPatriarch(hpRatio)
+  Run.enemies = { patriarch }
+  Run.boss = patriarch
+  patriarch.hp = math.floor(patriarch.maxHp * hpRatio)
+  patriarch.invulnTimer = 0
+  patriarch.bossPhase = 3
+  patriarch.summonTimer = 0
+  Boss.update(patriarch, 0.01, Run, {
+    target = Run.player,
+    canSee = true,
+    distance = 100,
+    dx = 100,
+    dy = 0,
+    nx = 1,
+    ny = 0,
+  })
+end
+
+forceRandom(0.10, false)
+summonPatriarch(0.49)
+assert(countKind(Run, "broken_automaton") == 3, "bajo 50% debe invocar el mínimo de autómatas rotos")
+
+forceRandom(0.10, true)
+summonPatriarch(0.49)
+assert(countKind(Run, "broken_automaton") == 10, "la horda debe llegar al máximo de diez")
+
+forceRandom(0.90, false)
+summonPatriarch(0.49)
+assert(countKind(Run, "broken_automaton") == 0, "la probabilidad debe poder fallar")
+
+forceRandom(0.10, false)
+summonPatriarch(0.60)
+assert(countKind(Run, "broken_automaton") == 0, "sobre 50% no debe aparecer la horda")
+love.math.random = originalRandom
 
 
 print("OK V6: roles, élites, hazards y jefes")

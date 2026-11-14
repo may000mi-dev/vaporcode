@@ -11,7 +11,8 @@ Roguelite de acción con ataques automáticos y ventanas de ritmo. El loop de un
 2. Moverse con joystick; el ataque básico dispara solo al enemigo más cercano.
 3. Limpiar el piso antes de que se agote el tiempo (300 s, aviso a los 60 s).
 4. La salida se abre al morir el último enemigo; tocarla sube al siguiente piso.
-5. Cada 3 pisos hay jefe de mazmorra. Al morir se puede reintentar el piso exacto
+5. Cada 3 pisos hay jefe de mazmorra; en los demás el Guardián de la Caldera
+   puede aparecer como jefe opcional. Al morir se puede reintentar el piso exacto
    (instantánea) o volver al menú; monedas y mejoras permanentes se conservan.
 6. **Modo Historia** encadena Cripta, Forja, Catedral y Torre con escenas,
    checkpoints por piso y portales al cerrar cada capítulo. **Modo Infinito**
@@ -66,6 +67,8 @@ habilidades a ritmo y reduce enfriamientos.
 - Ventana de acierto: ±120 ms alrededor del pulso (visible ±120 ms).
 - Acierto perfecto: ×2 daño (Resonancia y básicos a ritmo).
 - La racha rítmica se muestra en la capa de depuración (F3).
+- Sobre el metrónomo del HUD se ve siempre cuántos enemigos faltan para abrir
+  la salida; al abrirse cambia a «¡Salida abierta!».
 
 ## Mazmorras
 
@@ -172,15 +175,19 @@ entre 25 y 120 monedas; vende pasivas, mascotas y habilidades de ítem.
 
 | Jefe | Rasgo principal |
 |---|---|
-| Guardián de la Caldera | cuerpo a cuerpo rápido; 320 HP |
+| Guardián de la Caldera | cuerpo a cuerpo rápido; 320 HP; jefe opcional (12%) en pisos sin jefe fijo |
 | Patriarca de Huesos y Cobre | invoca autómatas y dispara abanicos; fases en 66%/33% |
 | Forja Viviente | zonas de fuego (radio 58) e invoca sabuesos; 500 HP |
 | Inquisidor del Tiempo | tamaño del jugador; aura de daño, cono congelante y reubicación si queda bloqueado; 560 HP |
-| Órgano del Tiempo | jefe final; rayos de cerca, brazo que arrastra a media distancia y zonas de fuego a distancia; invoca aliados y clérigos cuando va perdiendo |
+| Órgano del Tiempo | jefe final; rayos en las fases, zonas de fuego a distancia y un brazo que siempre persigue al jugador; invoca aliados y clérigos cuando va perdiendo |
 
 Todos los jefes son inmunes al aturdimiento para que la Pólvora o el Perro no
 anulen sus patrones de ataque. Al morir sueltan una Resonancia del personaje de la
 run, que se gasta en la pantalla de Personajes.
+
+Cuando un jefe invocador baja del 50% de vida, cada aliado que invoque tiene un
+30% de probabilidad de venir acompañado por 3–10 autómatas rotos alrededor del
+aliado. Los valores viven en `Bosses.brokenAutomata`.
 
 ## Modo Historia
 
@@ -270,8 +277,9 @@ Se entra desde Configuración y usa una definición `Dungeons.sandbox` que no
 aparece en el menú ni en `Data.dungeons`. La run se marca con `run.sandbox`:
 
 - No hay oleadas automáticas, temporizador, salida ni jefes de piso.
-- El panel `PRUEBAS`/`F2` invoca enemigos y jefes del catálogo, da ítems en
-  cantidad x1 o x5, vacía el inventario y alterna invulnerabilidad.
+- El panel `PRUEBAS`/`F2` invoca enemigos y jefes del catálogo en cantidad x1
+  o x5, da ítems con la misma cantidad, vacía el inventario y alterna
+  invulnerabilidad.
 - Morir restaura la vida y limpia proyectiles/hazards; la sesión continúa.
 - Las monedas se contabilizan solo en `run.coinsEarned`; no se escriben en el
   guardado. Tampoco se guardan desbloqueos de personaje, récords ni autosave.

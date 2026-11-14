@@ -66,8 +66,19 @@ function Spawner.spawnEnemies(run)
     end
   end
 
+  local bossKind
   if run.depth % Data.bossEvery == 0 then
-    local bossDef = Data.enemyTypes[run.def.boss or "guardian"]
+    bossKind = run.def.boss or "guardian"
+  elseif run.def.boss
+    and run.dungeon.rng:random() < (Data.spawn.guardianChance or 0.12)
+  then
+    -- El antiguo Guardián de la Caldera aparece como jefe opcional en
+    -- pisos que no tienen un jefe fijo.
+    bossKind = "guardian"
+  end
+
+  if bossKind then
+    local bossDef = Data.enemyTypes[bossKind]
     local bx, by = run.dungeon:randomFloorPoint(
       run.spawnX,
       run.spawnY,
@@ -87,7 +98,7 @@ function Spawner.spawnEnemies(run)
     end
 
     if bx then
-      local boss = run:createEnemy(bossDef.id or (run.def.boss or "guardian"), bx, by, {
+      local boss = run:createEnemy(bossKind, bx, by, {
         noElite = true,
       })
       run.boss = boss
