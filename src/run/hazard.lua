@@ -12,6 +12,7 @@ local function colorFor(kind)
   if kind == "beam" then return { 0.72, 0.52, 1.00 } end
   if kind == "zone" then return { 1.00, 0.28, 0.18 } end
   if kind == "cone" then return { 0.52, 0.72, 1.00 } end
+  if kind == "echo" then return { 0.42, 0.62, 1.00 } end
   return { 0.80, 0.80, 0.80 }
 end
 
@@ -41,7 +42,7 @@ function Hazard.new(kind, x, y, options)
 end
 
 function Hazard:applyEffect(run)
-  if self.kind == "fire" or self.kind == "zone" then
+  if self.kind == "fire" or self.kind == "zone" or self.kind == "echo" then
     if Util.dist2(self.x, self.y, run.player.x, run.player.y)
       <= (self.radius + run.player.radius) ^ 2
     then
@@ -95,6 +96,15 @@ function Hazard:update(dt, run)
     return
   end
 
+  -- El eco detona una sola vez al terminar su telegrafiado.
+  if self.kind == "echo" then
+    self:applyEffect(run)
+    FX.ring(self.x, self.y, self.radius, self.color)
+    FX.burst(self.x, self.y, 8, self.color)
+    self.dead = true
+    return
+  end
+
   self.life = self.life - dt
   if self.life <= 0 then
     -- Las minas estallan al agotar su minuto de vida.
@@ -137,6 +147,19 @@ function Hazard:draw()
       love.graphics.line(self.x, self.y, endX, endY)
     else
       love.graphics.circle("line", self.x, self.y, self.radius)
+      if self.kind == "echo" then
+        local t = love.timer.getTime()
+        love.graphics.setColor(color[1], color[2], color[3], 0.38)
+        love.graphics.circle("line", self.x, self.y, self.radius * 0.55)
+        love.graphics.setColor(color[1], color[2], color[3], 0.72)
+        love.graphics.line(self.x, self.y, self.x, self.y - self.radius * 0.42)
+        love.graphics.line(
+          self.x,
+          self.y,
+          self.x + math.cos(t * 2.2) * self.radius * 0.32,
+          self.y + math.sin(t * 2.2) * self.radius * 0.32
+        )
+      end
     end
     love.graphics.setLineWidth(1)
     return

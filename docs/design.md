@@ -178,7 +178,7 @@ entre 25 y 120 monedas; vende pasivas, mascotas y habilidades de ítem.
 | Guardián de la Caldera | cuerpo a cuerpo rápido; 320 HP; jefe opcional (12%) en pisos sin jefe fijo |
 | Patriarca de Huesos y Cobre | invoca autómatas y dispara abanicos; fases en 66%/33% |
 | Forja Viviente | zonas de fuego (radio 58) e invoca sabuesos; 500 HP |
-| Inquisidor del Tiempo | tamaño del jugador; aura de daño, cono congelante y reubicación si queda bloqueado; 560 HP |
+| Inquisidor del Tiempo | tamaño del jugador; aura, cono congelante, reubicación y ecos retardados; fases en 66%/33%, rebobinado único al 50%; 650 HP |
 | Órgano del Tiempo | jefe final; rayos en las fases, zonas de fuego a distancia y un brazo que siempre persigue al jugador; invoca aliados y clérigos cuando va perdiendo |
 
 Todos los jefes son inmunes al aturdimiento para que la Pólvora o el Perro no

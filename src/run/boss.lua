@@ -22,6 +22,9 @@ function Boss.init(enemy)
     enemy.armPullTimer = 0
     enemy.armAttachedPlayer = nil
     enemy.healerTimer = def.healerFirstDelay or 5.0
+  elseif def.bossKind == "chrono" then
+    enemy.echoTimer = def.echoFirstDelay or 2.5
+    enemy.rewindUsed = false
   end
 end
 
@@ -198,10 +201,78 @@ local function findBlinkPoint(enemy, run, target)
   end
 end
 
+local function chronoBlink(enemy, run, target)
+  local blinkX, blinkY = findBlinkPoint(enemy, run, target)
+  if not blinkX then return false end
+
+  FX.ring(enemy.x, enemy.y, enemy.radius + 8, enemy.def.color)
+  enemy.x, enemy.y = blinkX, blinkY
+  FX.ring(enemy.x, enemy.y, enemy.radius + 10, enemy.def.color)
+  enemy.lostTimer = 0
+  enemy.stuckTimer = 0
+  return true
+end
+
+local function spawnChronoEcho(enemy, run)
+  local def = enemy.def
+  local player = run.player
+  run:spawnHazard("echo", player.x, player.y, {
+    radius = def.echoRadius or 64,
+    delay = def.echoDelay or 0.65,
+    damage = enemy.damage * (def.echoDamageScale or 0.8),
+    interval = 1,
+    color = def.echoColor,
+  })
+  FX.ring(player.x, player.y, def.echoRadius or 64, def.echoColor)
+end
+
+local function startChronoPhase(enemy, run, ctx)
+  local def = enemy.def
+  enemy.invulnTimer = def.phaseDuration or 1.6
+  enemy.coneTimer = 0.35
+  spawnChronoEcho(enemy, run)
+  chronoBlink(enemy, run, ctx.target or run.player)
+  FX.add("¡Desfase temporal!", enemy.x, enemy.y - 42, def.color)
+  if run.shake then run:shake(5, 0.25) end
+end
+
+local function startChronoRewind(enemy, run, ctx)
+  local def = enemy.def
+  enemy.rewindUsed = true
+  enemy.invulnTimer = def.rewindInvuln or 1.0
+  enemy.coneTimer = 0.6
+  enemy.hp = math.min(enemy.maxHp, enemy.hp + enemy.maxHp * (def.rewindHeal or 0.10))
+  chronoBlink(enemy, run, ctx.target or run.player)
+  FX.add("¡Rebobinando!", enemy.x, enemy.y - 42, def.echoColor or def.color)
+  if run.shake then run:shake(7, 0.35) end
+end
+
 local function updateChrono(enemy, dt, run, ctx)
   local def = enemy.def
+  enemy.invulnTimer = math.max(0, (enemy.invulnTimer or 0) - dt)
+  if enemy.invulnTimer > 0 then return end
+
+  local ratio = enemy.maxHp > 0 and enemy.hp / enemy.maxHp or 0
+  local threshold = def.phaseThresholds and def.phaseThresholds[enemy.bossPhase]
+  if threshold and ratio <= threshold then
+    enemy.bossPhase = enemy.bossPhase + 1
+    startChronoPhase(enemy, run, ctx)
+    return
+  end
+
+  if not enemy.rewindUsed and ratio <= (def.rewindThreshold or 0.50) then
+    startChronoRewind(enemy, run, ctx)
+    return
+  end
+
   enemy.coneTimer = math.max(0, enemy.coneTimer - dt)
   enemy.auraTimer = math.max(0, (enemy.auraTimer or 0) - dt)
+  enemy.echoTimer = math.max(0, (enemy.echoTimer or 0) - dt)
+
+  if enemy.echoTimer <= 0 then
+    enemy.echoTimer = def.echoInterval or 4.2
+    spawnChronoEcho(enemy, run)
+  end
 
   if enemy.auraTimer <= 0 then
     enemy.auraTimer = def.auraInterval or 0.7
@@ -239,14 +310,7 @@ local function updateChrono(enemy, dt, run, ctx)
     and (ctx.canSee or enemy.lastSeenX ~= nil)
     and (lostTooLong or blockedTooLong)
   if canBlink then
-    local blinkX, blinkY = findBlinkPoint(enemy, run, target)
-    if blinkX then
-      FX.ring(enemy.x, enemy.y, enemy.radius + 8, def.color)
-      enemy.x, enemy.y = blinkX, blinkY
-      FX.ring(enemy.x, enemy.y, enemy.radius + 10, def.color)
-      enemy.lostTimer = 0
-      enemy.stuckTimer = 0
-    else
+    if not chronoBlink(enemy, run, target) then
       enemy.lostTimer = (def.blinkDelay or 1.1) * 0.5
       enemy.stuckTimer = 0
     end

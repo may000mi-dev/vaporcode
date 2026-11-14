@@ -63,7 +63,7 @@ Bosses.types = {
     -- Del mismo tamaño que el jugador; el aura es su amenaza principal.
     radius = 16,
     speed = 124,
-    hp = 560,
+    hp = 650,
     damage = 18,
     xp = 95,
     color = { 0.42, 0.62, 0.98 },
@@ -81,6 +81,17 @@ Bosses.types = {
     coneHalfAngle = 0.42,
     coneLock = 1.0,
     coneDamageScale = 2.0,
+    phaseThresholds = { 0.66, 0.33 },
+    phaseDuration = 1.6,
+    echoFirstDelay = 2.5,
+    echoInterval = 4.2,
+    echoDelay = 0.65,
+    echoRadius = 64,
+    echoDamageScale = 0.8,
+    echoColor = { 0.42, 0.62, 1.00 },
+    rewindThreshold = 0.50,
+    rewindHeal = 0.10,
+    rewindInvuln = 1.0,
   },
   time_organ = {
     name = "Órgano del Tiempo",
@@ -153,7 +164,7 @@ Bosses.bestiary = {
   },
   time_inquisitor = {
     name = "Inquisidor del Tiempo",
-    desc = "Aura dañina, teletransporte y un cono que congela al jugador.",
+    desc = "Aura dañina, cono congelante y ecos temporales; se desfasa en fases y rebobina una vez al 50%.",
   },
   time_organ = {
     name = "Órgano del Tiempo",

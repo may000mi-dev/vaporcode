@@ -345,6 +345,86 @@ assert(
 )
 Run.dungeon = originalDungeon
 
+-- Fases temporales: desfase, eco retardado y rebobinado único.
+local function chronoCtx(distance)
+  return {
+    target = Run.player,
+    canSee = true,
+    distance = distance,
+    dx = Run.player.x - chrono.x,
+    dy = Run.player.y - chrono.y,
+    nx = 1,
+    ny = 0,
+  }
+end
+
+Run.hazards = {}
+chrono.invulnTimer = 0
+chrono.rewindUsed = true
+chrono.bossPhase = 1
+chrono.hp = chrono.maxHp * 0.65
+chrono.auraTimer = 99
+chrono.coneTimer = 99
+chrono.echoTimer = 99
+chrono.x, chrono.y = Run.spawnX, Run.spawnY
+Run.player.x, Run.player.y = chrono.x + 90, chrono.y
+Boss.update(chrono, 0.01, Run, chronoCtx(90))
+assert(chrono.bossPhase == 2, "el Inquisidor debe entrar en fase al 66%")
+assert(chrono.invulnTimer > 0, "la fase debe volverlo invulnerable")
+assert(chrono:takeDamage(50, Run) == 0, "la fase no debe recibir daño")
+assert(
+  #Run.hazards >= 1 and Run.hazards[#Run.hazards].kind == "echo",
+  "la fase debe dejar un eco temporal"
+)
+chrono.invulnTimer = 0
+chrono.bossPhase = 2
+chrono.hp = chrono.maxHp * 0.32
+Run.hazards = {}
+Boss.update(chrono, 0.01, Run, chronoCtx(90))
+assert(chrono.bossPhase == 3, "el Inquisidor debe entrar en fase al 33%")
+
+Run.hazards = {}
+chrono.invulnTimer = 0
+chrono.bossPhase = 3
+chrono.hp = chrono.maxHp
+chrono.echoTimer = 0
+chrono.auraTimer = 99
+chrono.coneTimer = 99
+chrono.x, chrono.y = Run.spawnX, Run.spawnY
+Run.player.x, Run.player.y = chrono.x + 200, chrono.y
+Run.hp = Run.stats.maxHp
+Run.player.shield = 0
+Run.player.shieldTimer = 0
+Run.player.invuln = 0
+Boss.update(chrono, 0.01, Run, chronoCtx(200))
+assert(#Run.hazards == 1 and Run.hazards[1].kind == "echo", "debe aparecer un eco")
+assert(Run.hazards[1].delay > 0, "el eco debe telegrafiarse")
+local echo = Run.hazards[1]
+echo:update(echo.delay + 0.01, Run)
+echo:update(0.01, Run)
+assert(Run.hp < Run.stats.maxHp, "el eco debe dañar si no se esquiva")
+assert(echo.dead, "el eco debe detonar una sola vez")
+
+Run.hazards = {}
+chrono.invulnTimer = 0
+chrono.rewindUsed = false
+chrono.bossPhase = 3
+chrono.hp = chrono.maxHp * 0.49
+chrono.auraTimer = 99
+chrono.coneTimer = 99
+chrono.echoTimer = 99
+Run.player.x, Run.player.y = chrono.x + 80, chrono.y
+local hpBeforeRewind = chrono.hp
+Boss.update(chrono, 0.01, Run, chronoCtx(80))
+assert(chrono.rewindUsed, "el rebobinado debe activarse una vez")
+assert(chrono.hp > hpBeforeRewind, "el rebobinado debe curar al Inquisidor")
+assert(chrono.invulnTimer > 0, "el rebobinado debe dar invulnerabilidad breve")
+local hpAfterRewind = chrono.hp
+chrono.invulnTimer = 0
+chrono.hp = chrono.maxHp * 0.40
+Boss.update(chrono, 0.01, Run, chronoCtx(80))
+assert(chrono.hp == chrono.maxHp * 0.40, "el rebobinado no debe repetirse")
+assert(chrono.hp < hpAfterRewind, "el segundo cruce no debe curar")
 
 -- Jefe Órgano: zonas a distancia, brazo a media distancia y clérigos si va perdiendo.
 Run.hazards = {}
