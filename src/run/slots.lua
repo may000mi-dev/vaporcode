@@ -5,6 +5,7 @@ local Data = require("src.run.data")
 local Rhythm = require("src.run.rhythm")
 local Abilities = require("src.run.abilities")
 local FX = require("src.run.fx")
+local Compases = require("src.run.compases")
 
 local Slots = {}
 
@@ -44,7 +45,8 @@ function Slots.onAbilityLocked(run)
 end
 
 function Slots.addAbilityLock(run, seconds)
-  run.abilityLockTimer = math.max(run.abilityLockTimer or 0, seconds or 0)
+  local duration = (seconds or 0) + Compases.abilityLockBonus(run)
+  run.abilityLockTimer = math.max(run.abilityLockTimer or 0, duration)
 end
 
 function Slots.onManaFail(run, ability)

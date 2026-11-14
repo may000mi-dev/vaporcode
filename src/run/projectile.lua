@@ -27,6 +27,7 @@ function Projectile.new(x, y, angle, speed, damage, friendly, options)
   self.chain = options.chain
   self.effect = options.effect
   self.effectData = options.effectData
+  self.sourceEnemy = options.sourceEnemy
   self.hitSet = {}
   self.dead = false
   return self
@@ -120,7 +121,7 @@ function Projectile:update(dt, run)
     local player = run.player
     local rr = self.radius + player.radius
     if Util.dist2(self.x, self.y, player.x, player.y) <= rr * rr then
-      local hit = player:takeDamage(self.damage, run)
+      local hit = player:takeDamage(self.damage, run, self.sourceEnemy)
       if hit and self.effect and run.applyPlayerEffect then
         run:applyPlayerEffect(self.effect, self.effectData)
       end

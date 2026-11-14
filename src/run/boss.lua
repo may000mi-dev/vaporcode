@@ -1,5 +1,6 @@
 -- boss.lua: mecánicas de los jefes por mazmorra.
 local Data = require("src.run.data")
+local Compases = require("src.run.compases")
 local Util = require("src.utils.util")
 local FX = require("src.run.fx")
 
@@ -9,21 +10,21 @@ function Boss.init(enemy)
   local def = enemy.def
   enemy.bossPhase = 1
   enemy.invulnTimer = 0
-  enemy.summonTimer = def.firstSummonDelay or 2
-  enemy.zoneTimer = def.zoneInterval or 2.4
-  enemy.coneTimer = def.coneInterval or 5.0
+  enemy.summonTimer = enemy:cooldown(def.firstSummonDelay or 2)
+  enemy.zoneTimer = enemy:cooldown(def.zoneInterval or 2.4)
+  enemy.coneTimer = enemy:cooldown(def.coneInterval or 5.0)
   enemy.auraTimer = 0
   enemy.lostTimer = 0
   enemy.stuckTimer = 0
   if def.bossKind == "organ" then
-    enemy.armTimer = def.armFirstDelay or 2.2
+    enemy.armTimer = enemy:cooldown(def.armFirstDelay or 2.2)
     enemy.armState = nil
     enemy.armWindupTimer = 0
     enemy.armPullTimer = 0
     enemy.armAttachedPlayer = nil
-    enemy.healerTimer = def.healerFirstDelay or 5.0
+    enemy.healerTimer = enemy:cooldown(def.healerFirstDelay or 5.0)
   elseif def.bossKind == "chrono" then
-    enemy.echoTimer = def.echoFirstDelay or 2.5
+    enemy.echoTimer = enemy:cooldown(def.echoFirstDelay or 2.5)
     enemy.rewindUsed = false
   end
 end
@@ -97,7 +98,10 @@ local function summonAround(enemy, run, kind)
     math.sin(angle) * distance,
     def.radius
   )
-  local minion = run:createEnemy(kind, x, y, { noElite = true })
+  local minion = run:createEnemy(kind, x, y, {
+    noElite = true,
+    noEscort = true,
+  })
   FX.ring(x, y, def.radius + 6, def.color)
   if minion then
     maybeSpawnBrokenAutomata(enemy, run, minion)
@@ -114,7 +118,7 @@ local function startPatriarchPhase(enemy, run)
       rotation = enemy.def.beamRotation,
       length = enemy.def.beamLength,
       width = enemy.def.beamWidth,
-      damage = enemy.def.beamDamage,
+      damage = enemy.def.beamDamage * Compases.enemyDamageMultiplier(run),
       life = enemy.def.phaseDuration,
       interval = Data.hazards.beamTick,
       color = { 0.88, 0.78, 0.48 },
@@ -128,7 +132,7 @@ local function updatePatriarch(enemy, dt, run, ctx)
   enemy.invulnTimer = math.max(0, enemy.invulnTimer - dt)
   enemy.summonTimer = enemy.summonTimer - dt
   if enemy.summonTimer <= 0 then
-    enemy.summonTimer = enemy.def.summonInterval
+    enemy.summonTimer = enemy:cooldown(enemy.def.summonInterval)
     summonAround(enemy, run, enemy.def.summonKind)
   end
 
@@ -151,7 +155,7 @@ end
 local function updateForge(enemy, dt, run)
   enemy.zoneTimer = enemy.zoneTimer - dt
   if enemy.zoneTimer <= 0 then
-    enemy.zoneTimer = enemy.def.zoneInterval
+    enemy.zoneTimer = enemy:cooldown(enemy.def.zoneInterval)
     local player = run.player
     for i = 1, enemy.def.zoneCount do
       local angle = (math.pi * 2 / enemy.def.zoneCount) * (i - 1)
@@ -163,7 +167,7 @@ local function updateForge(enemy, dt, run)
         radius = enemy.def.zoneRadius,
         delay = enemy.def.zoneDelay,
         life = enemy.def.zoneDuration,
-        damage = enemy.def.zoneDamage,
+        damage = enemy.def.zoneDamage * Compases.enemyDamageMultiplier(run),
         interval = 0.5,
         color = { 1.00, 0.24, 0.14 },
       })
@@ -172,7 +176,7 @@ local function updateForge(enemy, dt, run)
 
   enemy.summonTimer = enemy.summonTimer - dt
   if enemy.summonTimer <= 0 then
-    enemy.summonTimer = enemy.def.summonInterval
+    enemy.summonTimer = enemy:cooldown(enemy.def.summonInterval)
     summonAround(enemy, run, enemy.def.summonKind)
   end
 end
@@ -270,12 +274,12 @@ local function updateChrono(enemy, dt, run, ctx)
   enemy.echoTimer = math.max(0, (enemy.echoTimer or 0) - dt)
 
   if enemy.echoTimer <= 0 then
-    enemy.echoTimer = def.echoInterval or 4.2
+    enemy.echoTimer = enemy:cooldown(def.echoInterval or 4.2)
     spawnChronoEcho(enemy, run)
   end
 
   if enemy.auraTimer <= 0 then
-    enemy.auraTimer = def.auraInterval or 0.7
+    enemy.auraTimer = enemy:cooldown(def.auraInterval or 0.7)
     local reach = (def.auraRadius or 120) + run.player.radius
     if Util.dist2(enemy.x, enemy.y, run.player.x, run.player.y) <= reach * reach
       and run.dungeon:lineOfSight(enemy.x, enemy.y, run.player.x, run.player.y)
@@ -317,7 +321,7 @@ local function updateChrono(enemy, dt, run, ctx)
   end
 
   if enemy.coneTimer <= 0 then
-    enemy.coneTimer = def.coneInterval
+    enemy.coneTimer = enemy:cooldown(def.coneInterval)
     if ctx.canSee and ctx.distance <= def.coneRange then
       local angle = Util.atan2(ctx.dy, ctx.dx)
       run:spawnHazard("cone", enemy.x, enemy.y, {
@@ -347,7 +351,7 @@ local function updateGuardian(enemy, dt, run, ctx)
     moveToward(enemy, dt, run, ctx.dx, ctx.dy, ctx.distance, 1)
     enemy.bossTimer = enemy.bossTimer - dt
     if enemy.bossTimer <= 0 then
-      enemy.bossTimer = Data.enemyAI.bossShootInterval
+      enemy.bossTimer = enemy:cooldown(Data.enemyAI.bossShootInterval)
       for i = 0, Data.enemyAI.bossProjectileCount - 1 do
         run:spawnProjectile(
           enemy.x,
@@ -436,7 +440,7 @@ local function updateOrganZones(enemy, dt, run)
   -- Igual que la Forja, las zonas apuntan al jugador aunque no haya visión.
   local tx, ty = run.player.x, run.player.y
 
-  enemy.zoneTimer = def.zoneInterval
+  enemy.zoneTimer = enemy:cooldown(def.zoneInterval)
   for i = 1, def.zoneCount do
     local angle = (math.pi * 2 / def.zoneCount) * (i - 1)
       + love.math.random() * 0.5
@@ -445,7 +449,7 @@ local function updateOrganZones(enemy, dt, run)
       radius = def.zoneRadius,
       delay = def.zoneDelay,
       life = def.zoneDuration,
-      damage = def.zoneDamage,
+      damage = def.zoneDamage * Compases.enemyDamageMultiplier(run),
       interval = 0.5,
       color = { 0.78, 0.46, 1.00 },
     })
@@ -482,7 +486,7 @@ local function updateOrganArmState(enemy, dt, run)
         enemy.armState = nil
         enemy.armAttachedPlayer = nil
       end
-      enemy.armTimer = def.armInterval or 4.8
+      enemy.armTimer = enemy:cooldown(def.armInterval or 4.8)
     end
     return true
   end
@@ -527,7 +531,7 @@ local function startOrganPhase(enemy, run)
       rotation = enemy.def.beamRotation,
       length = enemy.def.beamLength,
       width = enemy.def.beamWidth,
-      damage = enemy.def.beamDamage,
+      damage = enemy.def.beamDamage * Compases.enemyDamageMultiplier(run),
       life = enemy.def.phaseDuration,
       interval = Data.hazards.beamTick,
       color = { 0.78, 0.46, 1.00 },
@@ -545,7 +549,7 @@ local function updateOrgan(enemy, dt, run, ctx)
 
   enemy.summonTimer = enemy.summonTimer - dt
   if enemy.summonTimer <= 0 then
-    enemy.summonTimer = def.summonInterval
+    enemy.summonTimer = enemy:cooldown(def.summonInterval)
     summonRandomAround(enemy, run)
   end
 
@@ -556,7 +560,7 @@ local function updateOrgan(enemy, dt, run, ctx)
     and playerRatio >= bossRatio + (def.healerLead or 0.20)
   if enemy.healerTimer <= 0 and winning then
     summonHealerAround(enemy, run)
-    enemy.healerTimer = def.healerInterval or 7.0
+    enemy.healerTimer = enemy:cooldown(def.healerInterval or 7.0)
   end
 
   if enemy.invulnTimer <= 0 then

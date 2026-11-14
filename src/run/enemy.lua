@@ -3,6 +3,7 @@ local Data = require("src.run.data")
 local Util = require("src.utils.util")
 local Boss = require("src.run.boss")
 local FX = require("src.run.fx")
+local Compases = require("src.run.compases")
 
 local Enemy = {}
 Enemy.__index = Enemy
@@ -23,8 +24,10 @@ function Enemy.new(kind, x, y, hp, damage, xp, options)
   self.xp = xp or def.xp
   self.phase = love.math.random() * math.pi * 2
   self.hitFlash = 0
-  self.shootTimer = def.firstAttackDelay or 0
+  self.shootTimer = (def.firstAttackDelay or 0)
+    * (options.attackCooldownMultiplier or 1)
   self.bossTimer = Data.enemyAI.bossFirstShotDelay
+    * (options.attackCooldownMultiplier or 1)
   self.contactTimer = 0
   self.dead = false
   self.markTimer = 0
@@ -42,14 +45,46 @@ function Enemy.new(kind, x, y, hp, damage, xp, options)
   self.trapSide = 1
 
   self.elite = options.elite
+  self.affixes = options.affixes
+    or (options.elite and { options.elite })
+    or {}
+  if not self.elite and #self.affixes > 0 then
+    self.elite = self.affixes[1]
+  end
+  self.attackCooldownMultiplier = options.attackCooldownMultiplier or 1
+  self.immuneToStun = options.immuneToStun == true
   self.eliteTimer = love.math.random() * Data.elite.spectralCycle
   self.intangible = false
-  self.shield = self.elite == "armored" and Data.elite.armoredShield or 0
+  self.shield = self:hasAffix("armored") and Data.elite.armoredShield or 0
+  self.chronosTimer = self:hasAffix("chronos")
+    and love.math.random() * Data.elite.chronosInterval
+    or 0
+  self.mirrorTimer = self:hasAffix("mirror")
+    and Data.elite.mirrorDuration
+    or 0
+  self.mirrorCooldownTimer = 0
+  self.facingX = 1
+  self.facingY = 0
 
   if def.boss then
     Boss.init(self)
   end
   return self
+end
+
+function Enemy:hasAffix(id)
+  for _, affix in ipairs(self.affixes or {}) do
+    if affix == id then return true end
+  end
+  return false
+end
+
+function Enemy:isElite()
+  return #(self.affixes or {}) > 0
+end
+
+function Enemy:cooldown(base)
+  return (base or 0) * (self.attackCooldownMultiplier or 1)
 end
 
 function Enemy:canBeAffected()
@@ -74,7 +109,7 @@ end
 
 function Enemy:applyStun(duration)
   -- Los jefes no se aturden: la pólvora y el perro no deben anular su IA.
-  if self.def.boss then return false end
+  if self.def.boss or self.immuneToStun then return false end
   self.stunTimer = math.max(self.stunTimer, duration or 0)
   return true
 end
@@ -94,6 +129,8 @@ function Enemy:move(dt, run, dx, dy, scale)
   local distance = math.sqrt(dx * dx + dy * dy)
   if distance <= 0.001 then return end
   local speed = self:movementSpeed() * (scale or 1)
+  self.facingX = dx / distance
+  self.facingY = dy / distance
   self.x, self.y = run.dungeon:moveCircle(
     self.x,
     self.y,
@@ -107,6 +144,7 @@ function Enemy:shoot(run, target, options)
   options = options or {}
   local angle = Util.atan2(target.y - self.y, target.x - self.x)
   if options.angle then angle = options.angle end
+  options.sourceEnemy = self
   run:spawnProjectile(
     self.x,
     self.y,
@@ -175,7 +213,7 @@ function Enemy:updateRanged(dt, run, target, distance, nx, ny)
 
   self.shootTimer = self.shootTimer - dt
   if distance > ai.shootRange and self.shootTimer <= 0 then
-    self.shootTimer = ai.shootInterval
+    self.shootTimer = self:cooldown(ai.shootInterval)
     self:shoot(run, target, {
       damageScale = ai.shootDamageScale,
     })
@@ -187,7 +225,7 @@ function Enemy:updateTurret(dt, run, target, distance)
   if distance > (def.attackRange or 500) then return end
   self.shootTimer = self.shootTimer - dt
   if self.shootTimer <= 0 then
-    self.shootTimer = def.attackInterval or 3
+    self.shootTimer = self:cooldown(def.attackInterval or 3)
     self:shoot(run, target, {
       damageScale = def.projectileScale or 1,
       speed = def.projectileSpeed,
@@ -207,14 +245,15 @@ function Enemy:updateMortar(dt, run, target, distance, nx, ny)
 
   self.shootTimer = self.shootTimer - dt
   if self.shootTimer <= 0 then
-    self.shootTimer = def.attackInterval or 3.2
+    self.shootTimer = self:cooldown(def.attackInterval or 3.2)
     run:spawnHazard("fire", target.x, target.y, {
       radius = def.mortarRadius,
       delay = def.mortarDelay,
       life = def.fireDuration,
-      damage = def.mortarDamage,
+      damage = def.mortarDamage * Compases.enemyDamageMultiplier(run),
       interval = 0.5,
       color = { 1.00, 0.38, 0.14 },
+      sourceEnemy = self,
     })
     FX.ring(target.x, target.y, def.mortarRadius, { 1.00, 0.38, 0.14 })
   end
@@ -231,7 +270,7 @@ function Enemy:updateHealer(dt, run, distance, nx, ny)
 
   self.shootTimer = self.shootTimer - dt
   if self.shootTimer <= 0 then
-    self.shootTimer = def.attackInterval or 4
+    self.shootTimer = self:cooldown(def.attackInterval or 4)
     run:healEnemiesAround(self.x, self.y, def.healRadius, def.healPercent)
   end
 end
@@ -246,7 +285,7 @@ function Enemy:updateSummoner(dt, run, distance, nx, ny)
 
   self.shootTimer = self.shootTimer - dt
   if self.shootTimer <= 0 then
-    self.shootTimer = def.attackInterval or 6
+    self.shootTimer = self:cooldown(def.attackInterval or 6)
     local count = 0
     for _, enemy in ipairs(run.enemies) do
       if not enemy.dead and enemy.kind == def.summonKind then
@@ -283,13 +322,14 @@ function Enemy:updateTrapper(dt, run, target, nx, ny)
 
   self.shootTimer = self.shootTimer - dt
   if self.shootTimer <= 0 then
-    self.shootTimer = def.attackInterval or 2.6
+    self.shootTimer = self:cooldown(def.attackInterval or 2.6)
     self.trapSide = -self.trapSide
     run:spawnHazard("mine", self.x, self.y, {
       delay = Data.hazards.mineArm,
       life = Data.hazards.mineLife,
       radius = Data.hazards.mineExplosionRadius,
-      damage = Data.hazards.mineDamage,
+      damage = Data.hazards.mineDamage * Compases.enemyDamageMultiplier(run),
+      sourceEnemy = self,
     })
   end
 end
@@ -307,7 +347,7 @@ function Enemy:updateBlight(dt, run, target, distance, nx, ny)
     and distance > 60
     and self.shootTimer <= 0
   then
-    self.shootTimer = def.attackInterval or 3.4
+    self.shootTimer = self:cooldown(def.attackInterval or 3.4)
     self:shoot(run, target, {
       damageScale = 0.9,
       speed = 190,
@@ -333,7 +373,7 @@ function Enemy:updateManaHunter(dt, run, target, distance, nx, ny)
 
   self.shootTimer = self.shootTimer - dt
   if distance <= (def.attackRange or 470) and self.shootTimer <= 0 then
-    self.shootTimer = def.attackInterval or 3.4
+    self.shootTimer = self:cooldown(def.attackInterval or 3.4)
     self:shoot(run, target, {
       damageScale = 0.85,
       speed = def.projectileSpeed or 235,
@@ -379,7 +419,8 @@ function Enemy:updateContact(dt, run, target, distance, nx, ny, canSee, targetin
 
   local hit = target:takeDamage(
     self.damage * Data.enemyAI.contactDamageScale,
-    run
+    run,
+    self
   )
   if not hit then return end
 
@@ -399,6 +440,74 @@ function Enemy:updateContact(dt, run, target, distance, nx, ny, canSee, targetin
   )
 end
 
+function Enemy:hasGuardianAura(run)
+  if not run or not run.enemies then return false end
+  local radius = Data.elite.guardianRadius
+  for _, other in ipairs(run.enemies) do
+    if other ~= self and not other.dead and other:hasAffix("guardian") then
+      local reach = radius + self.radius
+      if Util.dist2(self.x, self.y, other.x, other.y) <= reach * reach then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+function Enemy:updateAffixTimers(dt, run)
+  if self:hasAffix("mirror") then
+    if self.mirrorTimer > 0 then
+      self.mirrorTimer = math.max(0, self.mirrorTimer - dt)
+      if self.mirrorTimer == 0 then
+        self.mirrorCooldownTimer = Data.elite.mirrorCooldown
+      end
+    elseif self.mirrorCooldownTimer > 0 then
+      self.mirrorCooldownTimer = math.max(0, self.mirrorCooldownTimer - dt)
+      if self.mirrorCooldownTimer == 0 then
+        self.mirrorTimer = Data.elite.mirrorDuration
+      end
+    end
+  end
+
+  if self:hasAffix("chronos") and self.stunTimer <= 0 then
+    self.chronosTimer = (self.chronosTimer or 0) - dt
+    if self.chronosTimer <= 0 then
+      self.chronosTimer = Data.elite.chronosInterval
+      local player = run and run.player
+      local radius = Data.elite.chronosRadius
+      if player then
+        local reach = radius + player.radius
+        if Util.dist2(self.x, self.y, player.x, player.y) <= reach * reach then
+          player:applySlow(Data.elite.chronosDuration, 1 - Data.elite.chronosSlow)
+        end
+      end
+      FX.ring(self.x, self.y, radius, { 0.52, 0.72, 1.00 })
+    end
+  end
+end
+
+function Enemy:onDamageDealt(amount, run)
+  if amount <= 0 or not self:hasAffix("vampiric") or self.dead then return end
+  local heal = amount * Data.elite.vampiricHealPercent
+  if self.hp < self.maxHp then
+    self.hp = math.min(self.maxHp, self.hp + heal)
+    FX.add("+" .. math.floor(heal) .. " vida", self.x, self.y - self.radius - 18, { 0.95, 0.30, 0.32 })
+  end
+end
+
+function Enemy:shouldReflect(run)
+  if self.mirrorTimer <= 0 or not run or not run.player then
+    return false
+  end
+  local dx = run.player.x - self.x
+  local dy = run.player.y - self.y
+  local distance = math.sqrt(dx * dx + dy * dy)
+  if distance <= 0.001 then return true end
+  local dot = (dx / distance) * (self.facingX or 1)
+    + (dy / distance) * (self.facingY or 0)
+  return dot >= 0.15
+end
+
 function Enemy:update(dt, run)
   self.hitFlash = math.max(0, self.hitFlash - dt * Data.enemyAI.hitFlashDecay)
   self.markTimer = math.max(0, self.markTimer - dt)
@@ -408,10 +517,12 @@ function Enemy:update(dt, run)
     self.extraSlowFactor = 1
   end
 
-  if self.elite == "spectral" then
+  if self:hasAffix("spectral") then
     self.eliteTimer = (self.eliteTimer + dt) % Data.elite.spectralCycle
     self.intangible = self.eliteTimer < Data.elite.spectralDuration
   end
+
+  self:updateAffixTimers(dt, run)
 
   if self.poisonTimer > 0 then
     self.poisonTimer = math.max(0, self.poisonTimer - dt)
@@ -482,6 +593,10 @@ function Enemy:takeDamage(amount, run, source)
   if self.dead then return 0 end
   if (self.invulnTimer or 0) > 0 or self.intangible then return 0 end
 
+  if run and run.enemies and self:hasGuardianAura(run) then
+    amount = amount * (1 - Data.elite.guardianDamageReduction)
+  end
+
   if (self.shield or 0) > 0 then
     local absorbed = math.min(self.shield, amount)
     self.shield = self.shield - absorbed
@@ -496,6 +611,18 @@ function Enemy:takeDamage(amount, run, source)
 
   self.hp = self.hp - amount
   self.hitFlash = 1
+
+  if run
+    and run.player
+    and source ~= "poison"
+    and source ~= "elite"
+    and source ~= "hazard"
+    and self:shouldReflect(run)
+  then
+    run.player:takeDamage(amount * Data.elite.mirrorReflect, run)
+    FX.ring(self.x, self.y, self.radius + 10, { 0.78, 0.88, 1.00 })
+  end
+
   if run and run.onEnemyDamaged then
     run:onEnemyDamaged(self, amount, source or "basic")
   end
@@ -536,17 +663,47 @@ function Enemy:draw()
   love.graphics.setColor(0.10, 0.10, 0.12, alpha)
   love.graphics.circle("fill", self.x, self.y, radius * 0.35)
 
-  if self.elite then
+  if self:isElite() then
     local t = love.timer.getTime()
-    if self.elite == "volatile" then
-      love.graphics.setColor(1.00, 0.48, 0.20, 0.85)
-    elseif self.elite == "armored" then
-      love.graphics.setColor(0.56, 0.72, 0.92, 0.85)
-    else
-      love.graphics.setColor(0.62, 0.86, 1.00, 0.85)
-    end
+    local colors = {
+      volatile = { 1.00, 0.48, 0.20, 0.85 },
+      armored = { 0.56, 0.72, 0.92, 0.85 },
+      spectral = { 0.62, 0.86, 1.00, 0.85 },
+      vampiric = { 0.90, 0.24, 0.30, 0.85 },
+      chronos = { 0.52, 0.72, 1.00, 0.85 },
+      guardian = { 0.82, 0.74, 0.36, 0.85 },
+      mirror = { 0.90, 0.92, 1.00, 0.85 },
+    }
     love.graphics.setLineWidth(2)
-    love.graphics.circle("line", self.x, self.y, radius + 5 + math.sin(t * 6) * 1.5)
+    for index, affix in ipairs(self.affixes) do
+      local color = colors[affix] or { 0.80, 0.80, 0.80, 0.85 }
+      love.graphics.setColor(color[1], color[2], color[3], color[4])
+      love.graphics.circle(
+        "line",
+        self.x,
+        self.y,
+        radius + 5 + index * 2 + math.sin(t * 6 + index) * 1.5
+      )
+    end
+    love.graphics.setLineWidth(1)
+  end
+
+  if self:hasAffix("chronos") then
+    love.graphics.setColor(0.52, 0.72, 1.00, 0.22)
+    love.graphics.circle("line", self.x, self.y, Data.elite.chronosRadius)
+  end
+
+  if self:hasAffix("guardian") then
+    love.graphics.setColor(0.82, 0.74, 0.36, 0.20)
+    love.graphics.circle("line", self.x, self.y, Data.elite.guardianRadius)
+  end
+
+  if self.mirrorTimer > 0 then
+    local facing = Util.atan2(self.facingY or 0, self.facingX or 1)
+    love.graphics.setColor(0.82, 0.90, 1.00, 0.90)
+    love.graphics.setLineWidth(3)
+    love.graphics.arc("line", "open", self.x, self.y, radius + 12,
+      facing - math.pi * 0.5, facing + math.pi * 0.5)
     love.graphics.setLineWidth(1)
   end
 

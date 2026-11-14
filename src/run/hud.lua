@@ -153,7 +153,7 @@ end
 function HUD.draw(run)
   HUD.layout()
   love.graphics.setColor(0.05, 0.06, 0.08, 0.82)
-  love.graphics.rectangle("fill", 10, 8, 500, 122, 8, 8)
+  love.graphics.rectangle("fill", 10, 8, 500, 138, 8, 8)
 
   love.graphics.setFont(Fonts.small)
   if run.mode == "story" then
@@ -287,6 +287,16 @@ function HUD.draw(run)
     love.graphics.print("Escudo (E) y Turbo (T) siempre disponibles", 20, 104)
   end
 
+  local compas = run.compases
+  if compas then
+    love.graphics.setColor(0.90, 0.76, 0.42)
+    love.graphics.print(
+      TextCache.format("hud-compas", "%s", compas.label),
+      20,
+      120
+    )
+  end
+
   local beatsPerBar = Data.rhythm.beatsPerBar or 4
   local strong = Data.colors.beatStrong
   local beatInBar = -1
@@ -384,7 +394,7 @@ function HUD.drawBoss(run)
   if not boss or boss.dead then return end
 
   local w = 280
-  local x, y = (Screen.width - w) * 0.5, 132
+  local x, y = (Screen.width - w) * 0.5, 148
   love.graphics.setColor(0.05, 0.06, 0.08, 0.88)
   love.graphics.rectangle("fill", x, y, w, 22, 6, 6)
 
@@ -442,6 +452,12 @@ function HUD.drawPause(run)
   )
 
   love.graphics.setFont(Fonts.small)
+  if run.compases then
+    love.graphics.setColor(0.90, 0.76, 0.42)
+    love.graphics.printf(TextCache.format("pause-compas", "%s", run.compases.label),
+      px, py + 136, panelW, "center")
+  end
+
   love.graphics.setColor(0.55, 0.62, 0.70)
   love.graphics.printf(
     "Izquierda: moverte · Centro: arrastra para mirar · A1/A2 se asignan en la mochila.",

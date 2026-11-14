@@ -231,7 +231,7 @@ function Player:update(dt, dx, dy, run)
   end
 end
 
-function Player:takeDamage(amount, run)
+function Player:takeDamage(amount, run, sourceEnemy)
   if run.over then return false end
   if run.sandbox and run.sandboxInvuln then return false end
   if self.invuln > 0 then return false end
@@ -248,6 +248,9 @@ function Player:takeDamage(amount, run)
   if amount > 0 then
     run.hp = run.hp - amount
     if run.shake then run:shake(3, 0.16) end
+    if sourceEnemy and sourceEnemy.onDamageDealt then
+      sourceEnemy:onDamageDealt(amount, run)
+    end
   end
 
   self.invuln = Data.player.invulnTime

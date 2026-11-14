@@ -7,12 +7,72 @@ local Enemy = require("src.run.enemy")
 local Hazard = require("src.run.hazard")
 local Projectile = require("src.run.projectile")
 local Threat = require("src.run.threat")
+local Compases = require("src.run.compases")
+local Elites = require("src.run.elite")
 local Chest = require("src.run.chest")
 local Shadow = require("src.run.shadow")
 local Pet = require("src.run.pet")
 local FX = require("src.run.fx")
 
 local Spawner = {}
+
+function Spawner.isClericTank(kind)
+  for _, tankKind in ipairs(Data.clericEscort.tanks) do
+    if tankKind == kind then return true end
+  end
+  return false
+end
+
+-- Devuelve el tanque vivo más cercano, no solo el primero de la lista.
+function Spawner.clericEscort(run, x, y)
+  local best, bestD2 = nil, math.huge
+  for _, enemy in ipairs(run.enemies or {}) do
+    if not enemy.dead and Spawner.isClericTank(enemy.kind) then
+      local d2 = 0
+      if x and y then
+        local dx = enemy.x - x
+        local dy = enemy.y - y
+        d2 = dx * dx + dy * dy
+      end
+      if d2 < bestD2 then
+        best, bestD2 = enemy, d2
+      end
+    end
+  end
+  return best
+end
+
+-- Punto de aparición a menos de 120 px del tanque, sin atravesar paredes.
+function Spawner.clericEscortPoint(run, tank, def)
+  local cfg = Data.clericEscort
+  local random = run.dungeon.rng
+  for _ = 1, cfg.attempts do
+    local angle = random:random() * math.pi * 2
+    local distance = cfg.minDistance
+      + random:random() * (cfg.maxDistance - cfg.minDistance)
+    local x, y = run.dungeon:nearestWalkable(
+      tank.x + math.cos(angle) * distance,
+      tank.y + math.sin(angle) * distance,
+      def.radius,
+      cfg.maxDistance
+    )
+    if x then
+      local dx = x - tank.x
+      local dy = y - tank.y
+      if dx * dx + dy * dy <= cfg.maxDistance * cfg.maxDistance then
+        return x, y
+      end
+    end
+  end
+
+  local x, y = run.dungeon:nearestWalkable(
+    tank.x + tank.radius + def.radius + 8,
+    tank.y,
+    def.radius,
+    cfg.maxDistance
+  )
+  return x or tank.x, y or tank.y
+end
 
 function Spawner.createEnemy(run, kind, x, y, options)
   options = options or {}
@@ -22,17 +82,34 @@ function Spawner.createEnemy(run, kind, x, y, options)
   local hpScale = 1 + (run.depth - 1) * run.def.hpScale
   local damageScale = 1 + (run.depth - 1) * run.def.damageScale
   local hp = options.hp or math.floor(def.hp * hpScale)
-  local damage = options.damage or math.floor(def.damage * damageScale)
+  local damage = (options.damage or math.floor(def.damage * damageScale))
+    * Compases.enemyDamageMultiplier(run)
 
-  local elite = options.elite
-  if not elite and not options.noElite and not def.boss and not def.noElite then
-    if run.dungeon.rng:random() < Data.elite.chance then
-      local roll = run.dungeon.rng:random(1, 3)
-      elite = roll == 1 and "volatile" or (roll == 2 and "armored" or "spectral")
+  -- Un Clérigo siempre nace junto a un tanque; si no existe, se crea la
+  -- escolta antes para que nunca quede solo ni únicamente con Clérigos.
+  if kind == "clerigo" and not options.noEscort then
+    local tank = Spawner.clericEscort(run, x, y)
+    if not tank then
+      local tankKind = Data.clericEscort.fallbackTank
+      local tankDef = Data.enemyTypes[tankKind]
+      local tx, ty = run.dungeon:nearestWalkable(x, y, tankDef.radius, 120)
+      tank = Spawner.createEnemy(run, tankKind, tx or x, ty or y, {
+        noElite = true,
+        noEscort = true,
+      })
+    end
+    if tank then
+      x, y = Spawner.clericEscortPoint(run, tank, def)
     end
   end
 
-  local enemy = Enemy.new(kind, x, y, hp, damage, def.xp, { elite = elite })
+  local affixes = Elites.roll(run, def, options)
+  local enemy = Enemy.new(kind, x, y, hp, damage, def.xp, {
+    elite = options.elite,
+    affixes = affixes,
+    attackCooldownMultiplier = Compases.enemyCooldownMultiplier(run),
+    immuneToStun = options.immuneToStun,
+  })
   run.enemies[#run.enemies + 1] = enemy
   if not run.sandbox then
     Save.discoverEnemy(kind)

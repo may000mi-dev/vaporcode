@@ -105,11 +105,55 @@ ser élite.
 
 ## Élites
 
-15% de probabilidad por enemigo elegible. Un élite añade un modificador:
+En Modo Historia se conserva la tirada original: 15% por enemigo elegible y un
+solo afijo entre volátil, blindado y espectral. En Modo Infinito la probabilidad
+crece con el piso (10% en el 1, 20% en el 5, 35% desde el 10) y los afijos se
+acumulan:
+
+- Pisos 1–6: un afijo.
+- Pisos 7–12: 30% de dos afijos.
+- Pisos 13+: 60% de dos afijos.
+
+Los afijos disponibles son:
 
 - **volátil**: explota al morir (radio 90, 1.5x de daño).
 - **blindado**: escudo de 50.
 - **espectral**: se vuelve intocable 0.5 s cada 2 s.
+- **vampírico**: cura 20% del daño infligido al jugador.
+- **cronos**: pulso cada 4 s; ralentiza −30% durante 2 s en radio 150.
+- **guardián**: los demás enemigos a menos de 180 px reciben 20% menos daño.
+- **espejo**: escudo frontal de 1.5 s cada 6 s; refleja 30% del daño recibido.
+
+La tirada vive en `src/run/elite.lua` y los valores en `Enemies.elite`. Los
+proyectiles, hazards y el contacto propagan `sourceEnemy` para que vampírico cure
+solo cuando el daño llega al jugador.
+
+Los **Clérigos** nunca quedan solos: al nacer buscan un tanque vivo (autómata,
+caldera o engranaje) a 40–120 px; si no existe, crean un autómata de respaldo. Las
+oleadas con Clérigo incluyen al menos un tanque y lo despliegan antes que al
+sanador. Los Clérigos invocados por jefes de Historia están exentos para no alterar
+la campaña.
+
+## Compases (Modo Infinito)
+
+Cada 3 pisos se activa un compás nuevo. La cadena conserva un máximo de 3 efectos
+y se genera de forma determinista a partir de `run.seed` y el piso, de modo que un
+reintento reproduce los mismos compases sin repetir efectos dentro de la ventana
+activa. El HUD muestra la etiqueta `Compás I · Presión · Sobrecarga`.
+
+| Compás | Efecto |
+|---|---|
+| Presión | Daño enemigo ×1.15. |
+| Sobrecarga | Intervalo de ataque enemigo ×0.83 (también jefes). |
+| Legión | Presupuesto de amenaza ×1.25. |
+| Eco | Hazard telegrafiado de 1.5 s sobre el jugador cada 10 s; radio 64 y daño `10 + (piso−1)×2`. |
+| Hambruna | Toda la curación del jugador ×0.60. |
+| Cacería | Un Sabueso élite vampírico e inmune al aturdimiento. |
+| Sello | Un Inquisidor garantizado; los bloqueos de habilidad duran 1 s más. |
+| Coro | Un Clérigo garantizado; la curación enemiga ×1.25. |
+
+Las garantías se integran al presupuesto de amenaza de la oleada. Los datos están
+en `src/data/compases.lua` y el estado/actualización en `src/run/compases.lua`.
 
 ## Presupuesto de amenaza (Modo Infinito)
 

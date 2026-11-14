@@ -9,6 +9,7 @@ local FX = require("src.run.fx")
 local Audio = require("src.utils.audio")
 local Util = require("src.utils.util")
 local Threat = require("src.run.threat")
+local Compases = require("src.run.compases")
 
 local Progression = {}
 
@@ -25,7 +26,10 @@ function Progression.addXp(run, amount)
     run.xpToNext = run:xpForLevel(run.playerLevel)
     run.stats.damage = run.stats.damage + Data.player.levelDamage
     run.stats.maxHp = run.stats.maxHp + Data.player.levelMaxHp
-    run.hp = math.min(run.stats.maxHp, run.hp + Data.player.levelHeal)
+    local levelHeal = math.floor(
+      Data.player.levelHeal * Compases.playerHealingMultiplier(run)
+    )
+    run.hp = math.min(run.stats.maxHp, run.hp + levelHeal)
     run.player:refreshShield(run.stats.maxHp)
     FX.add(
       "¡Nivel " .. run.playerLevel .. "!",
@@ -110,7 +114,11 @@ function Progression.nextLevel(run)
   run.depth = reached
   run.hp = math.min(
     run.stats.maxHp,
-    run.hp + math.floor(run.stats.maxHp * Data.player.nextLevelHealPercent)
+    run.hp + math.floor(
+      run.stats.maxHp
+        * Data.player.nextLevelHealPercent
+        * Compases.playerHealingMultiplier(run)
+    )
   )
   local unlockMessages = run:commitUnlockNotices()
   run.overlay = nil

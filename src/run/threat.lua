@@ -2,6 +2,7 @@
 -- El Modo Historia no entra aquí: sigue usando el spawn plano de spawner.lua.
 local Data = require("src.run.data")
 local Util = require("src.utils.util")
+local Compases = require("src.run.compases")
 
 local Threat = {}
 
@@ -293,6 +294,107 @@ function Threat.splitWaves(run, units, totalCost, roomCount)
   return waves
 end
 
+local function isTankKind(kind)
+  for _, tankKind in ipairs(Data.clericEscort.tanks) do
+    if tankKind == kind then return true end
+  end
+  return false
+end
+
+local function containsKind(units, kind)
+  for _, own in ipairs(units) do
+    if own == kind then return true end
+  end
+  return false
+end
+
+-- Inserta las apariciones garantizadas por compases sin perder el gasto
+-- original: primero usa presupuesto sobrante y luego trueca una unidad.
+function Threat.applyGuarantees(run, units, budget, spent)
+  local guarantees = Compases.guarantees(run)
+  local protected = {}
+  for _, kind in ipairs(guarantees) do
+    protected[kind] = true
+  end
+
+  for _, kind in ipairs(guarantees) do
+    if not containsKind(units, kind) then
+      local cost = Threat.cost(kind)
+      if budget - spent >= cost then
+        units[#units + 1] = kind
+        spent = spent + cost
+      else
+        local replaced = false
+        for index = #units, 1, -1 do
+          local old = units[index]
+          if not protected[old] and Threat.cost(old) >= cost then
+            spent = spent - Threat.cost(old) + cost
+            units[index] = kind
+            replaced = true
+            break
+          end
+        end
+        if not replaced then
+          units[#units + 1] = kind
+          spent = spent + cost
+        end
+      end
+    end
+  end
+  return spent
+end
+
+-- Asegura que ninguna oleada con Clérigo quede sin tanque y coloca los
+-- tanques antes que los Clérigos en la cola de aparición.
+function Threat.enforceEscorts(run, waves)
+  local cfg = Data.clericEscort
+  for _, wave in ipairs(waves) do
+    local hasCleric, hasTank = false, false
+    for _, kind in ipairs(wave.units) do
+      if kind == "clerigo" then hasCleric = true end
+      if isTankKind(kind) then hasTank = true end
+    end
+
+    if hasCleric and not hasTank then
+      local replaced = false
+      for index = 1, #wave.units do
+        if wave.units[index] ~= "clerigo" then
+          wave.units[index] = cfg.fallbackTank
+          replaced = true
+          break
+        end
+      end
+      if not replaced then
+        wave.units[#wave.units + 1] = cfg.fallbackTank
+      end
+    end
+
+    local ordered = {}
+    for _, kind in ipairs(wave.units) do
+      if isTankKind(kind) then ordered[#ordered + 1] = kind end
+    end
+    for _, kind in ipairs(wave.units) do
+      if kind == "clerigo" then ordered[#ordered + 1] = kind end
+    end
+    for _, kind in ipairs(wave.units) do
+      if not isTankKind(kind) and kind ~= "clerigo" then
+        ordered[#ordered + 1] = kind
+      end
+    end
+
+    wave.units = ordered
+    wave.total = #ordered
+    wave.cost = 0
+    for _, kind in ipairs(ordered) do
+      wave.cost = wave.cost + Threat.cost(kind)
+    end
+    wave.nextAt = math.max(
+      1,
+      math.ceil(wave.total * config().nextWaveKillRatio)
+    )
+  end
+end
+
 local function randomSpawnPoint(run, def)
   local cfg = config()
   local x, y = run.dungeon:randomFloorPoint(
@@ -334,7 +436,20 @@ function Threat.spawnFromQueue(run)
     if def then
       local x, y = randomSpawnPoint(run, def)
       if x then
-        local enemy = run:createEnemy(kind, x, y)
+        local options
+        if state.hunterAffix
+          and not state.hunterSpawned
+          and kind == Data.compases.types.hunt.guaranteedKind
+        then
+          options = {
+            affix = state.hunterAffix,
+            forceElite = true,
+            immuneToStun = true,
+          }
+          state.hunterSpawned = true
+        end
+
+        local enemy = run:createEnemy(kind, x, y, options)
         if enemy then
           enemy.threatWave = state.activeWave
           state.spawned = state.spawned + 1
@@ -355,8 +470,16 @@ function Threat.startFloor(run)
 
   local roomCount = Threat.roomCount(run)
   local budget, size = Threat.calculateBudget(run, roomCount)
+  budget = math.max(1, math.floor(budget * Compases.threatMultiplier(run)))
   local units, spent = Threat.generateComposition(run, budget)
+  spent = Threat.applyGuarantees(run, units, budget, spent)
   local waves = Threat.splitWaves(run, units, spent, roomCount)
+  Threat.enforceEscorts(run, waves)
+
+  spent = 0
+  for _, wave in ipairs(waves) do
+    spent = spent + wave.cost
+  end
 
   local state = {
     enabled = true,
@@ -371,6 +494,8 @@ function Threat.startFloor(run)
     queueIndex = 1,
     spawned = 0,
     killsTotal = 0,
+    hunterAffix = Compases.hunterAffix(run),
+    hunterSpawned = false,
   }
   run.threat = state
 

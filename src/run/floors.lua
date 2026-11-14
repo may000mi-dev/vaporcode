@@ -18,6 +18,7 @@ local Audio = require("src.utils.audio")
 local Sandbox = require("src.run.sandbox")
 local Floor = require("src.run.floor")
 local Story = require("src.run.story")
+local Compases = require("src.run.compases")
 local FX = require("src.run.fx")
 local Util = require("src.utils.util")
 
@@ -141,6 +142,7 @@ function Floors.enterLevel(run)
   -- La semilla de la partida hace reproducibles todos sus pisos.
   local seed = run.seed + run.depth * 7919
   run.dungeon = Dungeon.new({ depth = run.depth }, seed)
+  Compases.refresh(run)
 
   local px, py = run.dungeon:spawnPoint()
   run.player = Player.new(px, py, run.characterId)

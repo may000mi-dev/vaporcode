@@ -7,6 +7,7 @@ local FX = require("src.run.fx")
 local Util = require("src.utils.util")
 local Targeting = require("src.run.targeting")
 local Threat = require("src.run.threat")
+local Compases = require("src.run.compases")
 
 local Combat = {}
 
@@ -21,9 +22,10 @@ end
 function Combat.healEnemiesAround(run, x, y, radius, percent)
   local reach2 = radius * radius
   local healed = 0
+  local multiplier = Compases.enemyHealingMultiplier(run)
   for _, enemy in ipairs(run.enemies) do
     if not enemy.dead and Util.dist2(x, y, enemy.x, enemy.y) <= reach2 then
-      local amount = enemy.maxHp * percent
+      local amount = enemy.maxHp * percent * multiplier
       if enemy.hp < enemy.maxHp then
         enemy.hp = math.min(enemy.maxHp, enemy.hp + amount)
         healed = healed + 1
@@ -32,7 +34,12 @@ function Combat.healEnemiesAround(run, x, y, radius, percent)
   end
   if healed > 0 then
     FX.ring(x, y, radius, { 0.98, 0.86, 0.38 })
-    FX.add("+15% vida enemiga", x, y - 28, { 0.98, 0.86, 0.38 })
+    FX.add(
+      string.format("+%d%% vida enemiga", math.floor(percent * multiplier * 100 + 0.5)),
+      x,
+      y - 28,
+      { 0.98, 0.86, 0.38 }
+    )
   end
   return healed
 end
@@ -135,7 +142,7 @@ function Combat.onEnemyKilled(run, enemy)
     FX.add("+" .. enemy.xp .. " XP", enemy.x, enemy.y - 14, { 0.45, 0.90, 1.00 })
     run:maybeDropItem(enemy)
   end
-  if enemy.elite == "volatile" then
+  if enemy.hasAffix and enemy:hasAffix("volatile") then
     run:explodeVolatile(enemy)
   end
   if enemy.def.boss then
@@ -178,7 +185,9 @@ function Combat.onBasicDamage(run, enemy, amount)
   if vampire > 0 then
     local def = Data.items.vampire
     local rate = synergy and def.healSynergy or def.healPerStack
-    local heal = amount * math.min(rate * vampire, def.healCap)
+    local heal = amount
+      * math.min(rate * vampire, def.healCap)
+      * Compases.playerHealingMultiplier(run)
     run.hp = math.min(run.stats.maxHp, run.hp + heal)
   end
 

@@ -21,6 +21,7 @@ local Audio = require("src.utils.audio")
 local Floors = require("src.run.floors")
 local StoryUI = require("src.run.story_ui")
 local Threat = require("src.run.threat")
+local Compases = require("src.run.compases")
 
 local Run = {
   def = nil,
@@ -375,6 +376,7 @@ function Run.update(dt)
   end
 
   Rhythm.update(dt)
+  Compases.update(Run, dt)
   Abilities.update(Run, dt)
   Run.turboTimer = math.max(0, Run.turboTimer - dt)
 

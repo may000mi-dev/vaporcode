@@ -36,6 +36,7 @@ function Hazard.new(kind, x, y, options)
   self.rotation = options.rotation or 0
   self.color = options.color or colorFor(kind)
   self.target = options.target or "player"
+  self.sourceEnemy = options.sourceEnemy
   self.dead = false
   self.armed = self.delay <= 0
   return self
@@ -46,7 +47,7 @@ function Hazard:applyEffect(run)
     if Util.dist2(self.x, self.y, run.player.x, run.player.y)
       <= (self.radius + run.player.radius) ^ 2
     then
-      run.player:takeDamage(self.damage, run)
+      run.player:takeDamage(self.damage, run, self.sourceEnemy)
     end
   elseif self.kind == "beam" then
     local endX = self.x + math.cos(self.angle) * self.length
@@ -60,7 +61,7 @@ function Hazard:applyEffect(run)
       endY
     )
     if d2 <= (self.width + run.player.radius) ^ 2 then
-      run.player:takeDamage(self.damage, run)
+      run.player:takeDamage(self.damage, run, self.sourceEnemy)
     end
   end
 end
@@ -69,7 +70,7 @@ function Hazard:explodeMine(run)
   self.dead = true
   local reach = Data.hazards.mineExplosionRadius + run.player.radius
   if Util.dist2(self.x, self.y, run.player.x, run.player.y) <= reach * reach then
-    run.player:takeDamage(Data.hazards.mineDamage, run)
+    run.player:takeDamage(self.damage or Data.hazards.mineDamage, run, self.sourceEnemy)
   end
   for _, enemy in ipairs(run.enemies or {}) do
     if not enemy.dead then

@@ -8,6 +8,7 @@ local Abilities = require("src.data.abilities")
 local Balance = require("src.data.balance")
 local Bosses = require("src.data.bosses")
 local Characters = require("src.data.characters")
+local Compases = require("src.data.compases")
 local Dungeons = require("src.data.dungeons")
 local Enemies = require("src.data.enemies")
 local Items = require("src.data.items")
@@ -76,7 +77,9 @@ for _, id in ipairs(Bosses.bestiaryOrder) do
   end
 end
 
+Data.compases = Compases
 Data.elite = Enemies.elite
+Data.clericEscort = Enemies.clericEscort
 Data.hazards = Enemies.hazards
 Data.enemyAI = Enemies.enemyAI
 Data.spawn = Enemies.spawn

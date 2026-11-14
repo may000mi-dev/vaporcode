@@ -1,5 +1,6 @@
 -- abilities.lua: lanzamiento, apuntado y efectos de las habilidades.
 local Data = require("src.run.data")
+local Compases = require("src.run.compases")
 local Util = require("src.utils.util")
 local Camera = require("src.utils.camera")
 local Rhythm = require("src.run.rhythm")
@@ -154,7 +155,11 @@ local function castShield(run, def)
   local refreshing = run.player.shieldTimer > 0
   run.player.shieldTimer = def.duration
   if not refreshing then
-    local heal = math.floor(run.stats.maxHp * def.healPercent)
+    local heal = math.floor(
+      run.stats.maxHp
+        * def.healPercent
+        * Compases.playerHealingMultiplier(run)
+    )
     run.hp = math.min(run.stats.maxHp, run.hp + heal)
     FX.add("+" .. heal .. " vida", run.player.x, run.player.y - 26, { 0.40, 1.00, 0.50 })
   end

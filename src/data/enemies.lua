@@ -203,12 +203,48 @@ Enemies.enemyTypes = {
 }
 
 Enemies.elite = {
+  -- Valores heredados del Modo Historia. En Infinito se usan las curvas de
+  -- abajo para que la probabilidad y el número de afijos crezcan con el piso.
   chance = 0.15,
+  chanceByDepth = {
+    { depth = 1, chance = 0.10 },
+    { depth = 5, chance = 0.20 },
+    { depth = 10, chance = 0.35 },
+  },
+  affixCountByDepth = {
+    { maxDepth = 6, twoAffixChance = 0.00 },
+    { maxDepth = 12, twoAffixChance = 0.30 },
+    { maxDepth = math.huge, twoAffixChance = 0.60 },
+  },
+  affixes = {
+    "volatile", "armored", "spectral",
+    "vampiric", "chronos", "guardian", "mirror",
+  },
   volatileRadius = 90,
   volatileDamageScale = 1.5,
   armoredShield = 50,
   spectralCycle = 2.0,
   spectralDuration = 0.5,
+  vampiricHealPercent = 0.20,
+  chronosInterval = 4,
+  chronosRadius = 150,
+  chronosSlow = 0.30,
+  chronosDuration = 2,
+  guardianRadius = 180,
+  guardianDamageReduction = 0.20,
+  mirrorDuration = 1.5,
+  mirrorCooldown = 6,
+  mirrorReflect = 0.30,
+}
+
+-- Los Clérigos no deben quedar solos: siempre nacen cerca de un cuerpo
+-- acorazado y una oleada con Clérigo incluye al menos un tanque.
+Enemies.clericEscort = {
+  tanks = { "automaton", "caldera", "engranaje" },
+  minDistance = 40,
+  maxDistance = 120,
+  attempts = 14,
+  fallbackTank = "automaton",
 }
 
 Enemies.hazards = {
