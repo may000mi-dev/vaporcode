@@ -32,7 +32,7 @@ local function storyLabel()
 end
 
 local function storySubtitle()
-  local story = Save.data.story
+  local story = Save.getStory()
   local chapter = story and story.chapterId
     and Data.story.chapterById[story.chapterId]
     or nil

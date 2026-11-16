@@ -5,7 +5,7 @@ local Json = require("src.utils.json")
 local Save = {}
 local FILE = "save.json"
 local TEMP_FILE = "save.json.tmp"
-local VERSION = 5
+local VERSION = 6
 
 local function clamp01(value)
   value = tonumber(value)
@@ -30,13 +30,13 @@ local function writeSave(name, content)
   return ok and written and true or false
 end
 
-local function defaultStory()
+local function defaultStory(characterId)
   return {
     active = false,
     completed = false,
     chapterId = nil,
     depth = 1,
-    characterId = "amado",
+    characterId = characterId or "amado",
     checkpoint = nil,
   }
 end
@@ -51,8 +51,10 @@ end
 
 local function defaults()
   local progress = {}
+  local stories = {}
   for _, id in ipairs(Data.characterOrder) do
     progress[id] = defaultProgress()
+    stories[id] = defaultStory(id)
   end
 
   return {
@@ -65,7 +67,7 @@ local function defaults()
     progress = progress,
     bestiary = {},
     settings = { musicVolume = 0.6, effectsVolume = 0.8 },
-    story = defaultStory(),
+    stories = stories,
   }
 end
 
@@ -99,12 +101,12 @@ local function validCheckpoint(checkpoint)
     and type(stats.attackRate) == "number"
 end
 
-local function normalizeStory(data)
-  local out = defaultStory()
+local function normalizeStory(data, characterId)
+  local out = defaultStory(characterId)
   if type(data) ~= "table" then return out end
 
   out.completed = data.completed and true or false
-  if Data.characters[data.characterId] then
+  if not characterId and Data.characters[data.characterId] then
     out.characterId = data.characterId
   end
 
@@ -119,18 +121,19 @@ local function normalizeStory(data)
 
   if data.active and validCheckpoint(data.checkpoint) then
     local checkpoint = data.checkpoint
+    if not characterId and not Data.characters[data.characterId]
+      and Data.characters[checkpoint.characterId] then
+      out.characterId = checkpoint.characterId
+    end
     local cpDepth = math.floor(tonumber(checkpoint.depth) or out.depth)
     if cpDepth >= chapter.startDepth and cpDepth <= chapter.endDepth then
       checkpoint.depth = cpDepth
       checkpoint.dungeonId = chapter.dungeonId
       checkpoint.mode = "story"
       checkpoint.storyChapterId = chapter.id
-      if not Data.characters[checkpoint.characterId] then
-        checkpoint.characterId = "amado"
-      end
+      checkpoint.characterId = out.characterId
       out.active = true
       out.depth = cpDepth
-      out.characterId = checkpoint.characterId
       out.checkpoint = checkpoint
     end
   end
@@ -216,13 +219,30 @@ local function normalize(data)
       or out.settings.effectsVolume
   end
 
-  out.story = normalizeStory(data.story)
+  -- Cada personaje conserva su propio checkpoint. La versión 5 guardaba una
+  -- sola historia global; se migra al personaje que la tenía activa.
+  local savedStories = type(data.stories) == "table" and data.stories or {}
+  for _, id in ipairs(Data.characterOrder) do
+    out.stories[id] = normalizeStory(savedStories[id], id)
+  end
 
-  -- El guardado anterior solo tenía un final. Se adjudica al personaje que
-  -- completó la campaña y se conserva la compatibilidad con story.completed.
-  local completedCharacter = out.story.characterId or "amado"
-  if out.story.completed and out.progress[completedCharacter] then
-    out.progress[completedCharacter].storyCompleted = true
+  if type(data.story) == "table" then
+    local legacy = normalizeStory(data.story)
+    if legacy.characterId and Data.characters[legacy.characterId] then
+      local target = out.stories[legacy.characterId]
+      local hasSpecific = target and (target.active or target.chapterId ~= nil
+        or type(target.checkpoint) == "table")
+      if not hasSpecific then
+        out.stories[legacy.characterId] = legacy
+      end
+    end
+
+    -- El guardado anterior solo tenía un final. Se adjudica al personaje que
+    -- completó la campaña y se conserva la compatibilidad con story.completed.
+    local completedCharacter = legacy.characterId or "amado"
+    if legacy.completed and out.progress[completedCharacter] then
+      out.progress[completedCharacter].storyCompleted = true
+    end
   end
 
   out.unlocked.torre = allStoriesCompleted(out.progress)
@@ -275,8 +295,25 @@ function Save.reset()
   return Save.data
 end
 
-function Save.hasStoryCheckpoint()
-  local story = Save.data and Save.data.story
+function Save.getStory(characterId)
+  if type(Save.data) ~= "table" then return nil end
+  if not Data.characters[characterId] then
+    characterId = Save.getSelectedCharacter()
+  end
+  if type(Save.data.stories) ~= "table" then
+    Save.data.stories = {}
+  end
+  local story = Save.data.stories[characterId]
+  if type(story) ~= "table" then
+    story = defaultStory(characterId)
+    Save.data.stories[characterId] = story
+  end
+  story.characterId = characterId
+  return story
+end
+
+function Save.hasStoryCheckpoint(characterId)
+  local story = Save.getStory(characterId)
   return story ~= nil
     and story.active == true
     and type(story.checkpoint) == "table"
@@ -293,7 +330,10 @@ function Save.setStoryCheckpoint(chapterId, snapshot)
     return false
   end
 
-  local story = Save.data.story
+  local characterId = Data.characters[snapshot.characterId]
+    and snapshot.characterId
+    or Save.getSelectedCharacter()
+  local story = Save.getStory(characterId)
   story.active = true
   story.completed = false
   story.chapterId = chapterId
@@ -301,25 +341,22 @@ function Save.setStoryCheckpoint(chapterId, snapshot)
     chapter.startDepth,
     math.min(math.floor(tonumber(snapshot.depth) or chapter.startDepth), chapter.endDepth)
   )
-  if Data.characters[snapshot.characterId] then
-    story.characterId = snapshot.characterId
-  end
   snapshot.mode = "story"
   snapshot.storyChapterId = chapterId
+  snapshot.characterId = characterId
   story.checkpoint = snapshot
   Save.save()
   return true
 end
 
 function Save.completeStory(characterId)
-  local story = Save.data and Save.data.story
-  if not story then return false end
-
-  characterId = characterId or story.characterId or "amado"
-  if not Save.data.progress[characterId] then
+  if type(Save.data) ~= "table" then return false end
+  characterId = characterId or Save.getSelectedCharacter()
+  if not Data.characters[characterId] or not Save.data.progress[characterId] then
     characterId = "amado"
   end
 
+  local story = Save.getStory(characterId)
   Save.data.progress[characterId].storyCompleted = true
   story.active = false
   story.completed = true
@@ -332,9 +369,14 @@ function Save.completeStory(characterId)
   return true, allCompleted
 end
 
-function Save.resetStory()
+function Save.resetStory(characterId)
   if type(Save.data) ~= "table" then return false end
-  Save.data.story = defaultStory()
+  characterId = characterId or Save.getSelectedCharacter()
+  if not Data.characters[characterId] then return false end
+  if type(Save.data.stories) ~= "table" then
+    Save.data.stories = {}
+  end
+  Save.data.stories[characterId] = defaultStory(characterId)
   Save.save()
   return true
 end

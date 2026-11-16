@@ -393,16 +393,17 @@ protagonista cambian según el personaje elegido.
 - **Escenas:** `src/data/story.lua` guarda prólogo, intros, cierres y desenlace;
   `src/run/story_ui.lua` las muestra sin assets externos. Se avanzan con toque,
   `Enter` o `Espacio`; `Esc` omite la escena actual.
-- **Checkpoint:** al entrar a cada piso se guarda capítulo, profundidad,
-  personaje y la instantánea completa. `CONTINUAR HISTORIA` retoma ese piso sin
-  repetir la intro ya vista.
+- **Checkpoint:** al entrar a cada piso se guarda capítulo, profundidad y la
+  instantánea completa en el espacio del personaje activo. `CONTINUAR HISTORIA`
+  retoma el piso del personaje seleccionado sin repetir la intro ya vista.
 - **Derrota:** `REINTENTAR PISO` restaura el checkpoint; el menú conserva la
   campaña para continuar después. La derrota por tiempo se narra como
   desestabilización del núcleo.
 - **Final:** el piso 12 abre el desenlace. Al terminarlo se marca la historia de
   ese personaje como completada y se borra el checkpoint, pero se conservan las
   demás historias, mejoras y monedas. `NUEVA HISTORIA` pide confirmación antes de
-  reiniciar la campaña activa.
+  reiniciar solo la campaña del personaje seleccionado; los checkpoints de los
+  otros personajes no se tocan.
 - **Personajes:** se puede jugar con Mar o Amileth solo si ya están desbloqueados.
   Cada uno tiene escenas propias y su final se contabiliza por separado (`x/3`).
 - **Torre:** se desbloquea al completar las tres historias y entonces también
@@ -410,11 +411,11 @@ protagonista cambian según el personaje elegido.
 
 ## Meta-progresión
 
-Persistente en `save.json` (versión 5, normalizado al cargar). Se escribe al
+Persistente en `save.json` (versión 6, normalizado al cargar). Se escribe al
 cambiar de piso, al terminar la run, al pausar y al perder el foco; usa
 `save.json.tmp` como respaldo para escrituras interrumpidas en Android. También
-guarda `settings.musicVolume`, `settings.effectsVolume` (0..1), el estado del
-Modo Historia con su checkpoint validado por capítulo y el Bestiario.
+guarda `settings.musicVolume`, `settings.effectsVolume` (0..1), un estado del
+Modo Historia por personaje con su checkpoint validado por capítulo y el Bestiario.
 
 | Mejora | Efecto | Base | +Nivel | Máx |
 |---|---|---|---|---|
@@ -425,7 +426,8 @@ Modo Historia con su checkpoint validado por capítulo y el Bestiario.
 Las mejoras son **por personaje** y ya no se compran con monedas. Cada jefe
 derrotado suelta una **Resonancia del personaje** de la run; recogerla suma un
 punto que se gasta en la pantalla de Personajes para subir una mejora. Al migrar
-un guardado v4, los niveles globales se reparten entre Amado, Mar y Amileth.
+un guardado v5, el checkpoint global se asigna al personaje que lo tenía; al
+migrar uno v4, los niveles globales se reparten entre Amado, Mar y Amileth.
 
 También persisten monedas, récord de piso, mazmorras desbloqueadas, historias
 completadas por personaje, resonancias, personajes desbloqueados, enemigos vistos

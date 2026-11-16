@@ -19,21 +19,22 @@ local Historia = {
 }
 
 local function currentChapter()
-  local story = Save.data.story
+  local story = Save.getStory()
   if not story or not story.active or not story.chapterId then return nil end
   return Data.story.chapterById[story.chapterId]
 end
 
 local function startNew()
-  Save.resetStory()
-  State.switch("run", "cripta", Save.getSelectedCharacter(), nil, { mode = "story", chapterId = "cripta" })
+  local cid = Save.getSelectedCharacter()
+  Save.resetStory(cid)
+  State.switch("run", "cripta", cid, nil, { mode = "story", chapterId = "cripta" })
 end
 
 local function continueStory()
-  local story = Save.data.story
+  local story = Save.getStory()
   local chapter = currentChapter()
   if not chapter then
-    Historia.message = "No hay una historia en curso."
+    Historia.message = "No hay una historia en curso para este personaje."
     Historia.messageTimer = 2.4
     return
   end
@@ -46,7 +47,7 @@ end
 
 local function requestNew()
   local cid = Save.getSelectedCharacter()
-  if Save.hasStoryCheckpoint() or Save.isStoryCompleted(cid) then
+  if Save.hasStoryCheckpoint(cid) or Save.isStoryCompleted(cid) then
     Historia.confirmNew = true
   else
     startNew()
@@ -185,8 +186,8 @@ function Historia.draw()
   if Historia.selector then Historia.selector:draw(selectorPanel) end
 
   local chapter = currentChapter()
-  local story = Save.data.story
   local selected = Data.characters[Save.getSelectedCharacter()]
+  local story = Save.getStory(selected.id)
   love.graphics.setFont(Fonts.body)
   love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   if chapter then
@@ -211,7 +212,7 @@ function Historia.draw()
       "Retoma desde el inicio del último piso guardado", theme.accent, true, theme)
   end
   local cid = Save.getSelectedCharacter()
-  local newLabel = (Save.isStoryCompleted(cid) or Save.hasStoryCheckpoint()) and "NUEVA HISTORIA" or "COMENZAR HISTORIA"
+  local newLabel = (Save.isStoryCompleted(cid) or Save.hasStoryCheckpoint(cid)) and "NUEVA HISTORIA" or "COMENZAR HISTORIA"
   drawButton(Historia.rects.new, newLabel,
     "Campaña de " .. selected.name .. " · mejoras y monedas se conservan",
     theme.secondary, false, theme)
@@ -242,7 +243,9 @@ function Historia.draw()
     love.graphics.setFont(Fonts.small)
     love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
     love.graphics.printf(
-      "Se borrará el checkpoint en curso. Las historias completadas, mejoras y monedas se conservan.",
+      TextCache.format("historia-reset-warning",
+        "Se borrará el checkpoint de %s. Los demás personajes, las historias completadas, mejoras y monedas se conservan.",
+        selected.name),
       modal.x + 30, modal.y + 58, modal.w - 60, "center")
     drawButton(modal.yes, "REINICIAR", nil, {0.95,0.45,0.40}, false, theme)
     drawButton(modal.no, "CANCELAR", nil, theme.accent, false, theme)

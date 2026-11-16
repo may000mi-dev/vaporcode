@@ -115,7 +115,8 @@ function Run.enter(dungeonId, characterId, abilityId, options)
   end
 
   if type(options) == "table" and options.resume then
-    local story = Save.data.story
+    local resumeCharacter = characterId or Save.getSelectedCharacter()
+    local story = Save.getStory(resumeCharacter)
     local chapter = story and story.chapterId
       and Data.story.chapterById[story.chapterId]
       or nil
@@ -123,13 +124,13 @@ function Run.enter(dungeonId, characterId, abilityId, options)
       return Floors.enter(
         Run,
         "cripta",
-        characterId,
+        resumeCharacter,
         nil,
         { mode = "story", chapterId = "cripta" }
       )
     end
 
-    local resumeCharacter = story.characterId or characterId
+    resumeCharacter = story.characterId or resumeCharacter
     local checkpoint = story.checkpoint
     Floors.enter(
       Run,

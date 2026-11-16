@@ -96,8 +96,8 @@ local index, total = Story.floorIndex({
 assert(index == 2 and total == 3, "la Torre debe mostrar 2 de 3 pisos")
 
 Save.load()
-assert(Save.data.version == 5, "el guardado debe usar la versión 5")
-assert(Save.data.story and not Save.data.story.active, "la historia inicia inactiva")
+assert(Save.data.version == 6, "el guardado debe usar la versión 6")
+assert(Save.getStory("amado") and not Save.getStory("amado").active, "la historia inicia inactiva")
 assert(not Save.hasStoryCheckpoint(), "sin checkpoint no debe haber continuación")
 
 local snapshot = {
@@ -117,75 +117,93 @@ local snapshot = {
 }
 assert(Save.setStoryCheckpoint("cripta", snapshot), "debe guardar un checkpoint")
 assert(Save.hasStoryCheckpoint(), "el checkpoint debe quedar activo")
-assert(Save.data.story.chapterId == "cripta", "debe recordar el capítulo")
-assert(Save.data.story.depth == 4, "debe recordar el piso")
+assert(Save.hasStoryCheckpoint("amado"), "el checkpoint debe ser de Amado")
+assert(Save.getStory("amado").chapterId == "cripta", "debe recordar el capítulo")
+assert(Save.getStory("amado").depth == 4, "debe recordar el piso")
 assert(snapshot.mode == "story", "el snapshot debe quedar marcado como historia")
 assert(snapshot.storyChapterId == "cripta", "el snapshot debe recordar el capítulo")
 
 Save.load()
-assert(Save.hasStoryCheckpoint(), "el checkpoint debe persistir")
-assert(Save.data.story.depth == 4, "el piso debe persistir")
-assert(Save.data.story.checkpoint.hp == 70, "el estado del piso debe persistir")
+assert(Save.hasStoryCheckpoint("amado"), "el checkpoint debe persistir")
+assert(Save.getStory("amado").depth == 4, "el piso debe persistir")
+assert(Save.getStory("amado").checkpoint.hp == 70, "el estado del piso debe persistir")
 
-Save.data.story = {
-  active = true,
-  chapterId = "torre",
-  depth = 99,
-  characterId = "mar",
-  checkpoint = { depth = 99, characterId = "mar" },
-}
+local marStory = Save.getStory("mar")
+marStory.active = true
+marStory.chapterId = "torre"
+marStory.depth = 99
+marStory.checkpoint = { depth = 99, characterId = "mar" }
 Save.save()
 Save.load()
-assert(not Save.hasStoryCheckpoint(), "un checkpoint fuera de rango debe descartarse")
-assert(Save.data.story.chapterId == "torre", "el capítulo válido debe conservarse")
-assert(Save.data.story.depth == 12, "la profundidad debe acotarse al capítulo")
+assert(not Save.hasStoryCheckpoint("mar"), "un checkpoint fuera de rango debe descartarse")
+assert(Save.getStory("mar").chapterId == "torre", "el capítulo válido debe conservarse")
+assert(Save.getStory("mar").depth == 12, "la profundidad debe acotarse al capítulo")
 
-Save.data.story = {
-  active = true,
-  chapterId = "cripta",
+local amadoStory = Save.getStory("amado")
+amadoStory.active = true
+amadoStory.chapterId = "cripta"
+amadoStory.depth = 2
+amadoStory.checkpoint = {
   depth = 2,
-  checkpoint = {
-    depth = 2,
-    dungeonId = "cripta",
-    characterId = "amado",
-    seed = 1,
-    playerLevel = 1,
-    hp = 1,
-    xp = 0,
-    xpToNext = 10,
-    mana = 0,
-    manaMax = 100,
-    timeLeft = 300,
-    stats = {},
-  },
+  dungeonId = "cripta",
+  characterId = "amado",
+  seed = 1,
+  playerLevel = 1,
+  hp = 1,
+  xp = 0,
+  xpToNext = 10,
+  mana = 0,
+  manaMax = 100,
+  timeLeft = 300,
+  stats = {},
 }
 Save.save()
 Save.load()
-assert(not Save.hasStoryCheckpoint(), "un checkpoint incompleto debe descartarse")
-assert(Save.data.story.chapterId == "cripta", "el capítulo válido debe conservarse")
-assert(Save.data.story.depth == 2, "la profundidad válida debe conservarse")
+assert(not Save.hasStoryCheckpoint("amado"), "un checkpoint incompleto debe descartarse")
+assert(Save.getStory("amado").chapterId == "cripta", "el capítulo válido debe conservarse")
+assert(Save.getStory("amado").depth == 2, "la profundidad válida debe conservarse")
 
 assert(Save.setStoryCheckpoint("cripta", snapshot), "debe poder reiniciar el checkpoint")
+local marSnapshot = {}
+for key, value in pairs(snapshot) do marSnapshot[key] = value end
+marSnapshot.seed = 456
+marSnapshot.depth = 3
+marSnapshot.characterId = "mar"
+marSnapshot.hp = 50
+assert(Save.setStoryCheckpoint("cripta", marSnapshot), "Mar debe guardar su propio checkpoint")
+assert(Save.hasStoryCheckpoint("amado") and Save.hasStoryCheckpoint("mar"),
+  "cada personaje debe conservar su checkpoint")
+assert(Save.resetStory("amado"), "reiniciar debe afectar solo al personaje indicado")
+assert(not Save.hasStoryCheckpoint("amado"), "Amado debe perder su checkpoint")
+assert(Save.hasStoryCheckpoint("mar"), "Mar debe conservar su checkpoint")
+Save.load()
+assert(not Save.hasStoryCheckpoint("amado"), "el reinicio por personaje debe persistir")
+assert(Save.hasStoryCheckpoint("mar") and Save.getStory("mar").depth == 3,
+  "el checkpoint de Mar debe persistir tras reiniciar a Amado")
+
+assert(Save.setStoryCheckpoint("cripta", snapshot), "debe poder reiniciar el checkpoint de Amado")
 assert(Save.completeStory("amado"), "debe poder completar la historia de Amado")
-assert(not Save.hasStoryCheckpoint(), "completar debe borrar el checkpoint")
-assert(Save.data.story.completed, "completar debe marcar el final de la sesión")
+assert(not Save.hasStoryCheckpoint("amado"), "completar debe borrar el checkpoint de Amado")
+assert(Save.hasStoryCheckpoint("mar"), "completar a Amado no debe borrar el checkpoint de Mar")
+assert(Save.getStory("amado").completed, "completar debe marcar el final de la sesión")
 assert(Save.isStoryCompleted("amado"), "Amado debe tener su historia completada")
 assert(Save.storyCompletionCount() == 1, "debe contar una historia completada")
 assert(not Save.isDungeonUnlocked("torre"), "la Torre exige las tres historias")
 Save.load()
-assert(Save.data.story.completed, "el final debe persistir")
+assert(Save.getStory("amado").completed, "el final debe persistir")
 assert(Save.isStoryCompleted("amado"), "la historia de Amado debe persistir")
+assert(Save.hasStoryCheckpoint("mar"), "cargar el guardado no debe tocar la historia de Mar")
 
 assert(Save.completeStory("mar"), "debe poder completar la historia de Mar")
 assert(Save.completeStory("amileth"), "debe poder completar la historia de Amileth")
 assert(Save.storyCompletionCount() == 3, "deben quedar tres historias completadas")
 assert(Save.isDungeonUnlocked("torre"), "la Torre debe abrirse con las tres historias")
 
-assert(Save.resetStory(), "debe poder reiniciar la campaña activa")
-assert(not Save.data.story.active, "reiniciar debe desactivar la historia")
-assert(not Save.data.story.completed, "reiniciar debe borrar el final de la sesión")
-assert(not Save.hasStoryCheckpoint(), "reiniciar debe borrar el checkpoint")
+assert(Save.resetStory("amado"), "debe poder reiniciar la campaña activa del personaje")
+assert(not Save.getStory("amado").active, "reiniciar debe desactivar la historia")
+assert(not Save.getStory("amado").completed, "reiniciar debe borrar el final de la sesión")
+assert(not Save.hasStoryCheckpoint("amado"), "reiniciar debe borrar el checkpoint")
 assert(Save.storyCompletionCount() == 3, "reiniciar no debe borrar historias completadas")
 assert(Save.isDungeonUnlocked("torre"), "la Torre debe seguir abierta tras reiniciar la sesión")
 
-print("OK historia, portales, escenas y guardado v5")
+print("OK historia por personaje, portales, escenas y guardado v6")

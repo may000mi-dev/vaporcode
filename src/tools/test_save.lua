@@ -87,13 +87,45 @@ files["save.json"] = Json.encode({
   story = { completed = true, characterId = "mar" },
 })
 Save.load()
-assert(Save.data.version == 5, "la migración debe actualizar a la versión 5")
+assert(Save.data.version == 6, "la migración debe actualizar a la versión 6")
 for _, id in ipairs({ "amado", "mar", "amileth" }) do
   assert(Save.upgradeLevel("damage", id) == 2, "la migración debe repartir las mejoras")
 end
 assert(Save.isStoryCompleted("mar"), "el final v4 debe asignarse a su personaje")
 assert(not Save.isStoryCompleted("amado"), "la migración no debe inventar finales")
 assert(not Save.isDungeonUnlocked("torre"), "la Torre exige las tres historias")
+
+-- Migración v5: el checkpoint global se asigna al personaje que lo tenía.
+files["save.json.tmp"] = nil
+files["save.json"] = Json.encode({
+  version = 5,
+  story = {
+    active = true,
+    chapterId = "cripta",
+    depth = 4,
+    characterId = "mar",
+    checkpoint = {
+      seed = 9,
+      depth = 4,
+      dungeonId = "cripta",
+      characterId = "mar",
+      playerLevel = 2,
+      hp = 60,
+      xp = 0,
+      xpToNext = 30,
+      mana = 50,
+      manaMax = 100,
+      timeLeft = 200,
+      stats = { damage = 15, maxHp = 100, speed = 150, attackRate = 2.5 },
+    },
+  },
+})
+Save.load()
+assert(Save.data.version == 6, "la migración v5 debe usar la versión 6")
+assert(Save.hasStoryCheckpoint("mar"), "el checkpoint v5 debe migrar a Mar")
+assert(Save.getStory("mar").chapterId == "cripta" and Save.getStory("mar").depth == 4,
+  "el capítulo y piso v5 deben migrarse")
+assert(not Save.hasStoryCheckpoint("amado"), "la migración no debe duplicar el checkpoint")
 
 -- Reiniciar borra monedas, mejoras, personajes y vuelve a los ajustes base.
 Save.data.coins = 99
@@ -104,4 +136,4 @@ assert(Save.data.settings.musicVolume == 0.6, "el reinicio debe restaurar el aud
 assert(files["save.json"], "el reinicio debe dejar un guardado limpio")
 assert(files["save.json.tmp"], "el reinicio debe escribir el respaldo")
 
-print("OK guardado versionado, ajustes y reinicio")
+print("OK guardado versionado v6, migración, ajustes y reinicio")

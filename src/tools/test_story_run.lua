@@ -83,8 +83,8 @@ assert(Run.depth == 1, "la Cripta debe iniciar en el piso 1")
 assert(Run.exitKind == "normal", "el primer piso no debe tener portal")
 assert(Run.overlay == "story", "el prólogo debe mostrarse como escena")
 assert(Run.storyScene == Data.story.scenes.prologo, "debe mostrarse el prólogo")
-assert(Save.hasStoryCheckpoint(), "el inicio del piso debe guardar checkpoint")
-assert(Save.data.story.chapterId == "cripta" and Save.data.story.depth == 1, "el checkpoint debe ser el piso 1")
+assert(Save.hasStoryCheckpoint("amado"), "el inicio del piso debe guardar checkpoint")
+assert(Save.getStory("amado").chapterId == "cripta" and Save.getStory("amado").depth == 1, "el checkpoint debe ser el piso 1")
 
 local frozenTime = Run.timeLeft
 Run.update(1)
@@ -97,7 +97,7 @@ assert(Run.mode == "story" and Run.storyChapterId == "cripta", "debe seguir en l
 Progression.nextLevel(Run)
 assert(Run.depth == 2, "el avance normal debe llevar al piso 2")
 assert(Run.overlay == nil, "un piso normal no debe abrir escena")
-assert(Save.data.story.depth == 2, "el nuevo piso debe guardar checkpoint")
+assert(Save.getStory("amado").depth == 2, "el nuevo piso debe guardar checkpoint")
 
 Run.hp = 1
 State.switch("historia", "amado")
@@ -114,7 +114,7 @@ assert(Run.storyScene == Data.story.scenes.cripta_outro, "debe mostrarse el outr
 finishScenes()
 assert(Run.storyChapterId == "forja", "la Cripta debe abrir la Forja")
 assert(Run.depth == 1 and Run.def.id == "forja", "la Forja debe iniciar en su piso 1")
-assert(Save.data.story.chapterId == "forja" and Save.data.story.depth == 1, "debe guardarse el nuevo capítulo")
+assert(Save.getStory("amado").chapterId == "forja" and Save.getStory("amado").depth == 1, "debe guardarse el nuevo capítulo")
 
 Run.depth = Run.storyChapter.endDepth
 Progression.nextLevel(Run)
@@ -138,8 +138,8 @@ Progression.nextLevel(Run)
 assert(Run.storyScene == Data.story.scenes.final, "el jefe final debe abrir el desenlace")
 finishScenes()
 assert(State.name == "menu", "el final debe volver al menú")
-assert(Save.data.story.completed, "el final debe marcar la historia como completada")
-assert(not Save.hasStoryCheckpoint(), "el final debe borrar el checkpoint")
+assert(Save.getStory("amado").completed, "el final debe marcar la historia como completada")
+assert(not Save.hasStoryCheckpoint("amado"), "el final debe borrar el checkpoint")
 
 Run.enter("cripta", "amado")
 assert(Run.mode == "free", "el modo libre debe seguir disponible tras la campaña")

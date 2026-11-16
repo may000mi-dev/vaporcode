@@ -118,22 +118,24 @@ juego, así que los datos se pueden mover entre archivos sin tocar el resto.
 
 ## Guardado
 
-JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 5.
+JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 6.
 Al cargar se normaliza y se repara: valores inválidos caen a los predeterminados,
 la cripta y Amado siempre quedan desbloqueados, los volúmenes de música/efectos
 se acotan a 0..1 y el checkpoint de historia se valida contra su capítulo.
 
-Cada personaje guarda sus mejoras, resonancias y si completó la Historia. La
-migración desde v4 reparte las mejoras globales entre los tres y asigna el final
-antiguo a su personaje. Los enemigos vistos se guardan en `bestiary`, y la Torre
+Cada personaje guarda sus mejoras, resonancias, si completó la Historia y su
+propio checkpoint activo. La migración desde v5 asigna el checkpoint global al
+personaje que lo tenía, y la de v4 reparte las mejoras globales entre los tres y
+asigna el final antiguo a su personaje. Los enemigos vistos se guardan en `bestiary`, y la Torre
 solo se desbloquea cuando las tres historias están completas.
 
 El progreso se guarda al cambiar de piso, al terminar la run, al pausar y cuando
 la app pierde el foco o se oculta; Android puede matar el proceso en segundo plano
 sin ejecutar `love.quit`. Cada guardado escribe primero `save.json.tmp` y luego el
 principal, así que una escritura interrumpida se recupera desde el respaldo.
-El Modo Historia guarda al inicio de cada piso el capítulo, la profundidad, el
-personaje y la instantánea completa del piso para continuar exactamente ahí.
+El Modo Historia guarda al inicio de cada piso el capítulo, la profundidad y la
+instantánea completa en el espacio del personaje activo, para continuar
+exactamente ahí sin afectar las partidas de los otros dos.
 
 ## Modo Historia
 
@@ -150,10 +152,12 @@ global: la misma tarjeta con confirmación aparece en menú, Historia, Infinito,
 Configuración y la pantalla de Personajes, y cambia al instante la paleta de toda
 la interfaz y la música. Cada uno tiene escenas, motivación y final propios; el
 contador `x/3` muestra las historias completadas. La historia no regala personajes ni mejoras: usa la misma economía
-del modo Infinito. Al comenzar cada piso se guarda un checkpoint; `CONTINUAR
-HISTORIA` retoma ese piso sin repetir las escenas ya vistas. Morir permite
-`REINTENTAR PISO` o volver al menú; reiniciar la campaña pide confirmación y
-conserva historias completadas, monedas, mejoras y desbloqueos.
+del modo Infinito. Al comenzar cada piso se guarda un checkpoint independiente
+por personaje; `CONTINUAR HISTORIA` retoma el piso del personaje seleccionado sin
+repetir las escenas ya vistas. Morir permite `REINTENTAR PISO` o volver al menú;
+reiniciar la campaña pide confirmación, borra únicamente el checkpoint del
+personaje seleccionado y conserva los de los demás, además de las historias
+completadas, monedas, mejoras y desbloqueos.
 
 ## Modo Infinito, Personajes y Bestiario
 
