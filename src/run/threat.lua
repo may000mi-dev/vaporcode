@@ -4,6 +4,7 @@ local Data = require("src.run.data")
 local Util = require("src.utils.util")
 local Compases = require("src.run.compases")
 local Director = require("src.run.director")
+local Antidote = require("src.run.antidote")
 
 local Threat = {}
 
@@ -150,6 +151,17 @@ function Threat.generateComposition(run, budget)
       remaining,
       units
     )
+  end
+
+  -- Antídoto opcional: consume presupuesto real y aparece como máximo una vez
+  -- por piso. La selección premia la build dominante del jugador.
+  local antidoteKind = Antidote.choose(run)
+  if antidoteKind then
+    local cost = Threat.cost(antidoteKind)
+    if cost > 0 and remaining >= cost then
+      units[#units + 1] = antidoteKind
+      remaining = remaining - cost
+    end
   end
 
   local firstPick = #units == 0

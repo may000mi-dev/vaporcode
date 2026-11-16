@@ -204,6 +204,31 @@ Solo se ejecuta con `run.mode == "free"` y `run.sandbox == false`. Historia no
 registra métricas ni altera presupuesto o afijos, y la sala de pruebas queda
 exenta.
 
+## Antídoto (Modo Infinito)
+
+Los Antídoto son enemigos que castigan builds dominantes sin romper la campaña.
+Solo aparecen con `run.mode == "free"`, `run.sandbox == false` y profundidad 6 o
+mayor. La probabilidad por piso es 35% en el 6, 50% en el 8, 65% en el 10, 80% en
+el 13 y 100% desde el 16. La composición admite **como máximo un Antídoto por
+piso** y descuenta su costo real del presupuesto de amenaza, por lo que Historia
+y la sala de pruebas conservan su generación original.
+
+La selección parte de pesos iguales y suma según la build: curación de Vampiro o
+Hada favorece al Purificador; perro, gato o dragón favorecen al Devorador; Pólvora,
+Veneno o daño alto favorecen al Espejo; vida máxima alta o nivel 10+ favorecen al
+Asediador. Ningún tipo queda excluido.
+
+| Antídoto | Costo | Comportamiento |
+|---|---:|---|
+| Purificador | 4 | Aura de radio 160 que reduce 50% toda curación y sustento del jugador. Mantiene distancia. |
+| Devorador | 5 | Armadura 20%. Ignora al hámster; persigue perro, gato o dragón y drena 35% de su daño cada 0.45 s, curándose 50% de lo drenado. |
+| Espejo | 5 | Escudo frontal activo 2.2 s cada 4.6 s (primer aviso a 1.6 s). Refleja 35% del daño frontal mayor a 8; no refleja veneno, hazards, mascotas ni élites. |
+| Asediador | 6 | Inmóvil y orientado al jugador. Cap de 16 de daño por golpe; el exceso solo aporta 15%. |
+
+El HUD muestra `PURIFICADO · -50%` mientras el aura cubre al jugador. Los valores
+viven en `Enemies.antidote` y las defs en `Enemies.enemyTypes`; la generación,
+elegibilidad y aura están en `src/run/antidote.lua`.
+
 ## Memorias de jefe y Sobrecarga (Modo Infinito)
 
 En los pisos de jefe (múltiplos de `bossEvery`) el jefe hereda 1–2 memorias de los
@@ -314,6 +339,10 @@ acumulan hasta su máximo global (activos + guardados); mascotas y desbloqueos s
   dentro tras 4 beats, con 10 s de recarga). Si una mascota queda atrapada y se aleja
   más de 360 px del jugador, reaparece a su lado.
 - **Personajes:** Mar y Amileth.
+- **Temas por personaje:** Amado usa cian/bronce, Mar rojo/ámbar y Amileth oro/naranja.
+  `src/data/themes.lua` deriva paneles, bordes, botones y textos de cada paleta; el
+  tema activo se aplica a menú, HUD, mochila, tienda, historia, pausa, game over,
+  bestiario, personajes, configuración y sala de pruebas.
 - **Resonancias de personaje:** cada jefe deja la resonancia del personaje con el
   que se juega. No ocupa inventario: al recogerla suma un punto permanente para
   esa ficha. En la Sala de pruebas no se generan.
@@ -411,19 +440,31 @@ El menú principal tiene cinco accesos: **Historia**, **Infinito**, **Personajes
   se explica en la ficha. La Torre exige las tres historias.
 - **Personajes:** retrato procedural a la izquierda; estadísticas base, pasiva,
   estado de Historia, resonancias y mejoras a la derecha. Solo los personajes
-  desbloqueados pueden mejorar.
+  desbloqueados pueden mejorar. La misma tarjeta de selección global aparece en
+  menú, Historia, Infinito y Configuración; un personaje bloqueado no abre el
+  modal de confirmación ni puede seleccionarse por atajo.
 - **Bestiario:** cuadrícula de enemigos y jefes ya vistos. Los no vistos aparecen
   como `???`; al seleccionarlos se muestra retrato procedural y descripción de
-  sus habilidades. Los descubrimientos persisten entre partidas.
+  sus habilidades. Los descubrimientos persisten entre partidas. `TODOS` es la
+  primera pestaña y usa scroll; le siguen `CUERPO`, `DISPARAN`, `INVOCAN`,
+  `SOPORTE` y `JEFES`. Las categorías pueden solaparse: un enemigo con disparo y
+  control aparece en `DISPARAN` y `SOPORTE`; un invocador con curación aparece en
+  `INVOCAN` y `SOPORTE`. El Devorador de Núcleos se clasifica como soporte por
+  eliminar a las mascotas del jugador. El detalle ocupa la columna derecha y
+  nunca se dibuja sobre las tarjetas de selección de personaje.
 
 ## Audio y configuración
 
 El menú abre Configuración con `C`. Desde ahí se ajustan música y efectos en pasos
-de 10%; cada cambio se guarda en `save.json`. La música es un bucle procedural de
-4 segundos generado con `love.sound` (11 kHz mono), con bajo, arpegio y pulso, y
-se reutiliza con `pitch` según el BPM de la mazmorra. Los efectos registran su
-volumen base en un bus (`src/utils/audio.lua`) para que el ajuste se aplique sin
-reiniciar la partida. Sin `love.audio` (tests) todo el bus queda inactivo.
+de 10%; cada cambio se guarda en `save.json`. La música usa 15 pistas MP3 en
+`assets/audio/music`: tres temas de menú (uno por personaje) y una pista por
+personaje y zona (cripta, forja, catedral y torre). Al cambiar de personaje o de
+zona se hace un crossfade corto sin reiniciar la pista si ya coincide. El BPM
+(120 menú, 104 cripta, 124 forja, 138 catedral, 150 torre) alimenta el reloj
+rítmico; si una pista falta o falla la decodificación, suena un metrónomo
+procedural de respaldo a 120 BPM. Los efectos registran su volumen base en un bus
+(`src/utils/audio.lua`) para que el ajuste se aplique sin reiniciar la partida.
+Sin `love.audio` (tests) todo el bus queda inactivo.
 
 Configuración también permite borrar todos los datos: monedas, mejoras, récords,
 personajes, desbloqueos y ajustes. El borrado pide una segunda confirmación de

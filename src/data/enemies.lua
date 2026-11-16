@@ -186,6 +186,69 @@ Enemies.enemyTypes = {
     manaDrain = 0.12,
     abilityLock = 2,
   },
+  purificador = {
+    name = "Purificador de Vapor",
+    radius = 17,
+    speed = 54,
+    hp = 72,
+    damage = 9,
+    xp = 20,
+    color = { 0.74, 0.92, 0.58 },
+    role = "purifier",
+    threat = 4,
+    threatRoles = { "antidote" },
+    keepDistance = 120,
+    retreatDistance = 72,
+  },
+  devorador = {
+    name = "Devorador de Núcleos",
+    radius = 15,
+    speed = 122,
+    hp = 88,
+    damage = 14,
+    xp = 22,
+    color = { 0.88, 0.30, 0.34 },
+    role = "pet_hunter",
+    threat = 5,
+    threatRoles = { "antidote" },
+    armor = 0.20,
+    petDrainInterval = 0.45,
+    petDrainScale = 0.35,
+    petDrainHealPercent = 0.50,
+  },
+  espejo = {
+    name = "Espejo de Latón",
+    radius = 16,
+    speed = 48,
+    hp = 96,
+    damage = 11,
+    xp = 23,
+    color = { 0.72, 0.86, 0.96 },
+    role = "mirror_guard",
+    threat = 5,
+    threatRoles = { "antidote" },
+    reflectionFirstDelay = 1.6,
+    reflectionActiveTime = 2.2,
+    reflectionCooldown = 4.6,
+    reflectionArc = math.pi * 0.70,
+    reflectionRotation = 2.4,
+    reflectionReflect = 0.35,
+    reflectionMinDamage = 8,
+  },
+  asediador = {
+    name = "Asediador de Hierro",
+    radius = 22,
+    speed = 0,
+    hp = 190,
+    damage = 20,
+    xp = 30,
+    color = { 0.62, 0.50, 0.34 },
+    role = "siege",
+    threat = 6,
+    threatRoles = { "antidote" },
+    damageCap = 16,
+    damageCapExcessScale = 0.15,
+  },
   broken_automaton = {
     name = "Autómata Roto",
     radius = 7,
@@ -260,7 +323,7 @@ Enemies.hazards = {
 Enemies.bestiaryOrder = {
   "automaton", "caldera", "sabueso", "centinela", "espectro", "engranaje",
   "artillero", "maquinista", "saboteador", "peste", "clerigo", "inquisidor",
-  "broken_automaton",
+  "purificador", "devorador", "espejo", "asediador", "broken_automaton",
 }
 
 Enemies.bestiary = {
@@ -312,6 +375,22 @@ Enemies.bestiary = {
     name = "Inquisidor de Reloj",
     desc = "Drena maná y bloquea habilidades desde la distancia.",
   },
+  purificador = {
+    name = "Purificador de Vapor",
+    desc = "Aura que reduce a la mitad la curación y el sustento del jugador cercano.",
+  },
+  devorador = {
+    name = "Devorador de Núcleos",
+    desc = "Acorazado y veloz: ignora al jugador para drenar a perro, gato o dragón.",
+  },
+  espejo = {
+    name = "Espejo de Latón",
+    desc = "Escudo frontal rotatorio que refleja el daño masivo recibido de frente.",
+  },
+  asediador = {
+    name = "Asediador de Hierro",
+    desc = "Tanque inmóvil con barrera que limita el daño por golpe recibido.",
+  },
   broken_automaton = {
     name = "Autómata Roto",
     desc = "Invocación débil y veloz. Muere de un golpe, pero distrae.",
@@ -351,6 +430,23 @@ Enemies.threat = {
   spawnMinDistance = 210,
   spawnFallbackDistance = 120,
   spawnRetries = 6,
+}
+-- Enemigos Antídoto: aparecen solo en Modo Infinito desde el piso 6 y castigan
+-- builds muy especializadas. Nunca entran al pool de Historia ni de pruebas.
+Enemies.antidote = {
+  minDepth = 6,
+  maxPerFloor = 1,
+  chanceByDepth = {
+    { depth = 6, chance = 0.35 },
+    { depth = 8, chance = 0.50 },
+    { depth = 10, chance = 0.65 },
+    { depth = 13, chance = 0.80 },
+    { depth = 16, chance = 1.00 },
+  },
+  types = { "purificador", "devorador", "espejo", "asediador" },
+  petKinds = { "dog", "cat", "dragon" },
+  healingAuraRadius = 160,
+  healingReduction = 0.50,
 }
 Enemies.enemyAI = {
   sightRange = 420,

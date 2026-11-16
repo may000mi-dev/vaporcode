@@ -4,9 +4,15 @@ local Util = require("src.utils.util")
 local Boss = require("src.run.boss")
 local FX = require("src.run.fx")
 local Compases = require("src.run.compases")
+local Antidote = require("src.run.antidote")
 
 local Enemy = {}
 Enemy.__index = Enemy
+
+local function angleDistance(a, b)
+  local delta = (a - b + math.pi) % (math.pi * 2) - math.pi
+  return math.abs(delta)
+end
 
 function Enemy.new(kind, x, y, hp, damage, xp, options)
   options = options or {}
@@ -53,6 +59,10 @@ function Enemy.new(kind, x, y, hp, damage, xp, options)
   end
   self.attackCooldownMultiplier = options.attackCooldownMultiplier or 1
   self.immuneToStun = options.immuneToStun == true
+  self.armor = def.armor or 0
+  self.mirrorShieldTimer = 0
+  self.mirrorShieldCooldownTimer = def.reflectionFirstDelay or 0
+  self.mirrorShieldAngle = love.math.random() * math.pi * 2
   self.eliteTimer = love.math.random() * Data.elite.spectralCycle
   self.intangible = false
   self.shield = self:hasAffix("armored") and Data.elite.armoredShield or 0
@@ -388,9 +398,70 @@ function Enemy:updateManaHunter(dt, run, target, distance, nx, ny)
   end
 end
 
+function Enemy:updatePurifier(dt, run, distance, nx, ny)
+  local def = self.def
+  local keep = def.keepDistance or 120
+  if distance > keep + 30 then
+    self:move(dt, run, nx, ny, 1)
+  elseif distance < (def.retreatDistance or 72) then
+    self:move(dt, run, -nx, -ny, 1)
+  end
+end
+
+function Enemy:updateSiege(dt, run, target, distance, nx, ny)
+  -- Inmóvil: solo orienta la barrera hacia el jugador.
+  self.facingX = nx
+  self.facingY = ny
+end
+
+function Enemy:findPetTarget(run)
+  if not Antidote.enabled(run) or not run.pets then return nil end
+
+  local best, bestD2 = nil, math.huge
+  local range = Data.enemyAI.sightRange
+  local range2 = range * range
+  for _, pet in ipairs(Antidote.activePets(run)) do
+    local d2 = Util.dist2(self.x, self.y, pet.x, pet.y)
+    if d2 <= range2
+      and (not run.dungeon or not run.dungeon.lineOfSight
+        or run.dungeon:lineOfSight(self.x, self.y, pet.x, pet.y))
+      and d2 < bestD2
+    then
+      best, bestD2 = pet, d2
+    end
+  end
+  return best
+end
+
+function Enemy:updatePetHunter(dt, run, target, distance, nx, ny)
+  self:move(dt, run, nx, ny, 1)
+  self.contactTimer = math.max(0, self.contactTimer - dt)
+  if distance > self.radius + target.radius + 4 then return end
+  if self.contactTimer > 0 then return end
+
+  local def = self.def
+  local drain = self.damage * (def.petDrainScale or 0.35)
+  if not target:takeDamage(drain, run) then return end
+
+  self.contactTimer = def.petDrainInterval or 0.45
+  local heal = drain * (def.petDrainHealPercent or 0.50)
+  self.hp = math.min(self.maxHp, self.hp + heal)
+  FX.line(self.x, self.y, target.x, target.y, def.color, 0.16, 3)
+  FX.add(
+    "-" .. math.max(1, math.floor(drain)),
+    target.x,
+    target.y - target.radius - 8,
+    def.color
+  )
+end
+
 function Enemy:updateRole(dt, run, target, distance, nx, ny)
   local role = self.def.role or (self.def.keepDistance and "ranged" or "chaser")
-  if role == "turret" then
+  if role == "purifier" then
+    self:updatePurifier(dt, run, distance, nx, ny)
+  elseif role == "siege" then
+    self:updateSiege(dt, run, target, distance, nx, ny)
+  elseif role == "turret" then
     self:updateTurret(dt, run, target, distance)
   elseif role == "mortar" then
     self:updateMortar(dt, run, target, distance, nx, ny)
@@ -454,6 +525,26 @@ function Enemy:hasGuardianAura(run)
   return false
 end
 
+function Enemy:updateMirrorShield(dt)
+  local def = self.def
+  if not def.reflectionActiveTime then return end
+
+  self.mirrorShieldAngle = (self.mirrorShieldAngle
+    + dt * (def.reflectionRotation or 2.4)) % (math.pi * 2)
+
+  if self.mirrorShieldTimer > 0 then
+    self.mirrorShieldTimer = math.max(0, self.mirrorShieldTimer - dt)
+    if self.mirrorShieldTimer == 0 then
+      self.mirrorShieldCooldownTimer = def.reflectionCooldown or 4.6
+    end
+  elseif self.mirrorShieldCooldownTimer > 0 then
+    self.mirrorShieldCooldownTimer = math.max(0, self.mirrorShieldCooldownTimer - dt)
+    if self.mirrorShieldCooldownTimer == 0 then
+      self.mirrorShieldTimer = def.reflectionActiveTime
+    end
+  end
+end
+
 function Enemy:updateAffixTimers(dt, run)
   if self:hasAffix("mirror") then
     if self.mirrorTimer > 0 then
@@ -495,6 +586,27 @@ function Enemy:onDamageDealt(amount, run)
   end
 end
 
+function Enemy:shouldReflectAntidote(run, amount, source)
+  local def = self.def
+  if def.role ~= "mirror_guard" or self.mirrorShieldTimer <= 0 then
+    return false
+  end
+  if amount < (def.reflectionMinDamage or 0) then return false end
+  if source == "poison"
+    or source == "elite"
+    or source == "hazard"
+    or source == "pet"
+  then
+    return false
+  end
+
+  local player = run and run.player
+  if not player then return false end
+  local angle = Util.atan2(player.y - self.y, player.x - self.x)
+  local halfArc = (def.reflectionArc or math.pi * 0.7) * 0.5
+  return angleDistance(angle, self.mirrorShieldAngle) <= halfArc
+end
+
 function Enemy:shouldReflect(run)
   if self.mirrorTimer <= 0 or not run or not run.player then
     return false
@@ -523,6 +635,7 @@ function Enemy:update(dt, run)
   end
 
   self:updateAffixTimers(dt, run)
+  self:updateMirrorShield(dt)
 
   if self.poisonTimer > 0 then
     self.poisonTimer = math.max(0, self.poisonTimer - dt)
@@ -538,8 +651,13 @@ function Enemy:update(dt, run)
   end
 
   local shadow = run.shadow
-  local target = shadow or run.player
+  local petTarget
+  if not shadow and self.def.role == "pet_hunter" then
+    petTarget = self:findPetTarget(run)
+  end
+  local target = shadow or petTarget or run.player
   local targetingShadow = shadow ~= nil
+  local targetingPet = not targetingShadow and petTarget ~= nil
   local dx = target.x - self.x
   local dy = target.y - self.y
   local distance = math.sqrt(dx * dx + dy * dy)
@@ -569,15 +687,21 @@ function Enemy:update(dt, run)
       ny = ny,
     })
   elseif canSee then
-    self:updateRole(dt, run, target, distance, nx, ny)
+    if targetingPet then
+      self:updatePetHunter(dt, run, target, distance, nx, ny)
+    else
+      self:updateRole(dt, run, target, distance, nx, ny)
+    end
   else
     self:updateSearch(dt, run)
   end
 
   self.phase = self.phase + dt * Data.enemyAI.phaseSpeed
-  self:updateContact(dt, run, target, distance, nx, ny, canSee, targetingShadow)
+  if not targetingPet then
+    self:updateContact(dt, run, target, distance, nx, ny, canSee, targetingShadow)
+  end
 
-  if not targetingShadow and run.pets then
+  if not targetingShadow and not targetingPet and run.pets then
     for _, pet in ipairs(run.pets) do
       if not pet.dead and pet.def.meleeVulnerable then
         local rr = self.radius + pet.radius
@@ -597,6 +721,10 @@ function Enemy:takeDamage(amount, run, source)
     amount = amount * (1 - Data.elite.guardianDamageReduction)
   end
 
+  if (self.armor or 0) > 0 then
+    amount = amount * (1 - self.armor)
+  end
+
   -- Fortificado protege mientras el jefe siga por encima del umbral. La
   -- memoria se rompe al cruzar el porcentaje y no vuelve a activarse.
   if self.memoryFortified
@@ -604,6 +732,11 @@ function Enemy:takeDamage(amount, run, source)
     and self.hp > self.maxHp * (self.memoryFortifiedThreshold or 0)
   then
     amount = amount * (1 - (self.memoryFortifiedReduction or 0))
+  end
+
+  local cap = self.def.damageCap
+  if cap and amount > cap then
+    amount = cap + (amount - cap) * (self.def.damageCapExcessScale or 0.15)
   end
 
   if (self.shield or 0) > 0 then
@@ -633,15 +766,29 @@ function Enemy:takeDamage(amount, run, source)
     FX.add("Fortificado roto", self.x, self.y - self.radius - 20, { 0.70, 0.80, 0.92 })
   end
 
+  local reflect = nil
+  local reflectColor = nil
   if run
     and run.player
     and source ~= "poison"
     and source ~= "elite"
     and source ~= "hazard"
+    and source ~= "pet"
+    and self:hasAffix("mirror")
     and self:shouldReflect(run)
   then
-    run.player:takeDamage(amount * Data.elite.mirrorReflect, run)
-    FX.ring(self.x, self.y, self.radius + 10, { 0.78, 0.88, 1.00 })
+    reflect = Data.elite.mirrorReflect
+    reflectColor = { 0.78, 0.88, 1.00 }
+  elseif run
+    and run.player
+    and self:shouldReflectAntidote(run, amount, source)
+  then
+    reflect = self.def.reflectionReflect or 0.35
+    reflectColor = self.def.color
+  end
+  if reflect then
+    run.player:takeDamage(amount * reflect, run)
+    FX.ring(self.x, self.y, self.radius + 10, reflectColor)
   end
 
   if run and run.onEnemyDamaged then
@@ -717,6 +864,51 @@ function Enemy:draw()
   if self:hasAffix("guardian") then
     love.graphics.setColor(0.82, 0.74, 0.36, 0.20)
     love.graphics.circle("line", self.x, self.y, Data.elite.guardianRadius)
+  end
+
+  if self.def.role == "purifier" then
+    local t = love.timer.getTime()
+    local aura = Data.antidote.healingAuraRadius
+    local pulse = 0.55 + 0.20 * math.sin(t * 3.2)
+    love.graphics.setColor(0.70, 0.95, 0.55, 0.06)
+    love.graphics.circle("fill", self.x, self.y, aura)
+    love.graphics.setColor(0.70, 0.95, 0.55, 0.18 * pulse + 0.10)
+    love.graphics.setLineWidth(2)
+    love.graphics.circle("line", self.x, self.y, aura)
+    love.graphics.setLineWidth(1)
+  end
+
+  if self.def.role == "mirror_guard" and self.mirrorShieldTimer > 0 then
+    local halfArc = (self.def.reflectionArc or math.pi * 0.7) * 0.5
+    love.graphics.setColor(0.78, 0.90, 1.00, 0.90)
+    love.graphics.setLineWidth(4)
+    love.graphics.arc(
+      "line",
+      "open",
+      self.x,
+      self.y,
+      self.radius + 12,
+      self.mirrorShieldAngle - halfArc,
+      self.mirrorShieldAngle + halfArc
+    )
+    love.graphics.setLineWidth(1)
+  end
+
+  if self.def.role == "siege" then
+    local facing = Util.atan2(self.facingY or 0, self.facingX or 1)
+    local halfArc = math.pi * 0.32
+    love.graphics.setColor(0.95, 0.72, 0.30, 0.85)
+    love.graphics.setLineWidth(4)
+    love.graphics.arc(
+      "line",
+      "open",
+      self.x,
+      self.y,
+      self.radius + 11,
+      facing - halfArc,
+      facing + halfArc
+    )
+    love.graphics.setLineWidth(1)
   end
 
   if self.mirrorTimer > 0 then

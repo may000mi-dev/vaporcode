@@ -145,9 +145,11 @@ actos y cuatro capítulos jugables:
 3. **Catedral de engranajes** (pisos 1–9), portal negro hacia la Torre.
 4. **Torre del Tiempo Detenido** (pisos 10–12), jefe final y desenlace.
 
-Amado, Mar y Amileth se pueden elegir si ya están desbloqueados. Cada uno tiene
-escenas, motivación y final propios; el contador `x/3` muestra las historias
-completadas. La historia no regala personajes ni mejoras: usa la misma economía
+Amado, Mar y Amileth se pueden elegir si ya están desbloqueados. La selección es
+global: la misma tarjeta con confirmación aparece en menú, Historia, Infinito,
+Configuración y la pantalla de Personajes, y cambia al instante la paleta de toda
+la interfaz y la música. Cada uno tiene escenas, motivación y final propios; el
+contador `x/3` muestra las historias completadas. La historia no regala personajes ni mejoras: usa la misma economía
 del modo Infinito. Al comenzar cada piso se guarda un checkpoint; `CONTINUAR
 HISTORIA` retoma ese piso sin repetir las escenas ya vistas. Morir permite
 `REINTENTAR PISO` o volver al menú; reiniciar la campaña pide confirmación y
@@ -168,7 +170,10 @@ todas las oleadas. La **atrición** reduce la curación entre pisos (15% → 0%)
 el tiempo límite (300 → 210 s) según la profundidad, desde el piso 10 ya no hay
 curación automática. El **Director Dinámico** mide tiempo, daño y vida al limpiar
 cada piso: si el jugador domina, sube el presupuesto y añade un élite; si sufre,
-lo reduce y suspende los élites de doble afijo. Cada 3 pisos entra un **compás**
+lo reduce y suspende los élites de doble afijo. Desde el piso 6 puede aparecer un
+**Antídoto** por piso (máximo uno): el Purificador reduce 50% la curación en su
+aura, el Devorador persigue mascotas, el Espejo refleja daño frontal y el
+Asediador limita el daño por golpe. Cada 3 pisos entra un **compás**
 (Presión, Sobrecarga, Legión, Eco, Hambruna, Cacería, Sello o Coro) y los élites
 suman afijos según la profundidad. En los pisos de jefe, los compases activos
 dejan **memorias** en el jefe (Furia, Eco, Sifón, Regeneración, Guardia o
@@ -183,14 +188,20 @@ esta pantalla. Las mejoras son independientes por personaje.
 
 **Bestiario** registra enemigos y jefes vistos en partidas (no en la sala de
 pruebas). Cada ficha muestra retrato procedural, nombre y descripción; los no
-vistos aparecen como `???`. El descubrimiento persiste entre partidas.
+vistos aparecen como `???`. El descubrimiento persiste entre partidas. La primera
+pestaña, `TODOS`, reúne el catálogo completo y tiene scroll; las demás filtran por
+tipo (`CUERPO`, `DISPARAN`, `INVOCAN`, `SOPORTE`, `JEFES`). Un enemigo puede
+aparecer en varios tipos: Peste-Negra dispara y controla, el Maquinista invoca y
+apoya, y el Devorador de Núcleos cuenta como soporte porque elimina mascotas.
 
 ## Configuración y sala de pruebas
 
 Configuración (`C` en el menú) ajusta el volumen de la música y de los efectos en
 pasos de 10%, guarda los cambios y permite borrar todo el progreso con confirmación.
-La música es un bucle procedural corto generado en el dispositivo; no hay pistas
-externas que cargar.
+La música usa 15 pistas MP3 incluidas en `assets/audio/music`: cada personaje
+tiene tema de menú y una pista por zona (cripta, forja, catedral y torre). El BPM
+se deriva de la zona y alimenta el reloj rítmico; si una pista falta o el
+dispositivo no puede decodificarla, suena el metrónomo procedural de respaldo.
 
 La sala de pruebas abre una run con oleadas desactivadas y tiempo libre. El panel
 `PRUEBAS` (o `F2`) lista enemigos y jefes para invocarlos, permite dar ítems en

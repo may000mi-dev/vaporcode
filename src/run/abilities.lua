@@ -6,6 +6,7 @@ local Camera = require("src.utils.camera")
 local Rhythm = require("src.run.rhythm")
 local FX = require("src.run.fx")
 local Shadow = require("src.run.shadow")
+local Antidote = require("src.run.antidote")
 
 local Abilities = {}
 
@@ -159,6 +160,7 @@ local function castShield(run, def)
       run.stats.maxHp
         * def.healPercent
         * Compases.playerHealingMultiplier(run)
+        * Antidote.healingMultiplier(run)
     )
     run.hp = math.min(run.stats.maxHp, run.hp + heal)
     FX.add("+" .. heal .. " vida", run.player.x, run.player.y - 26, { 0.40, 1.00, 0.50 })

@@ -59,6 +59,7 @@ local function defaults()
     version = VERSION,
     coins = 0,
     bestLevel = 0,
+    selectedCharacter = "amado",
     unlocked = { cripta = true, forja = false, catedral = false, torre = false },
     characters = { amado = true, mar = false, amileth = false },
     progress = progress,
@@ -143,6 +144,10 @@ local function normalize(data)
   out.version = VERSION
   out.coins = math.max(0, math.floor(tonumber(data.coins) or 0))
   out.bestLevel = math.max(0, math.floor(tonumber(data.bestLevel) or 0))
+  if type(data.selectedCharacter) == "string"
+    and Data.characters[data.selectedCharacter] then
+    out.selectedCharacter = data.selectedCharacter
+  end
 
   -- La versión 4 guardaba un solo nivel de mejora para toda la cuenta. Al
   -- migrar, ese progreso se reparte entre los tres personajes para no quitar
@@ -192,6 +197,9 @@ local function normalize(data)
     end
   end
   out.characters.amado = true
+  if not out.characters[out.selectedCharacter] then
+    out.selectedCharacter = "amado"
+  end
 
   if type(data.bestiary) == "table" then
     for id, seen in pairs(data.bestiary) do
@@ -452,6 +460,25 @@ function Save.stat(id, characterId)
   local def = Data.upgrades[id]
   local level = Save.upgradeLevel(id, characterId)
   return def.base + def.step * level
+end
+
+
+
+function Save.getSelectedCharacter()
+  local id = Save.data and Save.data.selectedCharacter or "amado"
+  if not Data.characters[id] then
+    id = "amado"
+  end
+  return id
+end
+
+function Save.setSelectedCharacter(id)
+  if type(Save.data) ~= "table" then return false end
+  if not Data.characters[id] then return false end
+  if not Save.isCharacterUnlocked(id) then return false end
+  Save.data.selectedCharacter = id
+  Save.save()
+  return true
 end
 
 return Save

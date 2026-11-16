@@ -5,6 +5,7 @@ local State = require("src.estados")
 local Util = require("src.utils.util")
 local TextCache = require("src.utils.textcache")
 local Screen = require("src.utils.screen")
+local Themes = require("src.data.themes")
 
 local Gameover = {
   info = nil,
@@ -61,13 +62,8 @@ local function chooseAt(x, y)
   end
 end
 
-local function drawButton(rect, label, accent)
-  love.graphics.setColor(
-    accent[1] * 0.18,
-    accent[2] * 0.18,
-    accent[3] * 0.18,
-    0.95
-  )
+local function drawButton(rect, label, accent, theme)
+  love.graphics.setColor(theme.button[1], theme.button[2], theme.button[3], 0.95)
   love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 8, 8)
 
   love.graphics.setColor(accent[1], accent[2], accent[3])
@@ -76,7 +72,7 @@ local function drawButton(rect, label, accent)
   love.graphics.setLineWidth(1)
 
   love.graphics.setFont(Fonts.button)
-  love.graphics.setColor(1, 1, 1)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.printf(label, rect.x, rect.y + 17, rect.w, "center")
 end
 
@@ -124,6 +120,7 @@ function Gameover.focus(focused) end
 
 function Gameover.draw()
   Gameover.layout()
+  local theme = Themes.current()
   local info = Gameover.info
   local panel = Gameover.panel
   local px, py = panel.x, panel.y
@@ -131,9 +128,9 @@ function Gameover.draw()
   love.graphics.setColor(0, 0, 0, 0.72)
   love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
-  love.graphics.setColor(0.07, 0.08, 0.11, 0.98)
+  love.graphics.setColor(theme.panel[1], theme.panel[2], theme.panel[3], 0.98)
   love.graphics.rectangle("fill", px, py, panel.w, panel.h, 12, 12)
-  love.graphics.setColor(0.45, 0.20, 0.20)
+  love.graphics.setColor(theme.border[1], theme.border[2], theme.border[3])
   love.graphics.rectangle("line", px, py, panel.w, panel.h, 12, 12)
 
   local timeout = info.reason == "timeout"
@@ -149,11 +146,11 @@ function Gameover.draw()
   end
 
   love.graphics.setFont(Fonts.title)
-  love.graphics.setColor(0.95, 0.40, 0.35)
+  love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
   love.graphics.printf(title, px, py + 30, panel.w, "center")
 
   love.graphics.setFont(Fonts.body)
-  love.graphics.setColor(0.82, 0.86, 0.92)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   if critical then
     love.graphics.printf(
       "La memoria del jefe desbordó los 3 minutos. La sala colapsó.",
@@ -204,7 +201,7 @@ function Gameover.draw()
   love.graphics.printf(TextCache.format("go-coins", "Monedas totales: %d", info.coins), px + 40, py + 216, 480, "center")
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.65, 0.70, 0.78)
+  love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
   if info.snapshot then
     love.graphics.printf(
       story and "Reintentar recupera el checkpoint de este piso."
@@ -224,15 +221,16 @@ function Gameover.draw()
     )
   end
 
-  drawButton(Gameover.rects.menu, "MENÚ", { 0.45, 0.70, 0.85 })
+  drawButton(Gameover.rects.menu, "MENÚ", theme.accent, theme)
   drawButton(
     Gameover.rects.retry,
     story and "REINTENTAR PISO" or "REINTENTAR",
-    { 0.90, 0.65, 0.30 }
+    theme.secondary,
+    theme
   )
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.55, 0.60, 0.68)
+  love.graphics.setColor(theme.dim[1], theme.dim[2], theme.dim[3])
   love.graphics.printf("Enter reintentar · Esc menú", 0, Screen.height - 70, Screen.width, "center")
 end
 

@@ -8,6 +8,7 @@ local Util = require("src.utils.util")
 local Targeting = require("src.run.targeting")
 local Threat = require("src.run.threat")
 local Compases = require("src.run.compases")
+local Antidote = require("src.run.antidote")
 
 local Combat = {}
 
@@ -181,6 +182,7 @@ function Combat.onBasicDamage(run, enemy, amount)
   local vampire = (run.passiveStacks and run.passiveStacks.vampire) or 0
   local fairy = (run.passiveStacks and run.passiveStacks.fairy) or 0
   local synergy = vampire > 0 and fairy > 0
+  local sustain = Antidote.healingMultiplier(run)
 
   if vampire > 0 then
     local def = Data.items.vampire
@@ -188,13 +190,14 @@ function Combat.onBasicDamage(run, enemy, amount)
     local heal = amount
       * math.min(rate * vampire, def.healCap)
       * Compases.playerHealingMultiplier(run)
+      * sustain
     run.hp = math.min(run.stats.maxHp, run.hp + heal)
   end
 
   if fairy > 0 then
     local def = Data.items.fairy
     local rate = synergy and def.healSynergy or def.healPerStack
-    local restore = amount * math.min(rate * fairy, def.healCap)
+    local restore = amount * math.min(rate * fairy, def.healCap) * sustain
     run.mana = math.min(run.manaMax, (run.mana or 0) + restore)
   end
 

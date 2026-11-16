@@ -12,6 +12,7 @@ local Threat = require("src.run.threat")
 local Compases = require("src.run.compases")
 local Atricion = require("src.run.atrition")
 local Director = require("src.run.director")
+local Antidote = require("src.run.antidote")
 
 local Progression = {}
 
@@ -29,7 +30,9 @@ function Progression.addXp(run, amount)
     run.stats.damage = run.stats.damage + Data.player.levelDamage
     run.stats.maxHp = run.stats.maxHp + Data.player.levelMaxHp
     local levelHeal = math.floor(
-      Data.player.levelHeal * Compases.playerHealingMultiplier(run)
+      Data.player.levelHeal
+        * Compases.playerHealingMultiplier(run)
+        * Antidote.healingMultiplier(run)
     )
     run.hp = math.min(run.stats.maxHp, run.hp + levelHeal)
     run.player:refreshShield(run.stats.maxHp)
@@ -125,6 +128,7 @@ function Progression.nextLevel(run)
         run.stats.maxHp
           * Data.player.nextLevelHealPercent
           * Compases.playerHealingMultiplier(run)
+          * Antidote.healingMultiplier(run)
       )
     )
   end

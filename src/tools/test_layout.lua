@@ -146,18 +146,28 @@ local function checkWide(width, height, expectedWidth, expectedScale)
   assert(insideScreen(Infinito.panel, Screen.width, Screen.height), "modo infinito fuera")
   assert(insideScreen(Infinito.rects.back, Screen.width, Screen.height), "volver fuera")
   assert(insideScreen(Infinito.rects.start, Screen.width, Screen.height), "iniciar fuera")
-  for _, rect in ipairs(Infinito.characterRects) do
+  for _, rect in ipairs(Infinito.characterRects or {}) do
     assert(insideScreen(rect, Screen.width, Screen.height), "personaje infinito fuera")
+  end
+  if Infinito.selector and Infinito.selector.rects then
+    for _, rect in ipairs(Infinito.selector.rects) do
+      assert(insideScreen(rect, Screen.width, Screen.height), "selector de personaje infinito fuera")
+    end
   end
   for _, rect in ipairs(Infinito.dungeonRects) do
     assert(insideScreen(rect, Screen.width, Screen.height), "mazmorra infinita fuera")
   end
 
-  Personajes.enter("amado")
+  Personajes.enter()
   assert(insideScreen(Personajes.panel, Screen.width, Screen.height), "personajes fuera")
   assert(insideScreen(Personajes.rects.back, Screen.width, Screen.height), "volver fuera")
-  for _, rect in ipairs(Personajes.characterRects) do
+  for _, rect in ipairs(Personajes.characterRects or {}) do
     assert(insideScreen(rect, Screen.width, Screen.height), "ficha de personaje fuera")
+  end
+  if Personajes.selector and Personajes.selector.rects then
+    for _, rect in ipairs(Personajes.selector.rects) do
+      assert(insideScreen(rect, Screen.width, Screen.height), "selector de personaje fuera")
+    end
   end
   for _, rect in ipairs(Personajes.upgradeRects) do
     assert(insideScreen(rect, Screen.width, Screen.height), "mejora de personaje fuera")
@@ -166,8 +176,16 @@ local function checkWide(width, height, expectedWidth, expectedScale)
   Bestiario.enter()
   assert(insideScreen(Bestiario.panel, Screen.width, Screen.height), "bestiario fuera")
   assert(insideScreen(Bestiario.rects.back, Screen.width, Screen.height), "volver fuera")
+  assert(insideScreen(Bestiario.detailRect, Screen.width, Screen.height), "detalle del bestiario fuera")
+  assert(Bestiario.tabs[1] and Bestiario.tabs[1].id == "all", "Todos debe ir primero")
   for _, rect in ipairs(Bestiario.cards) do
     assert(insideScreen(rect, Screen.width, Screen.height), "ficha de bestiario fuera")
+  end
+  for _, rect in ipairs(Bestiario.tabs) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "pestaña del bestiario fuera")
+  end
+  if Bestiario.grid then
+    assert(insideScreen(Bestiario.grid, Screen.width, Screen.height), "lista del bestiario fuera")
   end
 
   Config.layout()

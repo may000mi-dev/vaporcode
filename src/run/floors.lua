@@ -137,7 +137,8 @@ function Floors.enter(run, dungeonId, characterId, abilityId, options)
   FX.clear()
   Input.reset()
   Rhythm.enter(run.def.song)
-  Audio.startMusic(run.def.song.bpm)
+  local zone = run.sandbox and "sandbox" or run.def.id
+  Audio.playZone(zone, run.characterId)
   run:enterLevel()
 end
 
@@ -268,7 +269,8 @@ function Floors.retryFloor(run, snapshot)
   FX.clear()
   Input.reset()
   Rhythm.enter(run.def.song)
-  Audio.startMusic(run.def.song.bpm)
+  local zone = run.sandbox and "sandbox" or run.def.id
+  Audio.playZone(zone, run.characterId)
   run:enterLevel()
   return true
 end

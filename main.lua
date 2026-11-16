@@ -25,6 +25,7 @@ end
 function love.update(dt)
   -- Evita saltos grandes al recuperar el foco en Android.
   if dt > 0.1 then dt = 0.1 end
+  Audio.update(dt)
   State.update(dt)
 end
 
@@ -56,6 +57,10 @@ end
 function love.mousemoved(x, y, dx, dy, istouch)
   if istouch then return end
   State.mousemoved(Screen.toVirtualX(x), Screen.toVirtualY(y))
+end
+
+function love.wheelmoved(x, y)
+  State.wheelmoved(x, y)
 end
 
 function love.touchpressed(id, x, y)

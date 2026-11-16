@@ -10,6 +10,8 @@ local Debug = require("src.utils.debug")
 local TextCache = require("src.utils.textcache")
 local Atricion = require("src.run.atrition")
 local Director = require("src.run.director")
+local Antidote = require("src.run.antidote")
+local Themes = require("src.data.themes")
 
 local HUD = {}
 
@@ -96,6 +98,7 @@ end
 
 function HUD.drawInventory(run)
   HUD.layout()
+  local theme = Themes.current()
   for index = 1, Data.inventory.maxActive do
     local rect = HUD.inventoryRect(index)
     local slot = run.inventory and run.inventory[index]
@@ -103,13 +106,13 @@ function HUD.drawInventory(run)
       and run.selectionSection == "active"
       and run.selectedInventory == index
 
-    love.graphics.setColor(0.05, 0.065, 0.08, 0.86)
+    love.graphics.setColor(theme.panelAlt[1], theme.panelAlt[2], theme.panelAlt[3], 0.92)
     love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 6, 6)
     if selected then
-      love.graphics.setColor(1.00, 0.82, 0.32)
+      love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
       love.graphics.setLineWidth(2)
     else
-      love.graphics.setColor(0.22, 0.30, 0.36)
+      love.graphics.setColor(theme.border[1], theme.border[2], theme.border[3])
       love.graphics.setLineWidth(1)
     end
     love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 6, 6)
@@ -123,22 +126,22 @@ function HUD.drawInventory(run)
       love.graphics.circle("fill", rect.x + 13, rect.y + rect.h * 0.5, 12)
       love.graphics.setColor(color[1], color[2], color[3])
       love.graphics.circle("fill", rect.x + 13, rect.y + rect.h * 0.5, 7)
-      love.graphics.setColor(1, 1, 1)
+      love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
       love.graphics.print(def.short, rect.x + 23, rect.y + 4)
-      love.graphics.setColor(0.66, 0.74, 0.82)
+      love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
       local amount = slot.amount or 1
       local fmt = amount > 1 and "i%dx%d" or "i%d"
       love.graphics.print(TextCache.format(invLabelKeys[index], fmt, index, amount), rect.x + 23, rect.y + 20)
     else
-      love.graphics.setColor(0.34, 0.42, 0.49)
+      love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
       love.graphics.print(TextCache.format(invIndexKeys[index], "i%d", index), rect.x + 6, rect.y + 5)
-      love.graphics.setColor(0.24, 0.30, 0.36)
+      love.graphics.setColor(theme.dim[1], theme.dim[2], theme.dim[3])
       love.graphics.print("--", rect.x + 22, rect.y + 20)
     end
   end
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.55, 0.64, 0.72)
+  love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
   love.graphics.print(
     TextCache.format(
       "hud-storage",
@@ -154,12 +157,14 @@ end
 
 function HUD.draw(run)
   HUD.layout()
-  love.graphics.setColor(0.05, 0.06, 0.08, 0.82)
+  local theme = Themes.current()
+  local characterTheme = Themes.get(run.characterId)
+  love.graphics.setColor(theme.panel[1], theme.panel[2], theme.panel[3], 0.92)
   love.graphics.rectangle("fill", 10, 8, 500, 138, 8, 8)
 
   love.graphics.setFont(Fonts.small)
   if run.mode == "story" then
-    love.graphics.setColor(0.78, 0.64, 1.00)
+    love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
     love.graphics.print(
       TextCache.format(
         "hud-floor-story",
@@ -171,7 +176,7 @@ function HUD.draw(run)
       12
     )
   else
-    love.graphics.setColor(0.55, 0.85, 0.95)
+    love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
     love.graphics.print(
       TextCache.format("hud-floor", "%s · Piso %d", run.def.name, run.depth),
       20,
@@ -179,11 +184,11 @@ function HUD.draw(run)
     )
   end
 
-  love.graphics.setColor(0.80, 0.85, 0.90)
+  love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
   love.graphics.print(TextCache.format("coins", "Monedas %d", Save.data.coins), 398, 12)
 
   if run.sandbox then
-    love.graphics.setColor(0.55, 0.90, 1.00)
+    love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
     love.graphics.print(
       TextCache.format("hud-time-sandbox", "Sala de pruebas · tiempo libre"),
       600,
@@ -205,39 +210,39 @@ function HUD.draw(run)
   if run.stats.maxHp > 0 then
     hpRatio = Util.clamp(run.hp / run.stats.maxHp, 0, 1)
   end
-  love.graphics.setColor(0.08, 0.10, 0.12, 0.95)
+  love.graphics.setColor(theme.bg[1], theme.bg[2], theme.bg[3], 0.95)
   love.graphics.rectangle("fill", 20, 34, 230, 14, 4, 4)
   love.graphics.setColor(0.70, 0.18, 0.18)
   love.graphics.rectangle("fill", 20, 34, 230 * hpRatio, 14, 4, 4)
 
   if run.player and run.player.shieldMax > 0 then
     local shieldRatio = Util.clamp(run.player.shield / run.player.shieldMax, 0, 1)
-    love.graphics.setColor(0.08, 0.10, 0.12, 0.95)
+    love.graphics.setColor(theme.bg[1], theme.bg[2], theme.bg[3], 0.95)
     love.graphics.rectangle("fill", 20, 50, 230, 4, 2, 2)
-    love.graphics.setColor(0.45, 0.95, 0.85)
+    love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
     love.graphics.rectangle("fill", 20, 50, 230 * shieldRatio, 4, 2, 2)
   end
 
-  love.graphics.setColor(0.90, 0.95, 1.00)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.print(TextCache.format("hud-hp", "%d / %d", Util.round(run.hp), run.stats.maxHp), 258, 34)
 
   local xpRatio = 0
   if run.xpToNext > 0 then
     xpRatio = Util.clamp(run.xp / run.xpToNext, 0, 1)
   end
-  love.graphics.setColor(0.08, 0.10, 0.12, 0.95)
+  love.graphics.setColor(theme.bg[1], theme.bg[2], theme.bg[3], 0.95)
   love.graphics.rectangle("fill", 20, 58, 230, 8, 3, 3)
-  love.graphics.setColor(0.30, 0.75, 0.95)
+  love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
   love.graphics.rectangle("fill", 20, 58, 230 * xpRatio, 8, 3, 3)
 
-  love.graphics.setColor(0.75, 0.82, 0.90)
+  love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
   love.graphics.print(TextCache.format("hud-xp", "XP %d / %d", run.xp, run.xpToNext), 258, 54)
 
   local manaRatio = 0
   if run.manaMax > 0 then
     manaRatio = Util.clamp((run.mana or 0) / run.manaMax, 0, 1)
   end
-  love.graphics.setColor(0.08, 0.10, 0.12, 0.95)
+  love.graphics.setColor(theme.bg[1], theme.bg[2], theme.bg[3], 0.95)
   love.graphics.rectangle("fill", 20, 72, 230, 8, 3, 3)
   if (run.manaFlash or 0) > 0 and math.floor(run.manaFlash * 18) % 2 == 0 then
     love.graphics.setColor(0.95, 0.22, 0.22)
@@ -246,23 +251,23 @@ function HUD.draw(run)
   end
   love.graphics.rectangle("fill", 20, 72, 230 * manaRatio, 8, 3, 3)
 
-  love.graphics.setColor(0.75, 0.82, 0.90)
+  love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
   love.graphics.print(
     TextCache.format("hud-mana", "Maná %d / %d", Util.round(run.mana or 0), run.manaMax),
     258,
     68
   )
 
-  love.graphics.setColor(0.80, 0.85, 0.90)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.print(TextCache.format("hud-level", "Nv. %d", run.playerLevel), 398, 34)
 
   local character = Data.characters[run.characterId]
   local a1 = run.abilitySlot1 and Data.abilities[run.abilitySlot1]
   local a2 = run.abilitySlot2 and Data.abilities[run.abilitySlot2]
   if character then
-    love.graphics.setColor(character.color[1], character.color[2], character.color[3])
+    love.graphics.setColor(characterTheme.accent[1], characterTheme.accent[2], characterTheme.accent[3])
     love.graphics.print(character.name, 20, 88)
-    love.graphics.setColor(0.72, 0.80, 0.88)
+    love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
     love.graphics.print(
       TextCache.format(
         "hud-abilities",
@@ -277,7 +282,7 @@ function HUD.draw(run)
 
   local lock = run.abilityLockTimer or 0
   if lock > 0 then
-    love.graphics.setColor(0.55, 0.72, 1.00)
+    love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
     -- Se cuantiza a décimas: el texto cambia 10 veces por segundo, no 60.
     love.graphics.print(
       TextCache.format("hud-lock", "Habilidades selladas: %.1fs", math.floor(lock * 10) / 10),
@@ -285,13 +290,18 @@ function HUD.draw(run)
       104
     )
   else
-    love.graphics.setColor(0.55, 0.64, 0.72)
+    love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
     love.graphics.print("Escudo (E) y Turbo (T) siempre disponibles", 20, 104)
+  end
+
+  if Antidote.suppressed(run) then
+    love.graphics.setColor(0.74, 0.95, 0.55)
+    love.graphics.print("PURIFICADO · -50%", 388, 104)
   end
 
   local compas = run.compases
   if compas then
-    love.graphics.setColor(0.90, 0.76, 0.42)
+    love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
     love.graphics.print(
       TextCache.format("hud-compas", "%s", compas.label),
       20,
@@ -312,13 +322,13 @@ function HUD.draw(run)
       if isStrong then
         love.graphics.setColor(strong[1], strong[2], strong[3])
       else
-        love.graphics.setColor(1.00, 0.85, 0.35)
+        love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
       end
       dotRadius = 5 * Rhythm.pulse
     elseif isStrong then
       love.graphics.setColor(strong[1] * 0.55, strong[2] * 0.55, strong[3] * 0.55)
     else
-      love.graphics.setColor(0.25, 0.30, 0.35)
+      love.graphics.setColor(theme.dim[1], theme.dim[2], theme.dim[3])
     end
     love.graphics.circle("fill", 404 + i * 16, 92, dotRadius)
   end
@@ -326,10 +336,10 @@ function HUD.draw(run)
   if not run.sandbox then
     love.graphics.setFont(Fonts.small)
     if run.exitOpen then
-      love.graphics.setColor(0.40, 1.00, 0.60)
+      love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
       love.graphics.printf("¡Salida abierta!", 380, 70, 96, "center")
     else
-      love.graphics.setColor(0.86, 0.92, 1.00)
+      love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
       local text
       if run.threat and run.threat.enabled then
         text = TextCache.format(
@@ -347,37 +357,39 @@ function HUD.draw(run)
   end
 
   local pause = HUD.pauseButton
-  love.graphics.setColor(0.08, 0.10, 0.13, 0.90)
+  love.graphics.setColor(theme.button[1], theme.button[2], theme.button[3], 0.95)
   love.graphics.rectangle("fill", pause.x, pause.y, pause.w, pause.h, 8, 8)
-  love.graphics.setColor(0.40, 0.70, 0.80)
+  love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
   love.graphics.rectangle("line", pause.x, pause.y, pause.w, pause.h, 8, 8)
-  love.graphics.setColor(0.80, 0.90, 1.00)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.printf("PAUSA", pause.x, pause.y + 11, pause.w, "center")
 
   local backpack = HUD.backpackButton
-  love.graphics.setColor(0.08, 0.10, 0.13, 0.90)
+  love.graphics.setColor(theme.button[1], theme.button[2], theme.button[3], 0.95)
   love.graphics.rectangle("fill", backpack.x, backpack.y, backpack.w, backpack.h, 8, 8)
-  love.graphics.setColor(0.50, 0.82, 0.90)
+  love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
   love.graphics.rectangle("line", backpack.x, backpack.y, backpack.w, backpack.h, 8, 8)
-  love.graphics.setColor(0.84, 0.94, 1.00)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.printf("MOCHILA", backpack.x, backpack.y + 11, backpack.w, "center")
 
   local shop = HUD.shopButton
   local shopOpen = HUD.shopUnlocked(run)
-  love.graphics.setColor(0.08, 0.10, 0.13, 0.90)
+  local shopBorder = shopOpen and theme.secondary or theme.border
+  local shopText = shopOpen and theme.secondary or theme.dim
+  love.graphics.setColor(theme.button[1], theme.button[2], theme.button[3], 0.95)
   love.graphics.rectangle("fill", shop.x, shop.y, shop.w, shop.h, 8, 8)
-  love.graphics.setColor(shopOpen and 0.95 or 0.30, shopOpen and 0.78 or 0.36, shopOpen and 0.32 or 0.42)
+  love.graphics.setColor(shopBorder[1], shopBorder[2], shopBorder[3])
   love.graphics.rectangle("line", shop.x, shop.y, shop.w, shop.h, 8, 8)
-  love.graphics.setColor(shopOpen and 1.00 or 0.52, shopOpen and 0.88 or 0.58, shopOpen and 0.55 or 0.64)
+  love.graphics.setColor(shopText[1], shopText[2], shopText[3])
   love.graphics.printf("TIENDA", shop.x, shop.y + 11, shop.w, "center")
 
   if run.sandbox then
     local sandbox = HUD.sandboxButton
-    love.graphics.setColor(0.08, 0.13, 0.11, 0.94)
+    love.graphics.setColor(theme.button[1], theme.button[2], theme.button[3], 0.95)
     love.graphics.rectangle("fill", sandbox.x, sandbox.y, sandbox.w, sandbox.h, 8, 8)
-    love.graphics.setColor(0.45, 0.95, 0.65)
+    love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
     love.graphics.rectangle("line", sandbox.x, sandbox.y, sandbox.w, sandbox.h, 8, 8)
-    love.graphics.setColor(0.76, 1.00, 0.86)
+    love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
     love.graphics.printf(
       run.sandboxInvuln and "PRUEBAS · INV" or "PRUEBAS",
       sandbox.x,
@@ -396,19 +408,20 @@ function HUD.drawDirectorNotice(run)
   local text, color = Director.currentNotice(run)
   if not text then return end
 
+  local theme = Themes.current()
   local state = run.director
   local alpha = math.min(1, (state.noticeTimer or 0) / 0.4)
   local w = 460
   local x = (Screen.width - w) * 0.5
   local y = 190
 
-  love.graphics.setColor(0.05, 0.06, 0.08, 0.82 * alpha)
+  love.graphics.setColor(theme.panel[1], theme.panel[2], theme.panel[3], 0.92 * alpha)
   love.graphics.rectangle("fill", x, y, w, 24, 6, 6)
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(
-    color and color[1] or 0.80,
-    color and color[2] or 0.85,
-    color and color[3] or 0.90,
+    color and color[1] or theme.text[1],
+    color and color[2] or theme.text[2],
+    color and color[3] or theme.text[3],
     alpha
   )
   love.graphics.printf(
@@ -424,20 +437,21 @@ function HUD.drawBoss(run)
   local boss = run.boss
   if not boss or boss.dead then return end
 
+  local theme = Themes.current()
   local w = 280
   local x, y = (Screen.width - w) * 0.5, 148
-  love.graphics.setColor(0.05, 0.06, 0.08, 0.88)
+  love.graphics.setColor(theme.panel[1], theme.panel[2], theme.panel[3], 0.94)
   love.graphics.rectangle("fill", x, y, w, 22, 6, 6)
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.95, 0.75, 0.85)
+  love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
   love.graphics.print(boss.def.name or "GUARDIÁN", x + 8, y + 3)
 
   local ratio = 0
   if boss.maxHp > 0 then
     ratio = Util.clamp(boss.hp / boss.maxHp, 0, 1)
   end
-  love.graphics.setColor(0.08, 0.10, 0.12)
+  love.graphics.setColor(theme.bg[1], theme.bg[2], theme.bg[3])
   love.graphics.rectangle("fill", x + 8, y + 14, w - 16, 5, 2, 2)
   love.graphics.setColor(0.85, 0.25, 0.45)
   love.graphics.rectangle("fill", x + 8, y + 14, (w - 16) * ratio, 5, 2, 2)
@@ -461,13 +475,14 @@ function HUD.drawBoss(run)
     if boss.memoryRageActive or seconds <= 30 then
       love.graphics.setColor(1.00, 0.45, 0.38)
     else
-      love.graphics.setColor(0.86, 0.74, 0.50)
+      love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
     end
     love.graphics.print(text, x + 8, y + 24)
   end
 end
 
 function HUD.drawPause(run)
+  local theme = Themes.current()
   local panelW, panelH = 560, 390
   local px = (Screen.width - panelW) * 0.5
   local py = (Screen.height - panelH) * 0.5
@@ -475,13 +490,13 @@ function HUD.drawPause(run)
   love.graphics.setColor(0, 0, 0, 0.70)
   love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
-  love.graphics.setColor(0.06, 0.08, 0.11, 0.99)
+  love.graphics.setColor(theme.panel[1], theme.panel[2], theme.panel[3], 0.99)
   love.graphics.rectangle("fill", px, py, panelW, panelH, 12, 12)
-  love.graphics.setColor(0.30, 0.50, 0.60)
+  love.graphics.setColor(theme.border[1], theme.border[2], theme.border[3])
   love.graphics.rectangle("line", px, py, panelW, panelH, 12, 12)
 
   love.graphics.setFont(Fonts.title)
-  love.graphics.setColor(0.60, 0.90, 1.00)
+  love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
   love.graphics.printf("PAUSA", px, py + 22, panelW, "center")
 
   local director = Director.active(run)
@@ -493,10 +508,10 @@ function HUD.drawPause(run)
   end
 
   love.graphics.setFont(Fonts.body)
-  love.graphics.setColor(0.80, 0.85, 0.90)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.printf("Toca o pulsa P para continuar", px, py + 78, panelW, "center")
 
-  love.graphics.setColor(0.60, 0.70, 0.80)
+  love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
   love.graphics.printf(
     TextCache.format(
       run.sandbox and "pause-summary-sandbox"
@@ -517,7 +532,7 @@ function HUD.drawPause(run)
   love.graphics.setFont(Fonts.small)
   local detailY = py + 136
   if run.compases then
-    love.graphics.setColor(0.90, 0.76, 0.42)
+    love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
     love.graphics.printf(TextCache.format("pause-compas", "%s", run.compases.label),
       px, detailY, panelW, "center")
     detailY = detailY + 14
@@ -526,7 +541,7 @@ function HUD.drawPause(run)
   if Atricion.enabled(run) then
     local nextHeal = Atricion.floorHealPercent(run, run.depth + 1)
     local limit = Atricion.timeLimit(run)
-    love.graphics.setColor(0.95, 0.64, 0.36)
+    love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
     love.graphics.printf(
       TextCache.format(
         "pause-atrition",
@@ -568,14 +583,14 @@ function HUD.drawPause(run)
     if boss.memoryRageActive or seconds <= 30 then
       love.graphics.setColor(1.00, 0.45, 0.38)
     else
-      love.graphics.setColor(0.82, 0.68, 0.46)
+      love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
     end
     love.graphics.printf(text, px, detailY, panelW, "center")
     detailY = detailY + 14
   end
 
   local footerY = math.max(py + 150, detailY + 4)
-  love.graphics.setColor(0.55, 0.62, 0.70)
+  love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
   love.graphics.printf(
     "Izquierda: moverte · Centro: arrastra para mirar · A1/A2 se asignan en la mochila.",
     px,
@@ -610,16 +625,20 @@ function HUD.drawPause(run)
   if confirm then
     love.graphics.setColor(0.28, 0.08, 0.08, 0.98)
   else
-    love.graphics.setColor(0.08, 0.16, 0.20, 0.98)
+    love.graphics.setColor(theme.button[1], theme.button[2], theme.button[3], 0.98)
   end
   love.graphics.rectangle("fill", button.x, button.y, button.w, button.h, 8, 8)
-  love.graphics.setColor(confirm and 0.95 or 0.48, confirm and 0.30 or 0.78, confirm and 0.28 or 0.90)
+  if confirm then
+    love.graphics.setColor(0.95, 0.30, 0.28)
+  else
+    love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
+  end
   love.graphics.setLineWidth(2)
   love.graphics.rectangle("line", button.x, button.y, button.w, button.h, 8, 8)
   love.graphics.setLineWidth(1)
 
   love.graphics.setFont(Fonts.button)
-  love.graphics.setColor(1, 1, 1)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.printf(
     confirm and "CONFIRMAR SALIDA" or "SALIR AL MENÚ",
     button.x,
@@ -646,7 +665,7 @@ function HUD.drawPause(run)
       panelW,
       "center"
     )
-    love.graphics.setColor(0.72, 0.62, 0.55)
+    love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
     love.graphics.printf(
       "Confirmación válida por 3 segundos · P continúa",
       px,
@@ -655,7 +674,7 @@ function HUD.drawPause(run)
       "center"
     )
   else
-    love.graphics.setColor(0.90, 0.72, 0.45)
+    love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
     love.graphics.printf(
       run.sandbox and "Salir cierra la sala de pruebas."
         or "Salir al menú descarta el progreso de esta partida.",
@@ -664,7 +683,7 @@ function HUD.drawPause(run)
       panelW,
       "center"
     )
-    love.graphics.setColor(0.62, 0.70, 0.76)
+    love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
     love.graphics.printf(
       run.sandbox and "El guardado real queda intacto."
         or "Las monedas, mejoras y desbloqueos ya guardados se conservan.",
@@ -686,11 +705,12 @@ end
 function HUD.drawDebug(run)
   if not Debug.enabled then return end
 
-  love.graphics.setColor(0, 0, 0, 0.65)
+  local theme = Themes.current()
+  love.graphics.setColor(theme.panel[1], theme.panel[2], theme.panel[3], 0.90)
   love.graphics.rectangle("fill", 10, 136, 286, 166, 6, 6)
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.40, 1.00, 0.60)
+  love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
   love.graphics.print("FPS " .. love.timer.getFPS(), 20, 144)
   love.graphics.print("Jugador " .. Util.round(run.player.x) .. ", " .. Util.round(run.player.y), 20, 160)
   love.graphics.print("Enemigos " .. run.enemyCount, 20, 176)

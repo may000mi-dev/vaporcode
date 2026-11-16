@@ -24,7 +24,7 @@ sh src/tools/test_all.sh
 echo "3/4 Empaquetando .love..."
 mkdir -p "$OUT_DIR"
 rm -f "$OUT"
-zip -r -D "$OUT" conf.lua main.lua src -x 'src/tools/*'
+zip -r -D "$OUT" conf.lua main.lua src assets/audio/music -x 'src/tools/*'
 
 echo "4/4 Verificando paquete..."
 unzip -t "$OUT"

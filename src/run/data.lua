@@ -85,6 +85,7 @@ Data.elite = Enemies.elite
 Data.clericEscort = Enemies.clericEscort
 Data.hazards = Enemies.hazards
 Data.enemyAI = Enemies.enemyAI
+Data.antidote = Enemies.antidote
 Data.spawn = Enemies.spawn
 Data.threat = Enemies.threat
 

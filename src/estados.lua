@@ -37,6 +37,7 @@ function State.keypressed(key, isrepeat) call("keypressed", key, isrepeat) end
 function State.mousepressed(x, y, button, istouch) call("mousepressed", x, y, button, istouch) end
 function State.mousereleased(x, y, button, istouch) call("mousereleased", x, y, button, istouch) end
 function State.mousemoved(x, y) call("mousemoved", x, y) end
+function State.wheelmoved(x, y) call("wheelmoved", x, y) end
 function State.touchpressed(id, x, y) call("touchpressed", id, x, y) end
 function State.touchmoved(id, x, y) call("touchmoved", id, x, y) end
 function State.touchreleased(id, x, y) call("touchreleased", id, x, y) end

@@ -93,9 +93,10 @@ Historia.confirmNew = false
 Infinito.enter()
 Infinito.draw()
 
-Personajes.enter("mar")
-Personajes.draw()
 Save.data.characters.mar = true
+Personajes.enter("mar")
+assert(Save.getSelectedCharacter() == "mar", "la pantalla debe respetar el personaje elegido")
+Personajes.draw()
 Save.data.progress.mar.resonance = 1
 Save.data.progress.mar.upgrades.damage = 2
 Personajes.draw()

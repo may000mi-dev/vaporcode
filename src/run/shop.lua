@@ -5,6 +5,7 @@ local Fonts = require("src.utils.fonts")
 local Util = require("src.utils.util")
 local TextCache = require("src.utils.textcache")
 local Screen = require("src.utils.screen")
+local Themes = require("src.data.themes")
 
 local Shop = {}
 
@@ -64,57 +65,62 @@ local function alchemyRowRect(index)
   }
 end
 
-local function drawPanel()
+local function drawPanel(theme)
   local panel = Shop.panel
   love.graphics.setColor(0, 0, 0, 0.50)
   love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
-  love.graphics.setColor(0.055, 0.070, 0.085, 0.98)
+  love.graphics.setColor(theme.panel[1], theme.panel[2], theme.panel[3], 0.98)
   love.graphics.rectangle("fill", panel.x, panel.y, panel.w, panel.h, 12, 12)
-  love.graphics.setColor(0.78, 0.60, 0.24)
+  love.graphics.setColor(theme.border[1], theme.border[2], theme.border[3])
   love.graphics.rectangle("line", panel.x, panel.y, panel.w, panel.h, 12, 12)
 end
 
-local function drawTab(rect, label, active)
-  love.graphics.setColor(active and 0.18 or 0.09, active and 0.24 or 0.12, active and 0.22 or 0.14, 0.98)
+local function drawTab(rect, label, active, theme)
+  local background = active and theme.buttonSelected or theme.button
+  local border = active and theme.accent or theme.border
+  local text = active and theme.text or theme.muted
+  love.graphics.setColor(background[1], background[2], background[3], 0.98)
   love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 7, 7)
-  love.graphics.setColor(active and 1.00 or 0.36, active and 0.82 or 0.44, active and 0.32 or 0.50)
+  love.graphics.setColor(border[1], border[2], border[3])
   love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 7, 7)
   love.graphics.setFont(Fonts.body)
-  love.graphics.setColor(active and 1 or 0.62, active and 1 or 0.68, active and 1 or 0.74)
+  love.graphics.setColor(text[1], text[2], text[3])
   love.graphics.printf(label, rect.x, rect.y + 8, rect.w, "center")
 end
 
-local function drawBuyList(run)
+local function drawBuyList(run, theme)
   for index, itemId in ipairs(Data.shop.items) do
     local rect = buyRowRect(index)
     local def = Data.items[itemId]
     local price = Data.shop.prices[itemId] or 0
     local affordable = Save.data.coins >= price
 
-    love.graphics.setColor(0.09, 0.115, 0.135, 0.98)
+    love.graphics.setColor(theme.panelAlt[1], theme.panelAlt[2], theme.panelAlt[3], 0.98)
     love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 6, 6)
-    love.graphics.setColor(affordable and 0.28 or 0.18, affordable and 0.40 or 0.22, affordable and 0.36 or 0.24)
+    local rowBorder = affordable and theme.accent or theme.border
+    love.graphics.setColor(rowBorder[1], rowBorder[2], rowBorder[3])
     love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 6, 6)
 
     love.graphics.setColor(def.color[1], def.color[2], def.color[3])
     love.graphics.circle("fill", rect.x + 18, rect.y + rect.h * 0.5, 10)
     love.graphics.setFont(Fonts.small)
-    love.graphics.setColor(0.90, 0.94, 0.98)
+    love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
     love.graphics.print(def.name, rect.x + 36, rect.y + 4)
-    love.graphics.setColor(0.58, 0.66, 0.74)
+    love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
     love.graphics.print(def.short, rect.x + 36, rect.y + 20)
 
     love.graphics.setFont(Fonts.body)
-    love.graphics.setColor(affordable and 1.00 or 0.65, affordable and 0.86 or 0.40, affordable and 0.35 or 0.32)
+    local priceColor = affordable and theme.secondary or theme.dim
+    love.graphics.setColor(priceColor[1], priceColor[2], priceColor[3])
     love.graphics.printf(priceText[itemId], rect.x + rect.w - 130, rect.y + 9, 120, "right")
   end
 end
 
-local function drawAlchemy(run)
+local function drawAlchemy(run, theme)
   local candidates = run:alchemyCandidates()
   if #candidates == 0 then
     love.graphics.setFont(Fonts.body)
-    love.graphics.setColor(0.68, 0.76, 0.84)
+    love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
     love.graphics.printf(
       "Necesitas dos ítems pasivos iguales y del mismo nivel en tus guardados. Cada combinación sube x1 hasta x5.",
       Shop.panel.x + 40,
@@ -131,15 +137,16 @@ local function drawAlchemy(run)
     local def = Data.items[candidate.itemId]
     local affordable = Save.data.coins >= candidate.cost
 
-    love.graphics.setColor(0.09, 0.115, 0.135, 0.98)
+    love.graphics.setColor(theme.panelAlt[1], theme.panelAlt[2], theme.panelAlt[3], 0.98)
     love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 6, 6)
-    love.graphics.setColor(affordable and 0.30 or 0.20, affordable and 0.42 or 0.24, affordable and 0.36 or 0.26)
+    local rowBorder = affordable and theme.accent or theme.border
+    love.graphics.setColor(rowBorder[1], rowBorder[2], rowBorder[3])
     love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 6, 6)
 
     love.graphics.setColor(def.color[1], def.color[2], def.color[3])
     love.graphics.circle("fill", rect.x + 20, rect.y + rect.h * 0.5, 11)
     love.graphics.setFont(Fonts.body)
-    love.graphics.setColor(0.92, 0.95, 1.00)
+    love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
     love.graphics.print(
       TextCache.format(
         alchemyRowKeys[index],
@@ -155,7 +162,8 @@ local function drawAlchemy(run)
       rect.y + 9
     )
 
-    love.graphics.setColor(affordable and 1.00 or 0.65, affordable and 0.86 or 0.40, affordable and 0.35 or 0.32)
+    local priceColor = affordable and theme.secondary or theme.dim
+    love.graphics.setColor(priceColor[1], priceColor[2], priceColor[3])
     love.graphics.printf(
       TextCache.format(alchemyCostKeys[index], "%d monedas", candidate.cost),
       rect.x + rect.w - 126,
@@ -168,15 +176,16 @@ end
 
 function Shop.draw(run)
   Shop.layout()
-  drawPanel()
+  local theme = Themes.current()
+  drawPanel(theme)
 
   love.graphics.setFont(Fonts.button)
-  love.graphics.setColor(1.00, 0.84, 0.40)
+  love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
   love.graphics.print("TIENDA DE ENGRANAJES", Shop.panel.x + 26, Shop.panel.y + 18)
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.68, 0.74, 0.80)
+  love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
   love.graphics.print("Activo · Nv.15 / piso 10", Shop.panel.x + 260, Shop.panel.y + 23)
-  love.graphics.setColor(1.00, 0.86, 0.35)
+  love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
   love.graphics.printf(
     TextCache.format("coins", "Monedas %d", Save.data.coins),
     Shop.panel.x + 490,
@@ -186,24 +195,25 @@ function Shop.draw(run)
   )
 
   local close = Shop.closeButton
-  love.graphics.setColor(0.10, 0.13, 0.16, 0.98)
+  love.graphics.setColor(theme.button[1], theme.button[2], theme.button[3], 0.98)
   love.graphics.rectangle("fill", close.x, close.y, close.w, close.h, 6, 6)
-  love.graphics.setColor(0.55, 0.70, 0.78)
+  love.graphics.setColor(theme.border[1], theme.border[2], theme.border[3])
   love.graphics.rectangle("line", close.x, close.y, close.w, close.h, 6, 6)
   love.graphics.setFont(Fonts.button)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.printf("X", close.x, close.y + 6, close.w, "center")
 
-  drawTab(Shop.tabBuy, "Comprar", run.shopTab ~= "alchemy")
-  drawTab(Shop.tabAlchemy, "Alquimia", run.shopTab == "alchemy")
+  drawTab(Shop.tabBuy, "Comprar", run.shopTab ~= "alchemy", theme)
+  drawTab(Shop.tabAlchemy, "Alquimia", run.shopTab == "alchemy", theme)
 
   if run.shopTab == "alchemy" then
-    drawAlchemy(run)
+    drawAlchemy(run, theme)
   else
-    drawBuyList(run)
+    drawBuyList(run, theme)
   end
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.52, 0.60, 0.68)
+  love.graphics.setColor(theme.dim[1], theme.dim[2], theme.dim[3])
   love.graphics.printf(
     "Toca un artículo para comprar · Alquimia combina dos guardados iguales · V/escape cierra",
     Shop.panel.x + 26,

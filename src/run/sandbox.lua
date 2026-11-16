@@ -6,6 +6,7 @@ local Data = require("src.run.data")
 local Fonts = require("src.utils.fonts")
 local Screen = require("src.utils.screen")
 local Util = require("src.utils.util")
+local Themes = require("src.data.themes")
 
 local Sandbox = {
   activeTab = "enemies",
@@ -221,65 +222,65 @@ function Sandbox.pressed(run, x, y)
   end
 end
 
-local function drawButton(rect, label, selected, accent)
-  love.graphics.setColor(
-    selected and 0.16 or 0.08,
-    selected and 0.24 or 0.11,
-    selected and 0.26 or 0.14,
-    0.96
-  )
+local function drawButton(rect, label, selected, accent, theme)
+  local background = selected and theme.buttonSelected or theme.button
+  love.graphics.setColor(background[1], background[2], background[3], 0.96)
   love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 6, 6)
-  love.graphics.setColor(
-    accent and accent[1] or 0.45,
-    accent and accent[2] or 0.75,
-    accent and accent[3] or 0.85
-  )
+  local border = accent or theme.border
+  love.graphics.setColor(border[1], border[2], border[3])
   love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 6, 6)
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(selected and 1 or 0.82, selected and 1 or 0.88, selected and 1 or 0.94)
+  local text = selected and theme.text or theme.muted
+  love.graphics.setColor(text[1], text[2], text[3])
   love.graphics.printf(label, rect.x + 6, rect.y + 11, rect.w - 12, "center")
 end
 
 function Sandbox.draw(run)
   Sandbox.layout()
+  local theme = Themes.current()
   local panel = Sandbox.panel
 
   love.graphics.setColor(0, 0, 0, 0.78)
   love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
-  love.graphics.setColor(0.05, 0.07, 0.09, 0.99)
+  love.graphics.setColor(theme.panel[1], theme.panel[2], theme.panel[3], 0.99)
   love.graphics.rectangle("fill", panel.x, panel.y, panel.w, panel.h, 12, 12)
-  love.graphics.setColor(0.35, 0.65, 0.72)
+  love.graphics.setColor(theme.border[1], theme.border[2], theme.border[3])
   love.graphics.rectangle("line", panel.x, panel.y, panel.w, panel.h, 12, 12)
 
   love.graphics.setFont(Fonts.title)
-  love.graphics.setColor(0.60, 0.92, 1.00)
+  love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
   love.graphics.print("SALA DE PRUEBAS", panel.x + 20, panel.y + 14)
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.62, 0.72, 0.80)
+  love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
   love.graphics.print(
     "Sin progreso permanente · monedas y desbloqueos no se guardan",
     panel.x + 20,
     panel.y + 36
   )
 
-  drawButton(Sandbox.closeRect, "X", false, { 0.90, 0.40, 0.35 })
+  drawButton(Sandbox.closeRect, "X", false, { 0.90, 0.40, 0.35 }, theme)
   drawButton(
     Sandbox.tabs.enemies,
     "ENEMIGOS",
-    Sandbox.activeTab == "enemies"
+    Sandbox.activeTab == "enemies",
+    nil,
+    theme
   )
   drawButton(
     Sandbox.tabs.items,
     "ÍTEMS",
-    Sandbox.activeTab == "items"
+    Sandbox.activeTab == "items",
+    nil,
+    theme
   )
   drawButton(
     Sandbox.tabs.quantity,
     "CANTIDAD x" .. Sandbox.quantity,
     Sandbox.quantity > 1,
-    { 0.90, 0.72, 0.30 }
+    theme.secondary,
+    theme
   )
 
   for _, rect in ipairs(Sandbox.gridRects) do
@@ -289,20 +290,21 @@ function Sandbox.draw(run)
     else
       def = Data.items[rect.id]
     end
-    drawButton(rect, def.name or rect.id, false, def.color)
+    drawButton(rect, def.name or rect.id, false, def.color, theme)
   end
 
-  drawButton(Sandbox.footerRects.clear, "VACIAR INVENTARIO", false, { 0.90, 0.60, 0.30 })
+  drawButton(Sandbox.footerRects.clear, "VACIAR INVENTARIO", false, theme.secondary, theme)
   drawButton(
     Sandbox.footerRects.invulnerable,
     "INVULNERABLE: " .. (run.sandboxInvuln and "SÍ" or "NO"),
     run.sandboxInvuln,
-    { 0.40, 0.90, 0.65 }
+    theme.accent,
+    theme
   )
-  drawButton(Sandbox.footerRects.close, "CERRAR", false)
+  drawButton(Sandbox.footerRects.close, "CERRAR", false, nil, theme)
 
   if Sandbox.message then
-    love.graphics.setColor(1.00, 0.88, 0.45)
+    love.graphics.setColor(theme.secondary[1], theme.secondary[2], theme.secondary[3])
     love.graphics.printf(
       Sandbox.message,
       panel.x + 20,

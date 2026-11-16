@@ -3,6 +3,7 @@ local Data = require("src.run.data")
 local Fonts = require("src.utils.fonts")
 local Screen = require("src.utils.screen")
 local TextCache = require("src.utils.textcache")
+local Themes = require("src.data.themes")
 
 local StoryUI = {}
 
@@ -67,6 +68,7 @@ end
 function StoryUI.draw(run)
   local scene = run.storyScene
   if not scene then return end
+  local theme = Themes.current()
 
   local index = run.storySceneIndex or 1
   local line = scene.lines[index]
@@ -80,19 +82,19 @@ function StoryUI.draw(run)
   love.graphics.setColor(0, 0, 0, 0.78)
   love.graphics.rectangle("fill", 0, 0, Screen.width, Screen.height)
 
-  love.graphics.setColor(0.07, 0.06, 0.12, 0.99)
+  love.graphics.setColor(theme.panel[1], theme.panel[2], theme.panel[3], 0.99)
   love.graphics.rectangle("fill", x, y, width, height, 12, 12)
-  love.graphics.setColor(0.58, 0.40, 0.95)
+  love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3])
   love.graphics.setLineWidth(2)
   love.graphics.rectangle("line", x, y, width, height, 12, 12)
   love.graphics.setLineWidth(1)
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.72, 0.62, 1.00)
+  love.graphics.setColor(theme.muted[1], theme.muted[2], theme.muted[3])
   love.graphics.print("HISTORIA", x + 28, y + 20)
 
   love.graphics.setFont(Fonts.title)
-  love.graphics.setColor(0.90, 0.84, 1.00)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.printf(scene.title or "", x + 28, y + 44, width - 56, "center")
 
   love.graphics.setFont(Fonts.body)
@@ -100,11 +102,11 @@ function StoryUI.draw(run)
   love.graphics.setColor(color[1], color[2], color[3])
   love.graphics.printf(line.speaker or "", x + 48, y + 98, width - 96, "center")
 
-  love.graphics.setColor(0.90, 0.91, 0.97)
+  love.graphics.setColor(theme.text[1], theme.text[2], theme.text[3])
   love.graphics.printf(line.text or "", x + 64, y + 130, width - 128, "center")
 
   love.graphics.setFont(Fonts.small)
-  love.graphics.setColor(0.58, 0.64, 0.74)
+  love.graphics.setColor(theme.dim[1], theme.dim[2], theme.dim[3])
   love.graphics.printf(
     TextCache.format("story-progress", "%d / %d", index, #scene.lines),
     x + 28,
