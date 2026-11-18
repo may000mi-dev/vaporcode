@@ -645,7 +645,7 @@ function Run:pressedAt(pointerId, x, y)
   -- El panel de pruebas es modal: absorbe el toque antes del HUD para que
   -- los botones que quedan detrás no abran otra capa por accidente.
   if Run.overlay == "sandbox" then
-    Sandbox.pressed(Run, x, y)
+    Sandbox.pointerPressed(Run, pointerId, x, y)
     return
   end
 
@@ -704,6 +704,10 @@ function Run:pressedAt(pointerId, x, y)
 end
 
 function Run:movedAt(pointerId, x, y)
+  if Run.overlay == "sandbox" then
+    Sandbox.pointerMoved(pointerId, x, y)
+    return
+  end
   if Run.overlay then return end
   if Camera.moveDrag(pointerId, x, y) then return end
   if Run.aim:move(pointerId, x, y) then return end
@@ -711,6 +715,10 @@ function Run:movedAt(pointerId, x, y)
 end
 
 function Run:releasedAt(pointerId, x, y)
+  if Run.overlay == "sandbox" then
+    Sandbox.pointerReleased(pointerId, x, y)
+    return
+  end
   if Run.overlay then return end
   Camera.endDrag(pointerId)
 
@@ -750,6 +758,12 @@ end
 
 function Run.touchreleased(id, x, y)
   Run:releasedAt(id, x, y)
+end
+
+function Run.wheelmoved(x, y)
+  if Run.overlay == "sandbox" then
+    Sandbox.wheelmoved(x, y)
+  end
 end
 
 function Run.focus(focused)

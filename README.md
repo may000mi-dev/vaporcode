@@ -27,9 +27,10 @@ de tamaño o al entrar en pantalla completa.
 MVP jugable (V9). Incluye combate automático, tres personajes con historia
 propia, cinco habilidades, enemigos por rol (torreta, mortero, invocador, trampero,
 sanador, cazador de maná), élites, hazards, cinco jefes con fases, ítems pasivos,
-mascotas, mochila, tienda, alquimia, guardado versionado, Modo Historia e Infinito,
+mascotas, mochila con pilas ilimitadas de hasta x5, tienda, alquimia, guardado versionado, Modo Historia e Infinito,
 Bestiario, pantalla de Personajes con mejoras por resonancia, configuración de
-audio, salida segura al menú y una sala de pruebas para enemigos e ítems.
+audio, salida segura al menú, catálogos de canciones e ítems y una sala de
+pruebas para enemigos e ítems.
 
 ## Ejecutar
 
@@ -63,7 +64,8 @@ sh src/tools/test_all.sh
 Suites en Lua puro (sin LÖVE): datos, mazmorras y línea de visión, personajes,
 habilidades, botín, estados, piso/reintento, historia, cámara, caché de textos,
 aislamiento entre runs, guardado con respaldo, volúmenes de audio y aislamiento
-de la sala de pruebas, resonancias, bestiario y mejoras por personaje.
+de la sala de pruebas, resonancias, bestiario, canciones, ítems vistos y mejoras
+por personaje.
 
 ## Controles
 
@@ -80,13 +82,16 @@ de la sala de pruebas, resonancias, bestiario y mejoras por personaje.
 | Modo Historia | H (menú) | botón HISTORIA |
 | Modo Infinito | I (menú) | botón INFINITO |
 | Personajes | P (menú) | botón PERSONAJES |
+| Canciones | N (menú) | botón CANCIONES |
+| Ítems | O (menú) | botón ÍTEMS |
 | Bestiario | B (menú) | botón BESTIARIO |
 | Sala de pruebas | F2 (solo en pruebas) | botón PRUEBAS |
 | Silenciar pulso | M | — |
 | Depuración | F3 | — |
 
-En el menú, `1`/`H` abre Historia, `2`/`I` Infinito, `3`/`P` Personajes, `4`/`B`
-Bestiario y `5`/`C` Configuración (música, efectos, borrar datos y sala de pruebas).
+En el menú, `1`/`H` abre Historia, `2`/`I` Infinito, `3`/`P` Personajes,
+`4`/`N` Canciones, `5`/`O` Ítems, `6`/`B` Bestiario y `7`/`C` Configuración
+(música, efectos, borrar datos y sala de pruebas).
 Dentro de la mochila: `1`–`5` selecciona un activo, `Tab` recorre los 20 espacios,
 `Enter` activa el guardado o guarda el activo, `Q`/`W` asignan una habilidad
 guardada a A1/A2, `X` tira el ítem y `Escape` cierra (o cancela un intercambio).
@@ -104,9 +109,11 @@ src/
 │   ├── dungeons.lua       -- mazmorras, índice por id, cadencia de jefes
 │   ├── enemies.lua        -- tipos, élites, hazards, IA, aparición
 │   ├── items.lua          -- ítems, mascotas, espacios y reglas de tienda
+│   ├── music.lua          -- pistas, zonas y títulos del catálogo musical
 │   ├── story.lua          -- actos, capítulos, escenas y lore
 │   └── upgrades.lua       -- mejoras permanentes
-├── estados/               -- menú, historia, infinito, personajes, bestiario, configuración
+├── estados/               -- menú, historia, infinito, personajes, canciones, ítems,
+│                          -- bestiario y configuración
 ├── run/                   -- partida; run.lua orquesta y monta los sistemas
 ├── tools/                 -- suites de test y empaquetado
 └── utils/                 -- input, cámara, joystick, JSON, audio, textcache
@@ -118,16 +125,18 @@ juego, así que los datos se pueden mover entre archivos sin tocar el resto.
 
 ## Guardado
 
-JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 6.
+JSON en `love.filesystem` (identidad `vaporcode`, archivo `save.json`), versión 7.
 Al cargar se normaliza y se repara: valores inválidos caen a los predeterminados,
 la cripta y Amado siempre quedan desbloqueados, los volúmenes de música/efectos
 se acotan a 0..1 y el checkpoint de historia se valida contra su capítulo.
 
 Cada personaje guarda sus mejoras, resonancias, si completó la Historia y su
-propio checkpoint activo. La migración desde v5 asigna el checkpoint global al
-personaje que lo tenía, y la de v4 reparte las mejoras globales entre los tres y
-asigna el final antiguo a su personaje. Los enemigos vistos se guardan en `bestiary`, y la Torre
-solo se desbloquea cuando las tres historias están completas.
+propio checkpoint activo. La migración desde v6 precarga el tema de menú de los personajes ya
+desbloqueados; la de v5 asigna el checkpoint global al personaje que lo tenía, y
+la de v4 reparte las mejoras globales entre los tres y asigna el final antiguo a
+su personaje. Los enemigos vistos se guardan en `bestiary`, los ítems vistos en
+`items` y las canciones escuchadas en `songs[personaje]`. La Torre solo se
+desbloquea cuando las tres historias están completas.
 
 El progreso se guarda al cambiar de piso, al terminar la run, al pausar y cuando
 la app pierde el foco o se oculta; Android puede matar el proceso en segundo plano
@@ -161,7 +170,8 @@ completadas, monedas, mejoras y desbloqueos.
 
 ## Modo Infinito, Personajes y Bestiario
 
-El menú principal ofrece cinco accesos. **Infinito** permite elegir personaje y
+El menú principal ofrece siete accesos: Historia, Infinito, Personajes,
+Canciones, Ítems, Bestiario y Configuración. **Infinito** permite elegir personaje y
 cualquier mazmorra desbloqueada; si falta una condición, la ficha explica cuál.
 La **Torre del Tiempo Detenido** solo aparece cuando Historia está completada con
 los tres personajes.
@@ -198,18 +208,35 @@ tipo (`CUERPO`, `DISPARAN`, `INVOCAN`, `SOPORTE`, `JEFES`). Un enemigo puede
 aparecer en varios tipos: Peste-Negra dispara y controla, el Maquinista invoca y
 apoya, y el Devorador de Núcleos cuenta como soporte porque elimina mascotas.
 
+## Canciones e Ítems
+
+`CANCIONES` (`N`) muestra las 15 pistas agrupadas por personaje: menú, cripta,
+forja, catedral y torre. Una pista se registra al escucharse en partida y el tema
+de menú también al confirmar la tarjeta del personaje. Los temas de personajes
+bloqueados aparecen como `???` y no se pueden reproducir. Tocar una pista
+desbloqueada la reproduce como vista previa; al salir vuelve el tema del menú.
+
+`ÍTEMS` (`O`) lista los objetos registrados con nombre, tipo y descripción. Un
+ítem se descubre en el momento en que cae al suelo, igual que un enemigo en el
+bestiario; los aún no vistos aparecen como `???`. Las pestañas filtran por pasivo,
+habilidad, mascota, desbloqueo de personaje y resonancia. La sala de pruebas no
+registra descubrimientos.
+
 ## Configuración y sala de pruebas
 
 Configuración (`C` en el menú) ajusta el volumen de la música y de los efectos en
 pasos de 10%, guarda los cambios y permite borrar todo el progreso con confirmación.
 La música usa 15 pistas MP3 incluidas en `assets/audio/music`: cada personaje
 tiene tema de menú y una pista por zona (cripta, forja, catedral y torre). El BPM
-se deriva de la zona y alimenta el reloj rítmico; si una pista falta o el
-dispositivo no puede decodificarla, suena el metrónomo procedural de respaldo.
+se deriva de la zona y alimenta el reloj rítmico; al entrar de una zona a otra
+(incluidos los portales del Modo Historia) se aplica la pista nueva con crossfade.
+Si una pista falta o el dispositivo no puede decodificarla, suena el metrónomo
+procedural de respaldo.
 
 La sala de pruebas abre una run con oleadas desactivadas y tiempo libre. El panel
 `PRUEBAS` (o `F2`) lista enemigos y jefes para invocarlos, permite dar ítems en
-cantidad x1/x5, vaciar el inventario y activar invulnerabilidad. Las monedas,
+cantidad x1/x5, vaciar el inventario y activar invulnerabilidad; ambas listas tienen scroll y no
+tapan los botones inferiores. Las monedas,
 desbloqueos, récords y ajustes no se escriben desde la sala; al salir se conserva
 el guardado real tal como estaba.
 

@@ -76,15 +76,15 @@ assert(#Run.inventory == Data.inventory.maxActive, "los cinco activos deben llen
 assert(Run:addItemToInventory("flute", 1) == "stored", "el sexto debe desbordar a guardados")
 assert(#Run.storage == 1 and Run.passiveStacks.flute == nil, "guardado no aplica efectos")
 
--- El tope de copias es global: activos + guardados.
+-- El tope es por pila: un x3 guardado y un x2 guardado no bloquean comprar más.
 reset()
-assert(Run:addItemToInventory("poison", 1) == "ok")
-assert(Run:addItemToInventory("poison", 1) == "ok")
-assert(Run:storeActive(1) == "ok" and Run:storeActive(1) == "ok", "dos copias al guardado")
-for _ = 1, 3 do
-  assert(Run:addItemToInventory("poison", 1) == "ok", "tres copias más a activos")
-end
-assert(Run:addItemToInventory("poison", 1) == "duplicate", "las guardadas cuentan al tope global")
+assert(Run:addItemToInventory("poison", 3) == "ok")
+assert(Run:storeActive(1) == "ok", "la pila x3 al guardado")
+assert(Run:addItemToInventory("poison", 2) == "ok")
+assert(Run:storeActive(1) == "ok", "la pila x2 al guardado")
+assert(Run:addItemToInventory("poison", 1) == "ok", "la tienda debe seguir vendiendo")
+assert(Run:totalAmount("poison") == 6, "las seis copias ocupan tres pilas")
+assert(#Run.inventory == 1 and #Run.storage == 2, "nada se fusiona automáticamente")
 
 -- Activar con hueco libre mueve el ítem y recalcula efectos.
 reset()
@@ -167,6 +167,39 @@ local candidate = Run:alchemyCandidates()[1]
 assert(candidate and candidate.cost == 10, "dos guardados iguales deben ser candidatos")
 assert(Run:combineAlchemy(candidate), "la combinación debe aplicarse")
 assert(#Run.storage == 1 and Run.storage[1].amount == 2, "el resultado queda guardado")
+
+-- Preparar x4 y x5 requiere seguir comprando duplicados aunque haya otras pilas.
+reset()
+for _ = 1, 2 do
+  assert(Run:addItemToInventory("poison", 3) == "ok")
+  assert(Run:storeActive(1) == "ok")
+end
+Save.data.coins = 50
+local pair4 = nil
+for _, option in ipairs(Run:alchemyCandidates()) do
+  if option.result == 4 then pair4 = option end
+end
+assert(pair4, "dos x3 guardados deben poder combinarse")
+assert(Run:combineAlchemy(pair4), "la alquimia debe crear x4")
+assert(#Run.storage == 1 and Run.storage[1].amount == 4, "el x4 queda guardado")
+assert(Save.data.coins == 0, "subir a x4 cuesta cincuenta monedas")
+
+Run.inventory = {}
+Run.storage = {}
+Run.passiveStacks = {}
+for _ = 1, 2 do
+  assert(Run:addItemToInventory("poison", 4) == "ok")
+  assert(Run:storeActive(1) == "ok")
+end
+Save.data.coins = 150
+local pair5 = nil
+for _, option in ipairs(Run:alchemyCandidates()) do
+  if option.result == 5 then pair5 = option end
+end
+assert(pair5, "dos x4 guardados deben poder combinarse")
+assert(Run:combineAlchemy(pair5), "la alquimia debe crear x5")
+assert(#Run.storage == 1 and Run.storage[1].amount == 5, "el x5 queda guardado")
+assert(Save.data.coins == 0, "subir a x5 cuesta ciento cincuenta monedas")
 
 -- Todo lleno: activos en 5 y guardados en 15.
 reset()

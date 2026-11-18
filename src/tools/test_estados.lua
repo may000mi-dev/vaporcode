@@ -24,6 +24,12 @@ end
 package.preload["src.estados.bestiario"] = function()
   return { enter = function() entered.bestiario = true end }
 end
+package.preload["src.estados.canciones"] = function()
+  return { enter = function() entered.canciones = true end }
+end
+package.preload["src.estados.items"] = function()
+  return { enter = function() entered.items = true end }
+end
 package.preload["src.run.run"] = function()
   return { enter = function() entered.run = true end }
 end
@@ -53,5 +59,11 @@ assert(State.name == "personajes" and entered.personajes, "debe cargar personaje
 
 State.switch("bestiario")
 assert(State.name == "bestiario" and entered.bestiario, "debe cargar bestiario")
+
+State.switch("canciones")
+assert(State.name == "canciones" and entered.canciones, "debe cargar canciones")
+
+State.switch("items")
+assert(State.name == "items" and entered.items, "debe cargar el catálogo de ítems")
 
 print("OK ruteo de estados")

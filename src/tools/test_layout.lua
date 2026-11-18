@@ -46,6 +46,8 @@ local Menu = require("src.estados.menu")
 local Infinito = require("src.estados.infinito")
 local Personajes = require("src.estados.personajes")
 local Bestiario = require("src.estados.bestiario")
+local Canciones = require("src.estados.canciones")
+local ItemsCatalog = require("src.estados.items")
 local Gameover = require("src.estados.gameover")
 local Config = require("src.estados.config")
 local Sandbox = require("src.run.sandbox")
@@ -135,7 +137,9 @@ local function checkWide(width, height, expectedWidth, expectedScale)
 
   Menu.enter()
   assert(insideScreen(Menu.panel, Screen.width, Screen.height), "menú fuera de pantalla")
-  for _, id in ipairs({ "story", "infinite", "characters", "bestiary", "config" }) do
+  for _, id in ipairs({
+    "story", "infinite", "characters", "songs", "items", "bestiary", "config",
+  }) do
     assert(
       insideScreen(Menu.rects[id], Screen.width, Screen.height),
       "acceso de menú fuera de pantalla: " .. id
@@ -186,6 +190,23 @@ local function checkWide(width, height, expectedWidth, expectedScale)
   end
   if Bestiario.grid then
     assert(insideScreen(Bestiario.grid, Screen.width, Screen.height), "lista del bestiario fuera")
+  end
+
+  Canciones.enter()
+  assert(insideScreen(Canciones.panel, Screen.width, Screen.height), "canciones fuera")
+  assert(insideScreen(Canciones.list, Screen.width, Screen.height), "lista canciones fuera")
+  for _, rect in ipairs(Canciones.tabs) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "pestaña canción fuera")
+  end
+
+  ItemsCatalog.enter()
+  assert(insideScreen(ItemsCatalog.panel, Screen.width, Screen.height), "ítems fuera")
+  assert(insideScreen(ItemsCatalog.detailRect, Screen.width, Screen.height), "detalle ítem fuera")
+  for _, rect in ipairs(ItemsCatalog.tabs) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "pestaña ítem fuera")
+  end
+  for _, rect in ipairs(ItemsCatalog.cards) do
+    assert(insideScreen(rect, Screen.width, Screen.height), "ficha de ítem fuera")
   end
 
   Config.layout()

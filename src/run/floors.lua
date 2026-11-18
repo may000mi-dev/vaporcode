@@ -26,6 +26,14 @@ local Util = require("src.utils.util")
 
 local Floors = {}
 
+local function applyZone(run)
+  Rhythm.enter(run.def.song)
+  local zone = run.sandbox and "sandbox" or run.def.id
+  Audio.playZone(zone, run.characterId)
+end
+
+Floors.applyZone = applyZone
+
 function Floors.enter(run, dungeonId, characterId, abilityId, options)
   options = options or {}
   run.def = Data.dungeonById[dungeonId] or Data.dungeons[1]
@@ -136,9 +144,6 @@ function Floors.enter(run, dungeonId, characterId, abilityId, options)
 
   FX.clear()
   Input.reset()
-  Rhythm.enter(run.def.song)
-  local zone = run.sandbox and "sandbox" or run.def.id
-  Audio.playZone(zone, run.characterId)
   run:enterLevel()
 end
 
@@ -207,6 +212,8 @@ function Floors.enterLevel(run)
   end
 
   FX.clear()
+  Input.reset()
+  applyZone(run)
   run.timeLeft = run.sandbox and 0 or Atricion.timeLimit(run)
   Director.beginFloor(run)
   run:spawnEnemies()
@@ -268,9 +275,7 @@ function Floors.retryFloor(run, snapshot)
 
   FX.clear()
   Input.reset()
-  Rhythm.enter(run.def.song)
-  local zone = run.sandbox and "sandbox" or run.def.id
-  Audio.playZone(zone, run.characterId)
+  applyZone(run)
   run:enterLevel()
   return true
 end

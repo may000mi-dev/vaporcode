@@ -79,6 +79,21 @@ assert(Save.upgradeLevel("damage", "amado") == 1, "la mejora por personaje debe 
 assert(Save.progressFor("amado").resonance == 1, "la resonancia debe persistir")
 assert(Save.isEnemyDiscovered("automaton"), "el bestiario debe persistir")
 
+-- Los ítems vistos y las canciones desbloqueadas sobreviven a cada partida.
+assert(Save.discoverItem("poison"), "debe registrar un ítem visto")
+assert(not Save.discoverItem("no_existe"), "no debe registrar ítems inválidos")
+assert(Save.discoverSong("amado", "amado_forja"), "debe registrar una canción")
+assert(not Save.discoverSong("amileth", "amileth_forja"),
+  "no puede desbloquear canciones de un personaje bloqueado")
+assert(Save.isSongDiscovered("amado", "amado_menu"),
+  "elegir personaje desbloquea su tema de menú")
+Save.load()
+assert(Save.isItemDiscovered("poison"), "el ítem descubierto debe persistir")
+assert(Save.isSongDiscovered("amado", "amado_forja"),
+  "la canción desbloqueada debe persistir")
+assert(Save.itemCount() >= 1 and Save.songCount("amado") >= 2,
+  "los contadores deben reflejar el catálogo")
+
 -- Migración v4: las mejoras globales se reparten entre los tres personajes.
 files["save.json.tmp"] = nil
 files["save.json"] = Json.encode({
@@ -87,7 +102,7 @@ files["save.json"] = Json.encode({
   story = { completed = true, characterId = "mar" },
 })
 Save.load()
-assert(Save.data.version == 6, "la migración debe actualizar a la versión 6")
+assert(Save.data.version == 7, "la migración debe actualizar a la versión 7")
 for _, id in ipairs({ "amado", "mar", "amileth" }) do
   assert(Save.upgradeLevel("damage", id) == 2, "la migración debe repartir las mejoras")
 end
@@ -121,11 +136,37 @@ files["save.json"] = Json.encode({
   },
 })
 Save.load()
-assert(Save.data.version == 6, "la migración v5 debe usar la versión 6")
+assert(Save.data.version == 7, "la migración v5 debe usar la versión 7")
 assert(Save.hasStoryCheckpoint("mar"), "el checkpoint v5 debe migrar a Mar")
 assert(Save.getStory("mar").chapterId == "cripta" and Save.getStory("mar").depth == 4,
   "el capítulo y piso v5 deben migrarse")
 assert(not Save.hasStoryCheckpoint("amado"), "la migración no debe duplicar el checkpoint")
+
+-- Migración v6: no había registro musical, se precarga el tema de quien
+-- ya estaba seleccionado y se conservan ítems y historias por personaje.
+files["save.json.tmp"] = nil
+files["save.json"] = Json.encode({
+  version = 6,
+  selectedCharacter = "amado",
+  characters = { amado = true, mar = true, amileth = false },
+  items = { vampire = true, fantasma = true },
+  stories = {
+    amado = {
+      chapterId = "forja",
+      depth = 3,
+      characterId = "amado",
+    },
+  },
+})
+Save.load()
+assert(Save.data.version == 7, "la migración v6 debe usar la versión 7")
+assert(Save.isSongDiscovered("amado", "amado_menu"), "Amado conserva su tema")
+assert(Save.isSongDiscovered("mar", "mar_menu"), "Mar también tenía tema propio")
+assert(not Save.isSongDiscovered("amileth", "amileth_menu"),
+  "no se inventa música de personajes bloqueados")
+assert(Save.isItemDiscovered("vampire"), "los ítems v6 deben migrarse")
+assert(not Save.isItemDiscovered("fantasma"), "los ítems inválidos se descartan")
+assert(Save.getStory("amado").chapterId == "forja", "las historias v6 se conservan")
 
 -- Reiniciar borra monedas, mejoras, personajes y vuelve a los ajustes base.
 Save.data.coins = 99
@@ -136,4 +177,4 @@ assert(Save.data.settings.musicVolume == 0.6, "el reinicio debe restaurar el aud
 assert(files["save.json"], "el reinicio debe dejar un guardado limpio")
 assert(files["save.json.tmp"], "el reinicio debe escribir el respaldo")
 
-print("OK guardado versionado v6, migración, ajustes y reinicio")
+print("OK guardado versionado v7, migración, ajustes y reinicio")

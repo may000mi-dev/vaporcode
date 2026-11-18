@@ -29,10 +29,41 @@ function Inventory.ownsPet(run, kind)
   return false
 end
 
+local function freeSlots(run)
+  local active = math.max(0, Data.inventory.maxActive - #(run.inventory or {}))
+  local stored = math.max(0, Data.inventory.maxInactive - #(run.storage or {}))
+  return active + stored, active, stored
+end
+
+-- Una pila nunca pasa de maxStacks, pero el jugador puede tener tantas pilas
+-- como quepan en la mochila. Así se pueden preparar pares para la alquimia.
+function Inventory.canAddItem(run, itemId, amount)
+  local def = Data.items[itemId]
+  if not def then return false end
+  amount = math.max(1, math.floor(amount or 1))
+  local totalFree, _, storageFree = freeSlots(run)
+
+  if def.kind == "passive" then
+    if not def.stackable then
+      return run:totalAmount(itemId) == 0 and totalFree >= 1
+    end
+    local cap = def.maxStacks or Data.alchemy.maxAmount
+    return totalFree >= math.ceil(amount / cap)
+  elseif def.kind == "pet" then
+    return run:totalAmount(itemId) == 0
+      and not run:ownsPet(def.pet)
+      and totalFree >= 1
+  elseif def.kind == "ability" then
+    return storageFree >= 1
+  end
+  return totalFree >= 1
+end
+
+-- Compatibilidad con la llamada anterior: ahora significa "no cabe otra pila".
 function Inventory.passiveMaxed(run, id)
   local def = Data.items[id]
-  if not def or def.kind ~= "passive" then return false end
-  return run:totalAmount(id) >= (def.maxStacks or 1)
+  if not def or def.kind ~= "passive" or not def.stackable then return false end
+  return not Inventory.canAddItem(run, id, 1)
 end
 
 function Inventory.findInventoryItem(run, itemId)
@@ -90,45 +121,60 @@ end
 
 -- Colocación: las habilidades siempre van a guardados; pasivas y mascotas
 -- se activan si hay hueco y, si no, quedan guardadas. Devuelve "ok" cuando
--- el ítem quedó activo y "stored" cuando solo quedó en la reserva.
+-- todo quedó activo y "stored" cuando alguna pila solo quedó en la reserva.
 function Inventory.addItemToInventory(run, itemId, amount)
   local def = Data.items[itemId]
   if not def then return "invalid" end
   amount = math.max(1, math.floor(amount or 1))
+  if not Inventory.canAddItem(run, itemId, amount) then
+    if def.kind == "passive" and not def.stackable
+      and run:totalAmount(itemId) > 0 then
+      return "duplicate"
+    end
+    if def.kind == "pet"
+      and (run:totalAmount(itemId) > 0 or run:ownsPet(def.pet)) then
+      return "duplicate"
+    end
+    return "full"
+  end
+
+  local cap = def.maxStacks or Data.alchemy.maxAmount
+  local remaining = amount
+  local anyStored = false
+  local anyActive = false
+  if def.kind ~= "passive" or not def.stackable then
+    remaining = 1
+  end
+
+  while remaining > 0 do
+    local stackAmount = def.kind == "passive" and def.stackable
+      and math.min(remaining, cap) or 1
+    local slot = {
+      itemId = itemId,
+      amount = def.kind == "passive" and stackAmount or 1,
+    }
+    local placed
+    if def.kind == "ability" then
+      placed = pushToList(run, "inactive", slot)
+    else
+      placed = pushToList(run, "active", slot) or pushToList(run, "inactive", slot)
+    end
+    if not placed then return "full" end
+
+    if run.storage[#run.storage] == slot then
+      anyStored = true
+    else
+      anyActive = true
+    end
+    remaining = remaining - stackAmount
+  end
 
   if def.kind == "passive" then
-    -- Cada copia ocupa su espacio para poder combinarlas con alquimia; el
-    -- tope de maxStacks cuenta activos + guardados para no acumular de más.
-    if not def.stackable and run:totalAmount(itemId) > 0 then return "duplicate" end
-    if def.stackable and run:passiveMaxed(itemId) then return "duplicate" end
-    local room = (def.maxStacks or 1) - run:totalAmount(itemId)
-    if room <= 0 then return "duplicate" end
-    amount = math.min(amount, room)
-  elseif def.kind == "pet" then
-    if run:totalAmount(itemId) > 0 or run:ownsPet(def.pet) then return "duplicate" end
+    run:rebuildPassives()
+  elseif def.kind == "pet" and anyActive then
+    run:addPet(def.pet, run.player.x, run.player.y)
   end
-
-  local slot = {
-    itemId = itemId,
-    amount = def.kind == "passive" and amount or 1,
-  }
-  local placed
-  if def.kind == "ability" then
-    placed = pushToList(run, "inactive", slot)
-  else
-    placed = pushToList(run, "active", slot) or pushToList(run, "inactive", slot)
-  end
-  if not placed then return "full" end
-
-  local active = run.inventory[#run.inventory] == slot
-  if active then
-    if def.kind == "passive" then
-      run:rebuildPassives()
-    elseif def.kind == "pet" then
-      run:addPet(def.pet, run.player.x, run.player.y)
-    end
-  end
-  return active and "ok" or "stored", amount
+  return anyStored and "stored" or "ok", amount
 end
 
 function Inventory.removeItemAt(run, section, index)

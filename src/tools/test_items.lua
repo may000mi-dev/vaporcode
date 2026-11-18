@@ -69,9 +69,20 @@ Run.passiveStacks = {}
 assert(Run:addItemToInventory("poison", 2) == "ok", "debe aceptar una pasiva x2")
 assert(Run.passiveStacks.poison == 2, "la pasiva debe reflejarse en el inventario")
 assert(#Run.inventory == 1 and Run.inventory[1].amount == 2, "cada copia ocupa un espacio")
-assert(Run:addItemToInventory("poison", 5) == "ok", "debe topar cada copia en cinco")
-assert(#Run.inventory == 2, "las copias iguales no se fusionan solas")
-assert(Run:addItemToInventory("poison", 1) == "duplicate", "no debe pasar del máximo total")
+assert(Run:addItemToInventory("poison", 5) == "ok", "otra pila también topa en cinco")
+assert(#Run.inventory == 2, "las pilas iguales no se fusionan solas")
+assert(Run:addItemToInventory("poison", 1) == "ok", "el tope es por pila, no global")
+assert(#Run.inventory == 3 and Run.inventory[3].amount == 1, "cabe una tercera pila")
+assert(Run.passiveStacks.poison == 8, "los efectos suman todas las pilas activas")
+
+Run.inventory = {}
+Run.storage = {}
+Run.passiveStacks = {}
+assert(Run:addItemToInventory("vampire", 7) == "ok", "una entrega grande debe repartirse")
+assert(#Run.inventory == 2, "siete copias caben en dos pilas")
+assert(Run.inventory[1].amount == 5 and Run.inventory[2].amount == 2,
+  "la primera pila llega a cinco y el resto forma otra")
+assert(Run.passiveStacks.vampire == 7, "ninguna copia debe perderse al repartir")
 
 Run.inventory = {}
 Run.storage = {}
@@ -86,6 +97,20 @@ assert(pair and pair.cost == 10, "dos x1 guardados deben combinarse por diez mon
 assert(Run:combineAlchemy(pair), "la alquimia debe combinar el par")
 assert(#Run.storage == 1 and Run.storage[1].amount == 2, "el resultado debe ser un solo x2 guardado")
 assert(Save.data.coins == 0, "la alquimia debe cobrar monedas")
+
+-- Dos x5 pueden convivir: el límite de cinco es por pila, nunca para x10.
+Run.inventory = {}
+Run.storage = {}
+Run.passiveStacks = {}
+assert(Run:addItemToInventory("poison", 5) == "ok")
+assert(Run:storeActive(1) == "ok")
+assert(Run:addItemToInventory("poison", 5) == "ok")
+assert(Run:storeActive(1) == "ok")
+assert(#Run.storage == 2 and Run.storage[1].amount == 5
+  and Run.storage[2].amount == 5, "dos pilas completas deben poder convivir")
+assert(#Run:alchemyCandidates() == 0, "x5 no se combina para pasar el tope")
+assert(Run:addItemToInventory("poison", 1) == "ok", "debe poder seguir comprando")
+assert(Run:totalAmount("poison") == 11, "once copias en tres pilas son válidas")
 
 Run.playerLevel = 14
 Run.depth = 10

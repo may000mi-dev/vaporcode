@@ -77,19 +77,21 @@ end
 
 function Menu.layout()
   local width = math.min(Screen.width - 60, 820)
-  local height = math.min(Screen.height - 24, 510)
+  local height = math.min(Screen.height - 24, 540)
   local x = (Screen.width - width) * 0.5
   local y = (Screen.height - height) * 0.5
   Menu.panel = { x = x, y = y, w = width, h = height }
   Menu.selectorPanel = { x = x, y = y, w = width, cardY = 62, cardH = 48, screenW = Screen.width, screenH = Screen.height }
   if Menu.selector then Menu.selector:layout(Menu.selectorPanel) end
 
-  local labels = { "story", "infinite", "characters", "bestiary", "config" }
+  local labels = {
+    "story", "infinite", "characters", "songs", "items", "bestiary", "config",
+  }
   local buttonX = x + 28
   local buttonY = y + 134
   local buttonW = width - 56
-  local buttonH = 50
-  local gap = 7
+  local buttonH = 44
+  local gap = 6
   Menu.rects = {}
   for index, id in ipairs(labels) do
     Menu.rects[id] = {
@@ -125,6 +127,10 @@ local function open(id)
     State.switch("infinito")
   elseif id == "characters" then
     State.switch("personajes")
+  elseif id == "songs" then
+    State.switch("canciones")
+  elseif id == "items" then
+    State.switch("items")
   elseif id == "bestiary" then
     State.switch("bestiario")
   elseif id == "config" then
@@ -138,8 +144,10 @@ function Menu.keypressed(key, isrepeat)
   if key == "1" or key == "h" then open("story")
   elseif key == "2" or key == "i" then open("infinite")
   elseif key == "3" or key == "p" then open("characters")
-  elseif key == "4" or key == "b" then open("bestiary")
-  elseif key == "5" or key == "c" then open("config") end
+  elseif key == "4" or key == "n" then open("songs")
+  elseif key == "5" or key == "o" then open("items")
+  elseif key == "6" or key == "b" then open("bestiary")
+  elseif key == "7" or key == "c" then open("config") end
 end
 
 function Menu.pressed(x, y)
@@ -151,7 +159,9 @@ function Menu.pressed(x, y)
   }
   if Menu.selector and Menu.selector:pressed(x, y) then return end
   if Menu.selector and Menu.selector.confirm then return end
-  for _, id in ipairs({ "story", "infinite", "characters", "bestiary", "config" }) do
+  for _, id in ipairs({
+    "story", "infinite", "characters", "songs", "items", "bestiary", "config",
+  }) do
     if Util.inside(x, y, Menu.rects[id]) then
       open(id)
       return
@@ -233,16 +243,23 @@ function Menu.draw()
   drawButton(Menu.rects.infinite, "MODO INFINITO", infiniteSubtitle(), sec, false, theme)
   drawButton(Menu.rects.characters, "PERSONAJES",
     "Estadísticas, pasivas y mejoras con resonancias", acc, false, theme)
+  local character = Save.getSelectedCharacter()
+  drawButton(Menu.rects.songs, "CANCIONES",
+    TextCache.format("menu-songs", "Desbloqueadas: %d/%d · vista previa por personaje",
+      Save.songCount(character), #Data.music.tracks), acc, false, theme)
+  drawButton(Menu.rects.items, "ÍTEMS",
+    TextCache.format("menu-items", "Descubiertos: %d/%d · descripciones al recogerlos",
+      Save.itemCount(), #Data.itemOrder), sec, false, theme)
   drawButton(Menu.rects.bestiary, "BESTIARIO",
     TextCache.format("menu-bestiary", "Enemigos registrados: %d/%d",
-      Save.bestiaryCount(), #Data.bestiaryOrder), sec, false, theme)
+      Save.bestiaryCount(), #Data.bestiaryOrder), acc, false, theme)
   drawButton(Menu.rects.config, "CONFIGURACIÓN",
     "Audio · borrar datos · sala de pruebas", acc, false, theme)
 
   love.graphics.setFont(Fonts.small)
   love.graphics.setColor(theme.dim[1], theme.dim[2], theme.dim[3])
   love.graphics.printf(
-    "Teclado: H historia · I infinito · P personajes · B bestiario · C configuración",
+    "Teclado: H historia · I infinito · P personajes · N música · O objetos · B bestiario · C config",
     0, py + panel.h - 22, Screen.width, "center"
   )
 

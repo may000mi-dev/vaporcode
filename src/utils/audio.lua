@@ -2,6 +2,7 @@
 -- Las pistas están en assets/audio/music; si falta un archivo se usa el
 -- bucle procedural para no dejar la partida en silencio.
 local Save = require("src.run.save")
+local Music = require("src.data.music")
 
 local Audio = {
   musicVolume = 0.6,
@@ -19,35 +20,14 @@ local Audio = {
   crossfadeDuration = 0.45,
 }
 
-local TRACKS = {
-  amado = {
-    menu = "assets/audio/music/brass_petals_and_pendulums.mp3",
-    config = "assets/audio/music/brass_petals_and_pendulums.mp3",
-    cripta = "assets/audio/music/beneath_the_iron_floor.mp3",
-    forja = "assets/audio/music/the_heavy_forge.mp3",
-    catedral = "assets/audio/music/psalm_for_a_mechanical_throne.mp3",
-    torre = "assets/audio/music/against_the_iron_pendulum.mp3",
-    sandbox = "assets/audio/music/brass_petals_and_pendulums.mp3",
-  },
-  mar = {
-    menu = "assets/audio/music/the_glassmaker_s_metronome.mp3",
-    config = "assets/audio/music/the_glassmaker_s_metronome.mp3",
-    cripta = "assets/audio/music/beneath_the_obsidian_vault.mp3",
-    forja = "assets/audio/music/clockwork_siege.mp3",
-    catedral = "assets/audio/music/the_clockwork_liturgy.mp3",
-    torre = "assets/audio/music/grand_alchemist_s_requiem.mp3",
-    sandbox = "assets/audio/music/the_glassmaker_s_metronome.mp3",
-  },
-  amileth = {
-    menu = "assets/audio/music/the_metal_key_s_lament.mp3",
-    config = "assets/audio/music/the_metal_key_s_lament.mp3",
-    cripta = "assets/audio/music/charting_the_iron_maze.mp3",
-    forja = "assets/audio/music/mainspring_snap.mp3",
-    catedral = "assets/audio/music/clockwork_sanctum.mp3",
-    torre = "assets/audio/music/brass_gears_and_broken_prayers.mp3",
-    sandbox = "assets/audio/music/the_metal_key_s_lament.mp3",
-  },
-}
+local TRACKS = {}
+for _, def in ipairs(Music.tracks) do
+  TRACKS[def.characterId] = TRACKS[def.characterId] or {}
+  TRACKS[def.characterId][def.zone] = def.file
+  for _, alias in ipairs(def.aliases) do
+    TRACKS[def.characterId][alias] = def.file
+  end
+end
 
 local ZONE_BPM = {
   menu = 120,
@@ -199,6 +179,10 @@ end
 function Audio.playZone(zone, characterId, opts)
   opts = opts or {}
   local selected = characterId or (Save and Save.getSelectedCharacter and Save.getSelectedCharacter()) or "amado"
+  local songId = Music.idFor(selected, zone)
+  if songId and Save.discoverSong then
+    Save.discoverSong(selected, songId)
+  end
   local path, bpm = resolveTrack(zone, selected)
   Audio.currentZone = zone or Audio.currentZone
   Audio.currentCharacterId = selected

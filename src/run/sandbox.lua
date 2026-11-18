@@ -16,6 +16,10 @@ local Sandbox = {
   itemIds = nil,
   tabs = {},
   gridRects = {},
+  gridClip = nil,
+  scroll = 0,
+  maxScroll = 0,
+  drag = nil,
   footerRects = {},
   closeRect = nil,
   panel = { x = 0, y = 0, w = 0, h = 0 },
@@ -53,6 +57,9 @@ function Sandbox.reset()
   Sandbox.activeTab = "enemies"
   Sandbox.quantity = 1
   Sandbox.message = nil
+  Sandbox.scroll = 0
+  Sandbox.maxScroll = 0
+  Sandbox.drag = nil
 end
 
 -- Reconstruye la cuadrícula cada frame de dibujo/entrada. Son pocas tablas
@@ -83,20 +90,31 @@ function Sandbox.layout()
   local cellW = (width - 40 - (columns - 1) * gap) / columns
   local cellH = 38
 
+  local footerY = y + height - 58
+  Sandbox.gridClip = {
+    x = gridX,
+    y = gridY,
+    w = width - 40,
+    h = math.max(cellH, footerY - 14 - gridY),
+  }
+
   Sandbox.gridRects = {}
   for index, id in ipairs(ids) do
     local column = (index - 1) % columns
     local row = math.floor((index - 1) / columns)
     Sandbox.gridRects[#Sandbox.gridRects + 1] = {
       x = gridX + column * (cellW + gap),
-      y = gridY + row * (cellH + gap),
+      y = gridY + row * (cellH + gap) - Sandbox.scroll,
       w = cellW,
       h = cellH,
       id = id,
     }
   end
 
-  local footerY = y + height - 58
+  local rowCount = math.ceil(#ids / columns)
+  local contentHeight = math.max(0, rowCount * (cellH + gap) - gap)
+  Sandbox.maxScroll = math.max(0, contentHeight - Sandbox.gridClip.h)
+  Sandbox.scroll = math.max(0, math.min(Sandbox.scroll, Sandbox.maxScroll))
   Sandbox.footerRects = {
     clear = { x = x + 20, y = footerY, w = 190, h = 40 },
     invulnerable = { x = x + 220, y = footerY, w = 230, h = 40 },
@@ -183,10 +201,14 @@ function Sandbox.pressed(run, x, y)
 
   if Util.inside(x, y, Sandbox.tabs.enemies) then
     Sandbox.activeTab = "enemies"
+    Sandbox.scroll = 0
+    Sandbox.drag = nil
     return
   end
   if Util.inside(x, y, Sandbox.tabs.items) then
     Sandbox.activeTab = "items"
+    Sandbox.scroll = 0
+    Sandbox.drag = nil
     return
   end
   if Util.inside(x, y, Sandbox.tabs.quantity) then
@@ -195,7 +217,8 @@ function Sandbox.pressed(run, x, y)
   end
 
   for _, rect in ipairs(Sandbox.gridRects) do
-    if Util.inside(x, y, rect) then
+    if Util.inside(x, y, rect)
+      and Util.inside(x, y, Sandbox.gridClip) then
       if Sandbox.activeTab == "enemies" then
         spawnEnemy(run, rect.id, Sandbox.quantity)
       else
@@ -220,6 +243,66 @@ function Sandbox.pressed(run, x, y)
     run.overlay = nil
     run:clearInput()
   end
+end
+
+function Sandbox.setScroll(value)
+  Sandbox.scroll = math.max(0, math.min(value, Sandbox.maxScroll or 0))
+end
+
+function Sandbox.pointerPressed(run, pointerId, x, y)
+  Sandbox.layout()
+  if Sandbox.maxScroll > 0 and Util.inside(x, y, Sandbox.gridClip) then
+    Sandbox.drag = {
+      pointerId = pointerId,
+      run = run,
+      y = y,
+      scroll = Sandbox.scroll,
+      moved = false,
+    }
+    return
+  end
+  Sandbox.pressed(run, x, y)
+end
+
+function Sandbox.pointerMoved(pointerId, x, y)
+  local drag = Sandbox.drag
+  if not drag or drag.pointerId ~= pointerId then return end
+  local delta = drag.y - y
+  if math.abs(delta) > 6 then drag.moved = true end
+  Sandbox.setScroll(drag.scroll + delta)
+end
+
+function Sandbox.pointerReleased(pointerId, x, y)
+  local drag = Sandbox.drag
+  if not drag or drag.pointerId ~= pointerId then return end
+  Sandbox.drag = nil
+  if not drag.moved then Sandbox.pressed(drag.run, x, y) end
+end
+
+function Sandbox.wheelmoved(x, y)
+  Sandbox.layout()
+  if Sandbox.maxScroll <= 0 then return end
+  Sandbox.setScroll(Sandbox.scroll - (y or 0) * 36)
+end
+
+local function setListClip(rect)
+  if not love.graphics.setScissor then return end
+  love.graphics.setScissor(
+    Screen.ox + rect.x * Screen.scale,
+    Screen.oy + rect.y * Screen.scale,
+    rect.w * Screen.scale,
+    rect.h * Screen.scale
+  )
+end
+
+local function clearListClip()
+  if not love.graphics.setScissor then return end
+  love.graphics.setScissor(
+    Screen.ox,
+    Screen.oy,
+    Screen.width * Screen.scale,
+    Screen.height * Screen.scale
+  )
 end
 
 local function drawButton(rect, label, selected, accent, theme)
@@ -283,14 +366,36 @@ function Sandbox.draw(run)
     theme
   )
 
+  setListClip(Sandbox.gridClip)
   for _, rect in ipairs(Sandbox.gridRects) do
-    local def
-    if Sandbox.activeTab == "enemies" then
-      def = Data.enemyTypes[rect.id]
-    else
-      def = Data.items[rect.id]
+    if rect.y + rect.h >= Sandbox.gridClip.y
+      and rect.y <= Sandbox.gridClip.y + Sandbox.gridClip.h then
+      local def
+      if Sandbox.activeTab == "enemies" then
+        def = Data.enemyTypes[rect.id]
+      else
+        def = Data.items[rect.id]
+      end
+      drawButton(rect, def.name or rect.id, false, def.color, theme)
     end
-    drawButton(rect, def.name or rect.id, false, def.color, theme)
+  end
+  clearListClip()
+
+  if Sandbox.maxScroll > 0 then
+    local track = {
+      x = Sandbox.gridClip.x + Sandbox.gridClip.w + 6,
+      y = Sandbox.gridClip.y,
+      w = 4,
+      h = Sandbox.gridClip.h,
+    }
+    local ratio = Sandbox.gridClip.h / (Sandbox.gridClip.h + Sandbox.maxScroll)
+    local thumbH = math.max(18, track.h * ratio)
+    local thumbY = track.y + (track.h - thumbH) *
+      (Sandbox.scroll / Sandbox.maxScroll)
+    love.graphics.setColor(theme.border[1], theme.border[2], theme.border[3], 0.5)
+    love.graphics.rectangle("fill", track.x, track.y, track.w, track.h, 2, 2)
+    love.graphics.setColor(theme.accent[1], theme.accent[2], theme.accent[3], 0.9)
+    love.graphics.rectangle("fill", track.x, thumbY, track.w, thumbH, 2, 2)
   end
 
   drawButton(Sandbox.footerRects.clear, "VACIAR INVENTARIO", false, theme.secondary, theme)

@@ -15,7 +15,7 @@ function Loot.itemCandidates(run, poolName)
   for _, id in ipairs(pool) do
     local def = Data.items[id]
     local allowed = true
-    if def.kind == "passive" and def.stackable and run:passiveMaxed(id) then
+    if def.kind == "passive" and def.stackable and not run:canAddItem(id, 1) then
       allowed = false
     elseif def.maxStacks == 1 and run:totalAmount(id) > 0 then
       allowed = false
@@ -47,6 +47,7 @@ function Loot.dropItem(run, itemId, x, y, amount)
   local item = ItemDrop.new(itemId, x, y, amount)
   if not item then return nil end
   run.itemDrops[#run.itemDrops + 1] = item
+  Save.discoverItem(itemId)
   FX.ring(x, y, 16, item.def.color)
   return item
 end
@@ -195,9 +196,7 @@ function Loot.pickupItem(run, item, pet)
     elseif status == "ok" then
       if def.kind == "passive" then
         local stacks = run.passiveStacks[item.itemId] or 0
-        local suffix = def.stackable
-          and (" x" .. stacks .. "/" .. def.maxStacks)
-          or ""
+        local suffix = def.stackable and (" x" .. stacks) or ""
         FX.add(def.name .. suffix, x, y - 24, def.color)
       elseif def.kind == "pet" then
         FX.add("¡" .. def.name .. " se une!", x, y - 24, def.color)

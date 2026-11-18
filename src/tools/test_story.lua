@@ -96,7 +96,7 @@ local index, total = Story.floorIndex({
 assert(index == 2 and total == 3, "la Torre debe mostrar 2 de 3 pisos")
 
 Save.load()
-assert(Save.data.version == 6, "el guardado debe usar la versión 6")
+assert(Save.data.version == 7, "el guardado debe usar la versión 7")
 assert(Save.getStory("amado") and not Save.getStory("amado").active, "la historia inicia inactiva")
 assert(not Save.hasStoryCheckpoint(), "sin checkpoint no debe haber continuación")
 
@@ -206,4 +206,4 @@ assert(not Save.hasStoryCheckpoint("amado"), "reiniciar debe borrar el checkpoin
 assert(Save.storyCompletionCount() == 3, "reiniciar no debe borrar historias completadas")
 assert(Save.isDungeonUnlocked("torre"), "la Torre debe seguir abierta tras reiniciar la sesión")
 
-print("OK historia por personaje, portales, escenas y guardado v6")
+print("OK historia por personaje, portales, escenas y guardado v7")

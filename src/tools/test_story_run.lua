@@ -63,6 +63,7 @@ local Data = require("src.run.data")
 local Historia = require("src.estados.historia")
 local Run = require("src.run.run")
 local StoryUI = require("src.run.story_ui")
+local Audio = require("src.utils.audio")
 local Progression = require("src.run.progression")
 
 local function finishScenes()

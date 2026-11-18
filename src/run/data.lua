@@ -13,6 +13,7 @@ local Compases = require("src.data.compases")
 local Dungeons = require("src.data.dungeons")
 local Enemies = require("src.data.enemies")
 local Items = require("src.data.items")
+local Music = require("src.data.music")
 local Story = require("src.data.story")
 local Upgrades = require("src.data.upgrades")
 
@@ -90,6 +91,8 @@ Data.spawn = Enemies.spawn
 Data.threat = Enemies.threat
 
 Data.items = Items.items
+Data.itemOrder = Items.itemOrder
+Data.music = Music
 Data.itemPool = Items.itemPool
 Data.resonanceItem = Items.resonanceItem
 Data.itemLifetime = Items.itemLifetime

@@ -21,6 +21,8 @@ Roguelite de acción con ataques automáticos y ventanas de ritmo. El loop de un
 7. El **Bestiario** revela retrato, nombre y habilidades de cada enemigo visto.
 8. La pantalla de **Personajes** concentra estadísticas, pasivas, historia y
    mejoras permanentes por personaje.
+9. **Canciones** reproduce las pistas ya escuchadas y **Ítems** muestra las
+   descripciones de los objetos descubiertos en partidas.
 
 La cámara sigue al jugador con margen de arrastre; el área de juego es mayor que
 la pantalla y se explora moviéndose.
@@ -315,9 +317,11 @@ y dejar la sala en 0 enemigos. El HUD muestra `Oleada N/M` y el total pendiente.
 
 Inventario de **5 espacios activos + 15 guardados**. Solo los activos aplican
 efectos y se ven en el HUD; los guardados son reserva y materia prima de alquimia.
-Los ítems en el suelo duran 7 s (parpadean el último 1.5 s). Las pasivas se
-acumulan hasta su máximo global (activos + guardados); mascotas y desbloqueos son
-únicos.
+Los ítems en el suelo duran 7 s (parpadean el último 1.5 s). El límite de
+**x5 es por pila**, no global: pueden existir varias pilas del mismo ítem,
+incluso dos x5, siempre que haya huecos libres. Los efectos suman todas las
+pilas activas; las guardadas siguen siendo solo reserva y material de alquimia.
+Mascotas y desbloqueos son únicos.
 
 - **Colocación:** pasivas y mascotas entran activas si hay hueco; si no, quedan
   guardadas. Las habilidades siempre caen en guardados.
@@ -327,7 +331,7 @@ acumulan hasta su máximo global (activos + guardados); mascotas y desbloqueos s
   para alquimia o para hacer espacio.
 - **Asignar habilidad:** un ítem `*_skill` guardado se asigna a A1/A2 y se consume.
 
-- **Pasivas apilables (máx 5):** Veneno (daño en tiempo), Vampiro (roba vida con el
+- **Pasivas apilables (máx 5 por pila):** Veneno (daño en tiempo), Vampiro (roba vida con el
   básico), Hada (recupera maná con el básico), Pólvora (explosión con aturdimiento;
   los jefes son inmunes).
 - **Pasivas únicas:** Tambor (ritmo: menos costo y enfriamiento), Flauta (el
@@ -350,7 +354,9 @@ acumulan hasta su máximo global (activos + guardados); mascotas y desbloqueos s
 ### Alquimia
 
 Dos ítems pasivos iguales del mismo nivel **guardados** se combinan y suben a x2,
-x3, x4 o x5. Costo: 10, 30, 50 y 150 monedas. El resultado queda guardado y no
+x3, x4 o x5; se pueden comprar duplicados extra para preparar esos pares aunque
+ya exista otra pila del mismo tipo. Costo: 10, 30, 50 y 150 monedas. El resultado
+nunca supera x5, pero nada impide tener varias pilas x5. El resultado queda guardado y no
 aplica efectos hasta activarse.
 
 ### Tienda
@@ -415,7 +421,8 @@ Persistente en `save.json` (versión 6, normalizado al cargar). Se escribe al
 cambiar de piso, al terminar la run, al pausar y al perder el foco; usa
 `save.json.tmp` como respaldo para escrituras interrumpidas en Android. También
 guarda `settings.musicVolume`, `settings.effectsVolume` (0..1), un estado del
-Modo Historia por personaje con su checkpoint validado por capítulo y el Bestiario.
+Modo Historia por personaje con su checkpoint validado por capítulo, el Bestiario,
+los ítems vistos y las canciones desbloqueadas por personaje.
 
 | Mejora | Efecto | Base | +Nivel | Máx |
 |---|---|---|---|---|
@@ -430,13 +437,20 @@ un guardado v5, el checkpoint global se asigna al personaje que lo tenía; al
 migrar uno v4, los niveles globales se reparten entre Amado, Mar y Amileth.
 
 También persisten monedas, récord de piso, mazmorras desbloqueadas, historias
-completadas por personaje, resonancias, personajes desbloqueados, enemigos vistos
-y volúmenes de audio.
+completadas por personaje, resonancias, personajes desbloqueados, enemigos vistos,
+ítems descubiertos, canciones escuchadas y volúmenes de audio.
+
+La versión 7 añadió `songs` e `items`. Al migrar desde la versión 6 no había
+registro musical, así que se precarga el tema de menú de cada personaje
+desbloqueado; las pistas de personajes bloqueados siguen ocultas hasta desbloquear
+al personaje y confirmar su tarjeta. Los ítems vistos se validan contra
+`Data.items` al cargar.
 
 ## Menú, Personajes y Bestiario
 
-El menú principal tiene cinco accesos: **Historia**, **Infinito**, **Personajes**,
-**Bestiario** y **Configuración**. Cada uno muestra un resumen del progreso.
+El menú principal tiene siete accesos: **Historia**, **Infinito**, **Personajes**,
+**Canciones**, **Ítems**, **Bestiario** y **Configuración**. Cada uno muestra un
+resumen del progreso.
 
 - **Infinito:** elegir personaje y mazmorra desbloqueada; si falta una condición,
   se explica en la ficha. La Torre exige las tres historias.
@@ -455,13 +469,25 @@ El menú principal tiene cinco accesos: **Historia**, **Infinito**, **Personajes
   eliminar a las mascotas del jugador. El detalle ocupa la columna derecha y
   nunca se dibuja sobre las tarjetas de selección de personaje.
 
+- **Canciones:** 15 pistas repartidas en cinco zonas por personaje. El tema de
+  menú se desbloquea al confirmar la tarjeta; el resto, al escucharse en una
+  partida. Las pistas de personajes bloqueados se ven como `???`. La vista previa
+  es temporal: `DETENER` o `VOLVER` devuelven el audio al tema del menú global.
+- **Ítems:** catálogo de 18 objetos con nombre, tipo y descripción. Se registran
+  al aparecer en el suelo, igual que los enemigos del bestiario. Incluye pestañas
+  por tipo y una cuadrícula con scroll; la sala de pruebas no cuenta.
+
 ## Audio y configuración
 
 El menú abre Configuración con `C`. Desde ahí se ajustan música y efectos en pasos
 de 10%; cada cambio se guarda en `save.json`. La música usa 15 pistas MP3 en
 `assets/audio/music`: tres temas de menú (uno por personaje) y una pista por
-personaje y zona (cripta, forja, catedral y torre). Al cambiar de personaje o de
-zona se hace un crossfade corto sin reiniciar la pista si ya coincide. El BPM
+personaje y zona (cripta, forja, catedral y torre). El catálogo vive en
+`src/data/music.lua`; `Audio.playZone` deriva la ruta de ahí y registra la pista
+como escuchada. Al cambiar de personaje o de zona se hace un crossfade corto sin
+reiniciar la pista si ya coincide. Toda entrada de piso (`Floors.enterLevel`),
+incluido el avance de capítulo en Historia y el reintento exacto, vuelve a aplicar
+la zona activa para que la música nunca quede de la mazmorra anterior. El BPM
 (120 menú, 104 cripta, 124 forja, 138 catedral, 150 torre) alimenta el reloj
 rítmico; si una pista falta o falla la decodificación, suena un metrónomo
 procedural de respaldo a 120 BPM. Los efectos registran su volumen base en un bus
@@ -469,8 +495,8 @@ procedural de respaldo a 120 BPM. Los efectos registran su volumen base en un bu
 Sin `love.audio` (tests) todo el bus queda inactivo.
 
 Configuración también permite borrar todos los datos: monedas, mejoras, récords,
-personajes, desbloqueos y ajustes. El borrado pide una segunda confirmación de
-4 segundos y reescribe un guardado limpio.
+personajes, desbloqueos, canciones, ítems vistos y ajustes. El borrado pide una
+segunda confirmación de 4 segundos y reescribe un guardado limpio.
 
 ## Sala de pruebas
 
@@ -480,7 +506,8 @@ aparece en el menú ni en `Data.dungeons`. La run se marca con `run.sandbox`:
 - No hay oleadas automáticas, temporizador, salida ni jefes de piso.
 - El panel `PRUEBAS`/`F2` invoca enemigos y jefes del catálogo en cantidad x1
   o x5, da ítems con la misma cantidad, vacía el inventario y alterna
-  invulnerabilidad.
+  invulnerabilidad. Las dos listas tienen scroll propio y dejan libre el área de
+  los botones inferiores.
 - Morir restaura la vida y limpia proyectiles/hazards; la sesión continúa.
 - Las monedas se contabilizan solo en `run.coinsEarned`; no se escriben en el
   guardado. Tampoco se guardan desbloqueos de personaje, récords ni autosave.

@@ -241,6 +241,18 @@ Items.items = {
   },
 }
 
+-- Orden estable para el catálogo; se calcula una sola vez al cargar el juego.
+Items.itemOrder = {}
+for id in pairs(Items.items) do
+  Items.itemOrder[#Items.itemOrder + 1] = id
+end
+table.sort(Items.itemOrder, function(a, b)
+  local nameA = Items.items[a].name or a
+  local nameB = Items.items[b].name or b
+  if nameA == nameB then return a < b end
+  return nameA < nameB
+end)
+
 Items.characterItem = {
   mar = "mar_unlock",
   amileth = "amileth_unlock",

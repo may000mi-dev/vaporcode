@@ -105,6 +105,17 @@ assert(Run.player.invuln > 0, "sandbox debe dar invulnerabilidad temporal")
 Run.overlay = "sandbox"
 Sandbox.reset()
 Sandbox.layout()
+assert(Sandbox.maxScroll > 0, "la lista de enemigos debe tener scroll")
+assert(Sandbox.gridClip.y + Sandbox.gridClip.h <= Sandbox.footerRects.clear.y,
+  "la lista no debe invadir los botones del pie")
+Sandbox.wheelmoved(0, -4)
+assert(Sandbox.scroll > 0, "la rueda debe desplazar la lista")
+Sandbox.layout()
+assert(Sandbox.gridRects[1].y < Sandbox.gridClip.y,
+  "el layout debe aplicar el scroll a las fichas")
+Sandbox.reset()
+Sandbox.layout()
+assert(Sandbox.scroll == 0, "reiniciar debe devolver la lista al inicio")
 local target
 for _, rect in ipairs(Sandbox.gridRects) do
   if rect.id == "automaton" then

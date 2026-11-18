@@ -69,6 +69,8 @@ local Historia = require("src.estados.historia")
 local Infinito = require("src.estados.infinito")
 local Personajes = require("src.estados.personajes")
 local Bestiario = require("src.estados.bestiario")
+local Canciones = require("src.estados.canciones")
+local ItemsCatalog = require("src.estados.items")
 local Run = require("src.run.run")
 local Sandbox = require("src.run.sandbox")
 local Hud = require("src.run.hud")
@@ -111,6 +113,19 @@ Save.data.bestiary.bone_patriarch = true
 Bestiario.selectedId = "bone_patriarch"
 Bestiario.draw()
 
+Canciones.enter()
+Canciones.draw()
+Canciones.setCharacter("mar")
+Canciones.draw()
+Canciones.leave()
+
+Save.discoverItem("poison")
+ItemsCatalog.enter()
+ItemsCatalog.draw()
+ItemsCatalog.setCategory("passive")
+ItemsCatalog.draw()
+ItemsCatalog.pressed(ItemsCatalog.rects.back.x + 4, ItemsCatalog.rects.back.y + 4)
+
 Run.enter("sandbox", "amado")
 Run:setPaused(true)
 Hud.drawPause(Run)
@@ -121,4 +136,4 @@ Sandbox.reset()
 Sandbox.draw(Run)
 Run.overlay = nil
 
-print("OK dibujo de menú, historia, configuración, pausa y sala de pruebas")
+print("OK dibujo de menú, catálogos, historia, configuración, pausa y sala de pruebas")

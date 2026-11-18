@@ -5,7 +5,7 @@ local Json = require("src.utils.json")
 local Save = {}
 local FILE = "save.json"
 local TEMP_FILE = "save.json.tmp"
-local VERSION = 6
+local VERSION = 7
 
 local function clamp01(value)
   value = tonumber(value)
@@ -49,6 +49,13 @@ local function defaultProgress()
   }
 end
 
+local function seedMenuSong(target, characterId)
+  local menuId = Data.music.menuIdFor(characterId)
+  if not menuId then return end
+  target.songs[characterId] = target.songs[characterId] or {}
+  target.songs[characterId][menuId] = true
+end
+
 local function defaults()
   local progress = {}
   local stories = {}
@@ -57,7 +64,7 @@ local function defaults()
     stories[id] = defaultStory(id)
   end
 
-  return {
+  local data = {
     version = VERSION,
     coins = 0,
     bestLevel = 0,
@@ -66,9 +73,13 @@ local function defaults()
     characters = { amado = true, mar = false, amileth = false },
     progress = progress,
     bestiary = {},
+    items = {},
+    songs = {},
     settings = { musicVolume = 0.6, effectsVolume = 0.8 },
     stories = stories,
   }
+  seedMenuSong(data, "amado")
+  return data
 end
 
 local function allStoriesCompleted(progress)
@@ -208,6 +219,39 @@ local function normalize(data)
     for id, seen in pairs(data.bestiary) do
       if type(id) == "string" and seen and Data.bestiary[id] then
         out.bestiary[id] = true
+      end
+    end
+  end
+
+  -- La versión 6 no registraba canciones: se precarga el tema de menú de
+  -- cada personaje desbloqueado, que ya sonaba al confirmar su tarjeta.
+  local savedSongs = type(data.songs) == "table" and data.songs or nil
+  for _, characterId in ipairs(Data.characterOrder) do
+    out.songs[characterId] = {}
+  end
+  if savedSongs then
+    for characterId, ids in pairs(savedSongs) do
+      if Data.characters[characterId] and type(ids) == "table" then
+        for songId, unlocked in pairs(ids) do
+          local def = Data.music.byId[songId]
+          if unlocked and def and def.characterId == characterId then
+            out.songs[characterId][songId] = true
+          end
+        end
+      end
+    end
+  else
+    for _, characterId in ipairs(Data.characterOrder) do
+      if out.characters[characterId] then
+        seedMenuSong(out, characterId)
+      end
+    end
+  end
+
+  if type(data.items) == "table" then
+    for id, seen in pairs(data.items) do
+      if type(id) == "string" and seen and Data.items[id] then
+        out.items[id] = true
       end
     end
   end
@@ -445,6 +489,70 @@ function Save.isDungeonUnlocked(id)
   return Save.data.unlocked[id] == true
 end
 
+local function markSong(characterId, songId)
+  local def = type(songId) == "string" and Data.music.byId[songId] or nil
+  if not def then return false end
+  characterId = characterId or def.characterId
+  if not Data.characters[characterId] or def.characterId ~= characterId then
+    return false
+  end
+  if not Save.isCharacterUnlocked(characterId) then return false end
+  if type(Save.data) ~= "table" then return false end
+  Save.data.songs = Save.data.songs or {}
+  Save.data.songs[characterId] = Save.data.songs[characterId] or {}
+  if Save.data.songs[characterId][songId] then return false end
+  Save.data.songs[characterId][songId] = true
+  return true
+end
+
+function Save.discoverSong(characterId, songId)
+  if not markSong(characterId, songId) then return false end
+  Save.save()
+  return true
+end
+
+function Save.isSongDiscovered(characterId, songId)
+  if type(Save.data) ~= "table" or type(Save.data.songs) ~= "table" then
+    return false
+  end
+  local byCharacter = Save.data.songs[characterId]
+  return type(byCharacter) == "table" and byCharacter[songId] == true
+end
+
+function Save.songCount(characterId)
+  local count = 0
+  for _, songId in ipairs(Data.music.byCharacter[characterId] or {}) do
+    if Save.isSongDiscovered(characterId, songId) then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+function Save.discoverItem(id)
+  if type(id) ~= "string" or not Data.items[id] then return false end
+  if type(Save.data) ~= "table" then return false end
+  Save.data.items = Save.data.items or {}
+  if Save.data.items[id] then return false end
+  Save.data.items[id] = true
+  Save.save()
+  return true
+end
+
+function Save.isItemDiscovered(id)
+  return type(Save.data) == "table"
+    and type(Save.data.items) == "table"
+    and Save.data.items[id] == true
+end
+
+function Save.itemCount()
+  local count = 0
+  for _, id in ipairs(Data.itemOrder) do
+    if Save.isItemDiscovered(id) then count = count + 1 end
+  end
+  return count
+end
+
 function Save.discoverEnemy(id)
   if type(id) ~= "string" or not Data.enemyTypes[id] then return false end
   if Save.data.bestiary[id] then return false end
@@ -488,6 +596,7 @@ function Save.unlockCharacter(id)
   if not Data.characters[id] then return false end
   if Save.data.characters[id] then return false end
   Save.data.characters[id] = true
+  markSong(id, Data.music.menuIdFor(id))
   Save.save()
   return true
 end
@@ -519,6 +628,7 @@ function Save.setSelectedCharacter(id)
   if not Data.characters[id] then return false end
   if not Save.isCharacterUnlocked(id) then return false end
   Save.data.selectedCharacter = id
+  markSong(id, Data.music.menuIdFor(id))
   Save.save()
   return true
 end
