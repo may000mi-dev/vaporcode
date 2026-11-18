@@ -9,7 +9,7 @@ VaporCode pasó de un prototipo base de LÖVE 11.5 a un **MVP jugable V9** con d
 
 El proyecto ya es **jugable y empaquetable en el teléfono**: `sh src/tools/build.sh` verifica sintaxis, ejecuta 34 suites de tests y genera un `.love`. El siguiente gran salto no es más contenido por sí solo, sino resolver tres bloqueos estructurales antes de escalar:
 
-1. **Peso del audio por personaje**: 15 pistas MP3 ocupan ~61 MB; el patrón actual de 5 pistas por personaje sería inviable con 30 personajes.
+1. **Peso del audio por personaje**: 15 pistas MP3 ocupan ~61 MB; el patrón actual de 5 pistas por personaje sería inviable con 30 personajes. La solución acordada es sustituirlo por **una base musical por mazmorra + leitmotifs cortos por personaje**; el detalle está en la sección 6.3.
 2. **Estado de partida singular y RNG parcialmente no determinista**: `Run` es un singleton y parte del botín/IA usa `love.math.random`; online/LAN con semilla compartida exige refactor.
 3. **Documentación y artefactos desincronizados**: hay texto que aún dice guardado v5/v6 o 12 enemigos activos, y `build/vaporcode.love` es viejo e ignora los módulos nuevos.
 
@@ -156,7 +156,7 @@ La expansión planteada (30 personajes, evolución de enemigos, nuevos capítulo
 | Plan | Dificultad | Por qué | Primer paso recomendado |
 |---|---|---|---|
 | Más de 30 personajes con mecánicas propias | Media-alta | Las tablas escalan, pero cada básico/pasiva/animación necesita código, balance y tests. | Definir un contrato de `CharacterDef` con hooks de basic/pasiva y migrar los 3 actuales. |
-| Canciones propias respetando BPM | Media en diseño, alta en almacenamiento | El catálogo ya existe, pero 150 pistas MP3 serían ~610 MB. | Convertir a OGG y cargar solo las pistas del personaje activo. |
+| Canciones propias respetando BPM | Media; factible con la solución acordada | 150 pistas MP3 serían ~610 MB, pero 4 motivos obligatorios + 6 opcionales por personaje son loops cortos reutilizables sobre bases compartidas. | Definir `Music.bases`/`Music.motifs` y validar una base de cripta con 3 motivos de Amado en OGG. |
 | Ítems únicos, mascotas con personalidades y habilidades exclusivas | Media | Encaja con `src/data/`, pero las personalidades requieren IA y diálogo/feedback. | Extender `PetDef` y `ItemDef` con `ownerCharacter` y `personality`. |
 | Evolución de enemigos por condición | Media | El ejemplo del Devorador es event-driven y cabe en el sistema actual. | Crear `run/evolution.lua` con reglas disparadas por eventos. |
 | Extensión de Historia a nuevos capítulos | Alta | Mucho texto, escenas, checkpoints y equilibrio; peor aún con 30 perspectivas. | Escribir el capítulo 2 como contenido nuevo con un solo personaje piloto. |
@@ -169,7 +169,7 @@ La expansión planteada (30 personajes, evolución de enemigos, nuevos capítulo
 
 **Personajes (30+).** La base de datos y la selección global ya soportan más personajes: `characters.lua`, `themes.lua`, `save.data.progress[characterId]`, `songs[characterId]` y los catálogos son tablas. Lo difícil no es agregar filas, sino que cada personaje tenga un básico y una pasiva realmente distintos sin llenar la lógica de condicionales. Conviene pasar de `if characterId == "mar"` a un contrato de hooks por personaje y mover los retratos procedurales a una definición de paleta/forma.
 
-**Música y BPM.** La regla actual (BPM por zona) ya funciona y debe conservarse. Para 30 personajes no se puede repetir el patrón de 5 MP3 por personaje: habría 150 pistas. La solución lightweight es OGG comprimido, un tema de menú por personaje y un número menor de pistas reutilizables por capítulo, más capas rítmicas procedurales para variar la sensación sin duplicar audio.
+**Música y BPM.** La regla actual (BPM por zona) ya funciona y debe conservarse. El patrón de 5 MP3 por personaje se descarta porque sería insostenible. La solución acordada es una base musical por mazmorra y un conjunto de leitmotifs cortos por personaje, con un motivo `core` reconocible que se reorquesta según la zona; el detalle de implementación está en la sección 6.3.
 
 **Ítems, mascotas y habilidades exclusivas.** Los catálogos de 18 ítems y 5 habilidades son un buen punto de partida. Un ítem único por personaje es barato en datos; una mascota con personalidad ("celosa", "tímida", "glotona", "protectiva") implica IA adicional y feedback visible. Lo recomendable es empezar con 1 mascota y 1 habilidad exclusiva para un personaje piloto, validar el patrón y recién entonces replicar.
 
@@ -183,6 +183,48 @@ La expansión planteada (30 personajes, evolución de enemigos, nuevos capítulo
 
 **Online y LAN.** Es el cambio más complejo y debe ir al final. La semilla compartida solo garantiza el mismo mapa; para que todos vean lo mismo también deben ser deterministas el botín, los críticos, la IA, los compases y el orden de resolución de eventos. Además, "servidor con la última palabra" y "host LAN con la última palabra" son dos modelos de autoridad distintos. La pausa por voto es sencilla una vez que existe sesión y transporte; ahora mismo no hay ni un módulo de red.
 
+### 6.3 Decisión de audio y personalización para 30 personajes
+
+Esta sección congela la solución acordada para escalar a 30 personajes sin repetir el patrón insostenible de 5 pistas completas por personaje.
+
+**Datos confirmados por May000mi:**
+
+- Los 15 MP3 actuales están mezclados y fueron generados con IA; **no existen stems originales**.
+- Sí se conservaron los **prompts** usados para generarlos, así que los motivos nuevos pueden regenerarse desde esas descripciones con BPM, compases y tonalidad controlados.
+- Se acepta el esquema de **4 leitmotifs obligatorios + 6 opcionales por personaje**.
+- Se mantiene la exigencia de que cada personaje tenga una identidad musical reconocible.
+
+**Arquitectura musical a implementar:**
+
+- **Base por mazmorra:** una cama musical compartida por zona (menú, cripta, forja, catedral, torre y futuras zonas), respetando el BPM de `ZONE_BPM` en `src/utils/audio.lua:32`. Es un solo archivo OGG en bucle, con 16 o 32 compases.
+- **Leitmotifs por personaje:** fragmentos cortos de 4 u 8 compases, en OGG, generados desde los prompts originales. Cada personaje tiene un motivo `core` que aparece en todas sus zonas y representa su identidad; el resto colorea estado de ánimo y contexto.
+- **Los 4 motivos obligatorios:** `core` (firma del personaje), `exploración`, `combate` y `jefe`.
+- **Los 6 motivos opcionales:** `vida_baja`, `victoria`, `historia`, `mascota`, `variante_mazmorra` y `final`. Se producen primero para los personajes con más contenido, no para todos desde el inicio.
+- **Disparo musical:** los motivos no son streams continuos, sino one-shots programados en el siguiente compás de la base. Se alinean con `Source:getPosition()` de la base o, si eso falla en Android, con el reloj de `Rhythm`; el gameplay rítmico sigue gobernado por `ZONE_BPM`, nunca por la posición del audio.
+- **Mezcla:** no se intentarán stems continuos ni extracción por frecuencia de los MP3 mezclados. Los MP3 actuales quedan como referencia de estilo y fallback hasta que exista una base OGG y los motivos validados.
+- **Metadatos por motivo:** `personaje`, `id`, `bpm`, `compases`, `tonalidad`, `instrumentación`, `estado`, `prompt` y `seed`. Sin estos campos, producir 300 motivos sería imposible de mantener.
+- **Guardado:** no se cambia el formato v7. Los ids actuales de `Music.idFor` seguirán representando “tema del personaje en zona”; internamente resolverán a base + motivos. El catálogo `Canciones` seguirá mostrando una entrada por personaje/zona, no una por motivo.
+- **Estimación:** 30 personajes × 4 motivos obligatorios = 120 motivos; con los 6 opcionales serían 300. Como cada motivo dura 4–8 compases, el total esperado es del orden de decenas de MB, más unas pocas bases compartidas, frente a los ~610 MB de 150 pistas completas.
+
+**Personalización jugable que debe acompañar a la música:**
+
+- `CharacterDef` con hooks de básico, pasiva, resonancia y paleta, para sustituir los `if characterId == ...` actuales en habilidades, slots, retratos y guardado.
+- Un ítem único por personaje con `ownerCharacter`, una habilidad exclusiva por personaje y mascotas con `personality` que altere su IA y feedback.
+- Variantes de Historia por personaje, con un `core` argumental compartido y escenas específicas para los que tengan capítulo propio.
+- El mismo patrón de “núcleo + variantes” usado en música debe aplicarse al diseño: una mecánica central reconocible por personaje y modificadores contextuales, no 30 sistemas sin relación.
+
+**Secuencia de implementación:**
+
+1. Registrar los prompts y definir el contrato de metadatos de bases y motivos.
+2. Hacer una prueba de concepto: base de cripta + motivos `core`, `combate` y `jefe` de un personaje, en OGG a 8 compases.
+3. Medir en teléfono: alineación de entradas, ausencia de clics, RAM, FPS y que el BPM de juego no se altere.
+4. Extender `src/data/music.lua` con `Music.bases` y `Music.motifs`, manteniendo `Music.tracks`/`idFor` como compatibilidad.
+5. Refactorizar `src/utils/audio.lua` para cargar solo la base activa y los motivos del personaje activo, con scheduler en `Audio.update` y sin asignaciones por frame.
+6. Validar con los 3 personajes actuales antes de producir el personaje 4.
+7. Producir los 30 personajes por lotes: primero los 4 motivos obligatorios de todos; después los opcionales según contenido real.
+
+**Riesgo principal y plan B:** si `Source:getPosition()` o el scheduler no mantienen la alineación en LÖVE para Android, se premezclan 2 o 3 variantes por zona en un único OGG por personaje. Se pierde algo de mezcla dinámica, pero se elimina la dependencia de sincronía precisa y se conserva la identidad musical.
+
 ---
 
 ## 7. Orden recomendado de trabajo
@@ -190,7 +232,7 @@ La expansión planteada (30 personajes, evolución de enemigos, nuevos capítulo
 1. **Sanidad documental y determinismo.** Corregir textos v5/v6 y 12/18 enemigos, actualizar artefacto de build, auditar `love.math.random` y unificar todo el RNG bajo `run.dungeon.rng` o un `Rng` por sistema.
 2. **Refactor de estado.** Convertir `Run` en instancia creada por `Run.new(seed, mode, characterId)`; mantener un singleton solo para la partida local. Es requisito previo para replays, LAN y servidor.
 3. **Contratos de contenido.** Definir `CharacterDef`, `PetDef`, `ItemDef`, `DungeonDef.rules` y eventos de enemigo. Migrar los 3 personajes actuales a esos contratos antes de crear el 4.
-4. **Contenido piloto.** Un personaje nuevo, una canción OGG, una mascota con personalidad, una habilidad exclusiva y una evolución de enemigo. Probar en teléfono antes de producir 30.
+4. **Contenido piloto.** Un personaje nuevo, una base de mazmorra en OGG con sus 4 motivos obligatorios, una mascota con personalidad, una habilidad exclusiva y una evolución de enemigo. Probar en teléfono antes de producir 30.
 5. **Capítulo 2.** Primero con un personaje, luego variantes. Guardar desbloqueo por `≥5` personajes completados sin romper el final del capítulo 1.
 6. **Assets y build de distribución.** Laptop: atlas, OGG, compresión, iconos y wrappers por plataforma.
 7. **Red.** Determinismo → protocolo → LAN host-autoritativa → voto de pausa → servidor online autoritativo.
@@ -253,9 +295,10 @@ La expansión planteada (30 personajes, evolución de enemigos, nuevos capítulo
 1. Corregir los textos desactualizados de `docs/design.md` y `GuiaVaporCode/` (guardado v7, 18 enemigos activos en Infinito, música incluida).
 2. Decidir el formato de guardado v8 si se agregarán capítulos/personajes nuevos, y documentarlo antes de implementarlo.
 3. Auditar y unificar RNG; agregar tests de reproducibilidad con la misma semilla.
-4. Diseñar el contrato de personaje/mascota/ítem y migrar a Amado, Mar y Amileth como prueba.
-5. Convertir las 15 pistas actuales a OGG y medir ahorro real antes de producir más música.
-6. Implementar la evolución del Devorador de Núcleos como primer sistema de eventos de enemigo.
-7. Solo después de esos pasos, crear el personaje 4 y el capítulo 2.
+4. Registrar los prompts de los 15 MP3 y definir el contrato de metadatos de bases y leitmotifs descrito en la sección 6.3.
+5. Hacer la prueba de concepto de audio: base de cripta en OGG + 3 motivos de Amado, y medir alineación, RAM y FPS en el teléfono.
+6. Diseñar el contrato de personaje/mascota/ítem y migrar a Amado, Mar y Amileth como prueba.
+7. Implementar la evolución del Devorador de Núcleos como primer sistema de eventos de enemigo.
+8. Solo después de esos pasos, crear el personaje 4 y el capítulo 2.
 
 Este documento debe actualizarse al terminar cada hito grande, igual que `README.md` y `docs/design.md`.
